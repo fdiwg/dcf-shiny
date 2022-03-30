@@ -11,7 +11,7 @@ RUN apt-get update && apt-get install -y \
     git 
 
 # install R package dependencies
-RUN R -e "install.packages(c('remotes','jsonlite','yaml), repos='https://cran.r-project.org/')"
+RUN R -e "install.packages(c('remotes','jsonlite','yaml'), repos='https://cran.r-project.org/')"
 RUN R -e "source('install.R')"
 
 RUN git -C /root/ clone https://github.com/eblondel/dcf-shiny.git && echo "OK!"
