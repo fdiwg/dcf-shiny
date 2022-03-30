@@ -17,7 +17,7 @@ RUN git -C /root/ clone https://github.com/eblondel/dcf-shiny.git && echo "OK!"
 RUN ln -s /root/dcf-shiny /srv/dcf-shiny
 # install R app package dependencies
 RUN cd /srv/dcf-shiny
-RUN R -e "source('install.R')"
+RUN R -e "source('./install.R')"
 RUN cd ../..
 
 #etc dirs (for config)
