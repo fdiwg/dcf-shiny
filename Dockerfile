@@ -10,12 +10,13 @@ RUN apt-get update && apt-get install -y \
     libxml2-dev \
     git 
 
-# install R package dependencies
+# install R core package dependencies
 RUN R -e "install.packages(c('remotes','jsonlite','yaml'), repos='https://cran.r-project.org/')"
-RUN R -e "source('install.R')"
-
+# clone app
 RUN git -C /root/ clone https://github.com/eblondel/dcf-shiny.git && echo "OK!"
 RUN ln -s /root/dcf-shiny /srv/dcf-shiny
+# install R app package dependencies
+RUN R -e "source('./root/dcf-shiny/install.R')"
 
 #etc dirs (for config)
 RUN mkdir -p /etc/dcf-shiny/
