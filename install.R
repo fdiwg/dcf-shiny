@@ -1,4 +1,4 @@
-packages <- jsonlite::read_json('./package.json')
+packages <- jsonlite::read_json('./srv/dcf-shiny/package.json')
 invisible(lapply(packages, function(pkg){
   from <- 'cran'
   pkg_installer <- remotes::install_version

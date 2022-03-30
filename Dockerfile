@@ -16,9 +16,7 @@ RUN R -e "install.packages(c('remotes','jsonlite','yaml'), repos='https://cran.r
 RUN git -C /root/ clone https://github.com/eblondel/dcf-shiny.git && echo "OK!"
 RUN ln -s /root/dcf-shiny /srv/dcf-shiny
 # install R app package dependencies
-RUN cd /srv/dcf-shiny
-RUN R -e "source('./install.R')"
-RUN cd ../..
+RUN R -e "source('./srv/dcf-shiny/install.R')"
 
 #etc dirs (for config)
 RUN mkdir -p /etc/dcf-shiny/
