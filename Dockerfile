@@ -11,7 +11,8 @@ RUN apt-get update && apt-get install -y \
     git 
 
 # install R core package dependencies
-RUN R -e "install.packages(c('httpuv', 'remotes','jsonlite','yaml'), repos='https://cran.r-project.org/')"
+RUn install2.r --error --skipinstalled --ncpus -1 httpuv
+RUN R -e "install.packages(c('remotes','jsonlite','yaml'), repos='https://cran.r-project.org/')"
 # clone app
 RUN git -C /root/ clone https://github.com/eblondel/dcf-shiny.git && echo "OK!"
 RUN ln -s /root/dcf-shiny /srv/dcf-shiny
