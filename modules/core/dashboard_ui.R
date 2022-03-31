@@ -7,6 +7,6 @@ dashboard_ui <- function(id){
     h4("Username -->"),
     verbatimTextOutput(ns("SHINYPROXY_USERNAME")),
     h4("Token -->"),
-    verbatimTextOutput("SHINYPROXY_OIDC_ACCESS_TOKEN")
+    verbatimTextOutput(ns("SHINYPROXY_OIDC_ACCESS_TOKEN"))
   )
 }
