@@ -1,8 +1,16 @@
-dashboard_server <- function(input, output, session, parent.session){
+dashboard_server <- function(input, output, session, profile, parent.session){
   
   ns <- session$ns
   
-  output$SHINYPROXY_USERNAME <- renderPrint( Sys.getenv("SHINYPROXY_USERNAME"))
-  output$SHINYPROXY_OIDC_ACCESS_TOKEN <- renderPrint( Sys.getenv("SHINYPROXY_OIDC_ACCESS_TOKEN") )
+  output$welcome <- renderUI({
+    h2(sprintf("Welcome %s!", profile$name))
+  })
+  
+  output$roles <- renderDataTable({
+    data.frame(
+      resource = sapply(names(profile$resource_access), URLdecode),
+      roles = sapply(profile$resource_access, function(x){ paste0(x$roles, collapse = ", ")})
+    )
+  })
   
 }

@@ -3,7 +3,8 @@
   {"package": "shinydashboard", "version": "0.7.2", "repos": "https://cran.r-project.org"},
   {"package": "shinyjs", "version": "2.0.0", "repos": "https://cran.r-project.org"},
   {"package": "shinycssloaders", "version": "1.0.0", "repos": "https://cran.r-project.org"},
-  {"repo": "eblondel/ocs4R", "from": "github"}
+  {"package": "jose", "version": "1.2.0", "repos": "https://cran.r-project.org"},
+  {"package": "d4storagehub4R", "version": "0.2", "repos": "https://cran.r-project.org"}
 ]
 
   
