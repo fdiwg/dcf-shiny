@@ -7,7 +7,7 @@
   {"package": "jsonlite", "version": "1.8.0", "repos": "https://cran.r-project.org"},
   {"package": "jose", "version": "1.2.0", "repos": "https://cran.r-project.org"},
   {"package": "DT", "version": "0.22", "repos": "https://cran.r-project.org"},
-  {"repo": "eblondel/d4storagehub4R", "from": "github"}
+  {"repo": "eblondel/d4storagehub4R", "from": "github"},
+  {"repo": "eblondel/ows4R", "from": "github"}
 ]
-
   

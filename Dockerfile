@@ -9,6 +9,8 @@ RUN apt-get update && apt-get install -y \
     libcurl4-openssl-dev \
     libxml2-dev \
     git 
+#geospatial
+RUN /rocker_scripts/install_geospatial.sh
 
 # install R core package dependencies
 RUN install2.r --error --skipinstalled --ncpus -1 httpuv
