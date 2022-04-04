@@ -7,9 +7,8 @@ options(stringsAsFactors = FALSE)
 
 #packages
 #---------------------------------------------------------------------------------------
-list_of_packages <- c(
-  "shiny", "shinydashboard", "shinyjs", "shinycssloaders"
-)
+packages <- jsonlite::read_json('./package.json')
+list_of_packages <- sapply(packages, function(x){x$package})
 invisible(lapply(list_of_packages, function(x) {
   require(x,character.only = TRUE, quietly = TRUE)
 }))
@@ -27,6 +26,8 @@ invisible(lapply(list_of_packages, function(x) {
 #---------------------------------------------------------------------------------------
 source("modules/core/dashboard_server.R")
 source("modules/core/dashboard_ui.R")
+source("modules/core/monitor_server.R")
+source("modules/core/monitor_ui.R")
 
 #main Shiny scripts
 #---------------------------------------------------------------------------------------
