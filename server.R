@@ -14,7 +14,7 @@ server <- function(input, output, session) {
          add_headers("Authorization" = paste("Bearer", jwt)),
          body = list(
           grant_type = I("urn:ietf:params:oauth:grant-type:uma-ticket"),
-          audience = "%2Fd4science.research-infrastructures.eu%2FFARM%2FWECAFC-FIRMS" #TODO needs config
+          audience = URLencode(names(out_jwt$resource_access)[1], reserved = T)
          )
        ))
       if(httr::status_code(req)==200){
