@@ -6,7 +6,7 @@ server <- function(input, output, session) {
     (strings <- strsplit(jwt, ".", fixed = TRUE)[[1]])
     out_jwt <- jsonlite::parse_json(rawToChar(jose::base64url_decode(strings[2])))
     out_jwt$expired <- as(Sys.time(), "numeric") > out_jwt$exp
-    
+    out_jwt$context <- names(out_jwt$resource_access)[1]
     if(!out_jwt$expired){
       req <- httr::with_verbose(httr::POST(
          "https://accounts.d4science.org/auth/realms/d4science/protocol/openid-connect/token",
@@ -14,7 +14,7 @@ server <- function(input, output, session) {
          add_headers("Authorization" = paste("Bearer", jwt)),
          body = list(
           grant_type = I("urn:ietf:params:oauth:grant-type:uma-ticket"),
-          audience = URLencode(names(out_jwt$resource_access)[1], reserved = T)
+          audience = URLencode(out_jwt$context, reserved = T)
          )
        ))
       if(httr::status_code(req)==200){
