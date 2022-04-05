@@ -7,7 +7,7 @@ dashboard_server <- function(input, output, session, profile, parent.session){
   })
   
   output$status <- renderUI({
-    if(PROFILE$expired){
+    if(profile$expired){
       tags$span(shiny::icon(c('times-circle')), "Token is expired", style="color:red;")
     }else{
       tags$span(shiny::icon(c('check-circle')), "Token is valid", style="color:green;")

@@ -15,8 +15,8 @@ monitor_server <- function(input, output, session, profile, parent.session){
                
            "Workspace (StorageHub)" = {
              status <- FALSE
-             if(!is.null(PROFILE$access)){
-               STORAGEHUB <- try(d4storagehub4R::StoragehubManager$new(token = PROFILE$access$access_token, token_type = "jwt"))
+             if(!is.null(profile$access)){
+               STORAGEHUB <- try(d4storagehub4R::StoragehubManager$new(token = profile$access$access_token, token_type = "jwt"))
                status <- !is(STORAGEHUB, "try-error")
                status <- is(STORAGEHUB, "StoragehubManager")
              }
@@ -29,15 +29,15 @@ monitor_server <- function(input, output, session, profile, parent.session){
            
            "DataMiner (WPS)" = {
              status <- FALSE
-             icproxy_req <- httr::GET(sprintf("https://registry.d4science.org/icproxy/gcube/service//ServiceEndpoint/DataAnalysis/DataMiner?gcube-scope=%s", PROFILE$context))
+             icproxy_req <- httr::GET(sprintf("https://registry.d4science.org/icproxy/gcube/service//ServiceEndpoint/DataAnalysis/DataMiner?gcube-scope=%s", profile$context))
              status <- httr::status_code(icproxy_req) == 200
              if(status){
                icproxy <- XML::xmlParse(httr::content(icproxy_req, "text"))
                wps_uri = xpathSApply(icproxy, "//AccessPoint/Interface/Endpoint", xmlValue)[1]
-               if(!is.null(PROFILE$access)){
+               if(!is.null(profile$access)){
                  WPS <- try(ows4R::WPSClient$new(
                    url = wps_uri, serviceVersion = "1.0.0",
-                   headers = c("Authorization" = paste("Bearer", PROFILE$access$access_token)),
+                   headers = c("Authorization" = paste("Bearer", profile$access$access_token)),
                    logger = "DEBUG"
                  ))
                  status <- !is(WPS, "try-error")
