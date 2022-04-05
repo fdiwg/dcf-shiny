@@ -2,6 +2,7 @@ monitor_server <- function(input, output, session, profile, parent.session){
   
   ns <- session$ns
   
+  #D4science resources
   resources <- c(
     "Workspace (StorageHub)", 
     "DataMiner (WPS)"
