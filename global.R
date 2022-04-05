@@ -10,8 +10,10 @@ options(stringsAsFactors = FALSE)
 packages <- jsonlite::read_json('./package.json')
 list_of_packages <- sapply(packages, function(x){
   pkg <- x$package
-  parts <- unlist(strsplit(x$package,"/"))
-  if(length(parts)>1) pkg <- parts[2]
+  if(is.null(pkg)) if("repo" %in% names(x)){
+    parts <- unlist(strsplit(x$repo,"/"))
+    if(length(parts)>1) pkg <- parts[2]
+  }
   return(pkg)
 })
 invisible(lapply(list_of_packages, function(x) {
