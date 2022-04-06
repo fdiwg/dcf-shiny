@@ -34,7 +34,7 @@ monitor_server <- function(input, output, session, profile, parent.session){
              status <- httr::status_code(icproxy_req) == 200
              if(status){
                icproxy <- XML::xmlParse(httr::content(icproxy_req, "text"))
-               wps_uri = XML::xpathSApply(icproxy, "//AccessPoint/Interface/Endpoint", xmlValue)[1]
+               wps_uri = XML::xpathSApply(icproxy, "//AccessPoint/Interface/Endpoint", XML::xmlValue)[1]
                if(!is.null(profile$access)){
                  WPS <- try(ows4R::WPSClient$new(
                    url = wps_uri, serviceVersion = "1.0.0",

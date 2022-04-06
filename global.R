@@ -2,23 +2,17 @@
 #---------------------------------------------------------------------------------------
 options(stringsAsFactors = FALSE)
 
+#utils
+#---------------------------------------------------------------------------------------
+source("assets/package_utils.R")
+source("assets/ui_utils.R")
+
 #config
 #---------------------------------------------------------------------------------------
 
 #packages
 #---------------------------------------------------------------------------------------
-packages <- jsonlite::read_json('./package.json')
-list_of_packages <- sapply(packages, function(x){
-  pkg <- x$package
-  if(is.null(pkg)) if("repo" %in% names(x)){
-    parts <- unlist(strsplit(x$repo,"/"))
-    if(length(parts)>1) pkg <- parts[2]
-  }
-  return(pkg)
-})
-invisible(lapply(list_of_packages, function(x) {
-  require(x,character.only = TRUE, quietly = TRUE)
-}))
+loadAppPackages()
 
 #global variables / environment
 #---------------------------------------------------------------------------------------
