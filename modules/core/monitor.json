@@ -1,0 +1,8 @@
+{
+  "type": "item",
+  "rank": 2,
+  "name": "monitor",
+  "title": "System monitor",
+  "restricted": true,
+  "roles": ["system admin", "r-studio"]
+}

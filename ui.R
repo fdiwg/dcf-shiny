@@ -4,22 +4,14 @@ ui <- shiny::tagList(
       title = "DCF-SHINY"
     ),
     dashboardSidebar(
-      sidebarMenu(
-        id = "dcf-tabs",
-        menuItem(text = "Dashboard",tabName = "dashboard"),
-        menuItem(text = "Monitor", tabName = "monitor")
-      )
+      sidebarMenuFromModules(config = NULL, profile = PROFILE)
     ),
     dashboardBody(
-      tabItems(
-        dashboard_ui("dashboard"),
-        monitor_ui("monitor")
-      ),
+      loadModuleUIs(config = NULL, profile = PROFILE),
       useShinyjs(),
       tags$head(
         tags$link(rel = "stylesheet", type = "text/css", href = "dcf-shiny.css")
       )
-      
     )
   ),
   tags$footer(footer(getAppId(), getAppVersion(), getAppDate()), align = "center")

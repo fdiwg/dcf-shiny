@@ -16,8 +16,8 @@ dashboard_server <- function(input, output, session, profile, parent.session){
   
   output$roles <- renderDataTable({
     data.frame(
-      resource = sapply(names(profile$resource_access), URLdecode),
-      roles = sapply(profile$resource_access, function(x){ paste0(x$roles, collapse = ", ")})
+      resource = URLdecode(profile$context),
+      roles = paste0(profile$context_resource_access$roles, collapse=", ")
     )
   })
   
