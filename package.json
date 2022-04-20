@@ -1,8 +1,10 @@
 {
   "id": "dcf-shiny",
   "version": "0.0.9999",
-  "date": "2022-04-06",
+  "date": "2022-04-20",
   "dependencies": [
+    {"package": "dplyr", "version": "1.0.8", "repos": "https://cran.r-project.org"},
+    {"package": "yaml", "version": "2.2.1", "repos": "https://cran.r-project.org"},
     {"package": "shiny", "version": "1.7.1", "repos": "https://cran.r-project.org"},
     {"package": "shinydashboard", "version": "0.7.2", "repos": "https://cran.r-project.org"},
     {"package": "shinyjs", "version": "2.0.0", "repos": "https://cran.r-project.org"},
@@ -11,6 +13,8 @@
     {"package": "jsonlite", "version": "1.8.0", "repos": "https://cran.r-project.org"},
     {"package": "XML", "version": "3.99-0.9", "repos": "https://cran.r-project.org"},
     {"package": "jose", "version": "1.2.0", "repos": "https://cran.r-project.org"},
+    {"package": "RPostgres", "version": "1.2.0", "repos": "https://cran.r-project.org"},
+    {"package": "uuid", "version": "1.0-4", "repos": "https://cran.r-project.org"},
     {"package": "DT", "version": "0.22", "repos": "https://cran.r-project.org"},
     {"repo": "eblondel/d4storagehub4R", "from": "github"},
     {"repo": "eblondel/ows4R", "from": "github"}

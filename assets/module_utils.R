@@ -30,7 +30,7 @@ loadModuleScripts <- function(config = NULL){
 }
 
 #loadModuleServers
-loadModuleServers <- function(config = NULL, profile, parent.session){
+loadModuleServers <- function(parent.session, config, profile, pool){
   default_module_profiles <- listModuleProfiles(config)
   for(module_profile in default_module_profiles){
     module <- unlist(strsplit(unlist(strsplit(module_profile, paste0(dirname(module_profile),"/")))[2], ".json"))[1]
@@ -46,7 +46,7 @@ loadModuleServers <- function(config = NULL, profile, parent.session){
         server_fun_name <- paste0(module, "_server")
         server_fun <- try(eval(expr = parse(text = server_fun_name)))
         if(!is(server_fun, "try-error")){
-          called <- try(shiny::callModule(server_fun, module, profile = profile, parent.session = parent.session))
+          called <- try(server_fun(module, parent.session = parent.session, config = config, profile = profile, pool = pool))
           if(is(called, "try-error")){
             ERROR("Error while calling shiny module '%s'", module)
           }

@@ -9,12 +9,36 @@ source("assets/package_utils.R")
 source("assets/module_utils.R")
 source("assets/ui_utils.R")
 
-#config
-#---------------------------------------------------------------------------------------
-
 #packages
 #---------------------------------------------------------------------------------------
 loadAppPackages()
+
+#config
+#---------------------------------------------------------------------------------------
+#default config_file path for DEPLOYMENT
+config_file <- file.path(getwd(), "configs/config.yml")
+
+#local configuration
+#If you are an R developer, you need to create a .REnviron file (no file extension) in /dcf-shiny dir
+#The file should include the local path for your shiny config file in that way:
+#DCF_SHINY_CONFIG=<your config path>
+local_config_file <- Sys.getenv("DCF_SHINY_CONFIG")
+if(nzchar(local_config_file)) config_file <- local_config_file
+CONFIG <- suppressWarnings(yaml::read_yaml(config_file))
+
+#language (in case not part of configuration)
+if(is.null(CONFIG$language)) CONFIG$language <- "en"
+
+#DB connections
+#---------------------------------------------------------------------------------------
+POOL <- try(pool::dbPool(
+  drv = DBI::dbDriver(CONFIG$dbi$drv),
+  dbname = CONFIG$dbi$dbname,
+  host = CONFIG$dbi$host,
+  port = CONFIG$dbi$port,
+  user = CONFIG$dbi$user,
+  password = CONFIG$dbi$password
+))
 
 #global variables / environment
 #---------------------------------------------------------------------------------------
@@ -38,7 +62,7 @@ fetchProfile <- function(jwt){
     }
   }
   out_jwt$context_resource_access <- out_jwt$resource_access[[1]]
-  
+  out_jwt$jwt <- jwt
   return(out_jwt)
 }
 
@@ -63,5 +87,5 @@ source("server.R")
 #onStop
 #---------------------------------------------------------------------------------------
 onStop(function(){
-  
+  DBI::dbDisconnect(POOL)
 })
