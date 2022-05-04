@@ -6,7 +6,10 @@ data_call_server <- function(id, parent.session, config, profile, pool){
       
       ns <- session$ns
       
-      #Data call management (CRUD
+      #Data call management (CRUD)
+      model <- reactiveValues(
+        error = NULL
+      )
       
       #getDataCalls
       getDataCalls <- function(pool){
@@ -17,11 +20,18 @@ data_call_server <- function(id, parent.session, config, profile, pool){
       createDataCall <- function(pool, task = "", start = Sys.Date(), end = Sys.Date(), status = "OPENED"){
         conn <- pool::poolCheckout(pool)
         idx <- nrow(getDataCalls(pool))+1
+        creation_date <- Sys.time()
+        attr(creation_date, "tzone") <- "UTC"
         insert_sql <- sprintf(
-          "INSERT INTO dcf_data_call(id_data_call, task_id, date_start, date_end, status, folder_id) 
-           VALUES (%s, '%s', '%s', '%s', '%s', '%s');", idx, task, as(start,"character"), as(end,"character"), status, "FOLDER_ID")
+          "INSERT INTO dcf_data_call(id_data_call, task_id, date_start, date_end, status, creator_id, creation_date) 
+           VALUES (%s, '%s', '%s', '%s', '%s', '%s', '%s');", 
+           idx, task, as(start,"character"), as(end,"character"), status, PROFILE$preferred_username, as(creation_date, "character")
+        )
         out_sql <- try(DBI::dbSendQuery(conn, insert_sql))
         created <- !is(out_sql, "try-error")
+        if(!created){
+          attr(created, "error") <- as(out_sql, "character")
+        }
         created
       }
       
@@ -50,6 +60,8 @@ data_call_server <- function(id, parent.session, config, profile, pool){
               "Start date" = data[i,"date_start"],
               "End date" = data[i,"date_end"],
               "Status" = data[i,"status"],
+              "Creator" = data[i,"creator_id"],
+              "Creation date" = data[i, "creation_date"],
               Actions = as(actionButton(inputId = ns(paste0('button_edit_', uuids[i])), class="btn btn-info", style = "margin-right: 2px;",
                                         title = "Edit data call", label = "", icon = icon("tasks")),"character")
             )
@@ -62,7 +74,9 @@ data_call_server <- function(id, parent.session, config, profile, pool){
             "Task ID" = character(0),
             "Start date" = character(0),
             "End date" = character(0),
-            "Status" = character(0),                  
+            "Status" = character(0), 
+            "Creator" = character(0),
+            "Creation date" = character(0),
             Actions = character(0)
           )
         }
@@ -125,8 +139,16 @@ data_call_server <- function(id, parent.session, config, profile, pool){
                               dateInput(ns("data_call_form_end"), "End date", value = end),
                               selectInput(ns("data_call_form_status"), "Status", choices = list("OPENED", "CLOSED"), selected = "OPENED"),
                               actionButton(ns(sprintf("data_call_%s_go", form_action)), title_prefix),
+                              uiOutput(ns("data_call_error")),
                               easyClose = TRUE, footer = NULL ))
       }
+      output$data_call_error <- renderUI({
+        if(is.null(model$error)){
+          tags$div(style="display:none;")
+        }else{
+          tags$div(model$error, class="alert alert-danger", role="alert")
+        }
+      })
       #contact/add
       observeEvent(input$add_data_call,{
         showDataCallModal(new = TRUE)
@@ -139,8 +161,14 @@ data_call_server <- function(id, parent.session, config, profile, pool){
           end = input$data_call_form_end,
           status = input$data_call_form_status
         )
-        removeModal()
-        renderDataCalls(getDataCalls(pool))
+        if(created){
+          model$error <- NULL
+          removeModal()
+          renderDataCalls(getDataCalls(pool))
+        }else{
+          model$error <- attr(created, "error")
+        }
+        
       })
       
       #-----------------------------------------------------------------------------------
