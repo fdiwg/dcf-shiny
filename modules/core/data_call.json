@@ -1,6 +1,6 @@
 {
   "type": "item",
-  "rank": 2,
+  "rank": 3,
   "name": "data_calls",
   "title": "Data calls management",
   "restricted": true,
