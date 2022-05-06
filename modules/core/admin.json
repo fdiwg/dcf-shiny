@@ -1,0 +1,7 @@
+{
+  "type": "item",
+  "menu": true,
+  "name": "admin",
+  "title": "System Administration",
+  "rank": 2
+}

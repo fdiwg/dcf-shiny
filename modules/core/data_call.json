@@ -1,7 +1,8 @@
 {
-  "type": "item",
+  "parent": "admin",
+  "type": "subitem",
   "rank": 2,
-  "name": "data_calls",
+  "name": "data_call",
   "title": "Data calls management",
   "restricted": true,
   "roles": ["regional data manager", "system admin", "r-studio"]

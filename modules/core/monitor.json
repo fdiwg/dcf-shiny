@@ -1,5 +1,6 @@
 {
-  "type": "item",
+  "parent": "admin",
+  "type": "subitem",
   "rank": 3,
   "name": "monitor",
   "title": "System monitor",
