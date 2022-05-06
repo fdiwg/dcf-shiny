@@ -1,0 +1,31 @@
+language: en
+
+dcf:
+  name: Regional Data Base (RDB)
+  context: WECAFC-FIRMS DCRF
+  tasks:
+    task-I.2:
+      catches: Nominal catches
+      url: "somewhere to describe the task"
+      dsd_ref_url: "somewhere over www"
+      data_call_limited_on:
+        time: "data_time({{DATA_CALL_YEAR}}-1,{{DATA_CALL_YEAR}}-1)"
+        time_start: "data_time_start({{DATA_CALL_YEAR}}-1)"
+        time_end: "data_time_end({{DATA_CALL_YEAR}}-1)"
+        flagstate: "profile_flagstate()"
+    task-II.1:
+      name: Catch
+      url: "sometwhere to describe the task"
+      dsd_ref_url: "htts://"
+    task-II.2:
+      name: Effort
+      url: "sometwhere to describe the task"
+      dsd_ref_url: "somewhere over www"
+
+dbi:
+  drv: Postgres
+  dbname: dcf
+  host: localhost
+  port: 5432
+  user: postgres
+  password: postgres

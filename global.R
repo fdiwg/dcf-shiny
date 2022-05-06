@@ -17,7 +17,8 @@ loadAppPackages()
 #config
 #---------------------------------------------------------------------------------------
 #default config_file path for DEPLOYMENT
-config_file <- "/etc/dcf-shiny/config.yml"
+#config_file <- "/etc/dcf-shiny/config.yml"
+config_file <- file.path(getwd(), "configs/wecafc-firms-rdb.yml")
 
 #local configuration
 #If you are an R developer, you need to create a .REnviron file (no file extension) in /dcf-shiny dir
