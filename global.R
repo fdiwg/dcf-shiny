@@ -65,6 +65,10 @@ fetchProfile <- function(jwt){
   }
   out_jwt$context_resource_access <- out_jwt$resource_access[[1]]
   out_jwt$jwt <- jwt
+  
+  #TODO enrich profile with other fields (flagstate, organization)
+  out_jwt$flagstate <- "FRA"
+  
   return(out_jwt)
 }
 
