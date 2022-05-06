@@ -10,6 +10,7 @@ loadModuleProfile <- function(filename){
   profile <- jsonlite::read_json(filename)
   if(is.null(profile$enabled)) profile$enabled <- TRUE
   if(is.null(profile$menu)) profile$menu <- FALSE
+  if(is.null(profile$icon)) profile$icon <- "angle-double-right"
   return(profile)
 }
 
@@ -165,8 +166,7 @@ sidebarMenuFromModules <- function(config = NULL, profile){
         lapply(menu_subitem_profiles, function(item_profile){
           INFO("Loading shiny menu sub-item '%s'...", item_profile$module)
           if(!item_profile$enabled) return(NULL)
-          icon = shiny::icon("angle-double-right")
-          if(!is.null(item_profile$icon)) icon = shiny::icon(item_profile$icon)
+          icon = shiny::icon(item_profile$icon)
           menuSubItem(item_profile$title, tabName = item_profile$module, icon = icon)
         })
       ))

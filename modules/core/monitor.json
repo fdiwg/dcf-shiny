@@ -4,6 +4,7 @@
   "rank": 3,
   "name": "monitor",
   "title": "System monitor",
+  "icon": "gears",
   "restricted": true,
   "roles": ["system admin", "r-studio"]
 }
