@@ -3,6 +3,13 @@ language: en
 dcf:
   name: Regional Data Base (RDB)
   context: WECAFC-FIRMS DCRF
+  user_properties:
+    country:
+      enabled: true
+      codelist_ref_url: ""
+    organization:
+      enabled: false
+      codelist_ref_url: ""
   tasks:
     task-I.2:
       catches: Nominal catches

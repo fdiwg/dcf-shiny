@@ -1,3 +1,36 @@
+#read_dcf_config
+read_dcf_config <- function(file){
+  
+  cfg <- suppressWarnings(yaml::read_yaml(config_file))
+  
+  #language
+  if(is.null(cfg$language)) cfg$language <- "en"
+  
+  #user_properties
+  if(!is.null(cfg$dcf$user_properties)){
+    for(user_prop_name in names(cfg$dcf$user_properties)){
+      user_prop <- cfg$dcf$user_properties[[user_prop_name]]
+      if(is.null(user_prop$enabled)){
+        user_prop$enabled <- TRUE
+        cfg$dcf$user_properties[[user_prop_name]]$enabled <- TRUE
+      }
+      if(user_prop$enabled){
+        if(is.null(user_prop$codelist_ref_url)){
+          stop(sprintf("No codelist ref URL for user property '%s'", user_prop_name))
+        }
+        cfg$dcf$user_properties[[user_prop_name]]$codelist_ref <- readr::read_csv(user_prop$codelist_ref_url)
+      }
+    }
+  }
+  
+  return(cfg)
+}
+
+#getUserProperties
+getUserProperties <- function(config, name){
+  return(config$dcf$user_properties[[name]]$codelist_ref)
+}
+
 #getTasks
 getTasks <- function(config){
   tasks <- config$dcf$tasks
