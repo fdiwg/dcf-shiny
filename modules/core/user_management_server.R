@@ -180,7 +180,7 @@ user_management_server <- function(id, parent.session, config, profile, pool){
           stringsAsFactors = FALSE
         )
         out_vre <- httr::GET("https://api.d4science.org/rest/2/users/get-all-fullnames-and-usernames",
-                             httr::add_headers("Authorization" = paste("Bearer", profile$access$access_token)))
+                             httr::add_headers("Authorization" = paste("Bearer", PROFILE$access$access_token)))
         if(httr::status_code(out_vre)==200){
           out_c <- content(out_vre)$result
           out_users <- data.frame(
