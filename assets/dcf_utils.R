@@ -42,7 +42,6 @@ getTasks <- function(config){
 #eval_variable_expression
 eval_variable_expression <- function(str){
   eval_str <- eval(parse(text = whisker::whisker.render(str, as.list(Sys.getenv()))))
-  eval_str <- eval(parse(text = eval_str))
   return(eval_str)
 }
 #data_time
