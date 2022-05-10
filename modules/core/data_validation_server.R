@@ -25,7 +25,7 @@ data_validation_server <- function(id, parent.session, config, profile, pool){
                        label="Data format",
                        multiple = F,
                        choices = c("Simplified"="simplified",
-                                   "Completed"="completed"),
+                                   "Generic"="generic"),
                        selected=NULL,
                        options = list(
                          placeholder = "Please select a format",
@@ -80,7 +80,7 @@ data_validation_server <- function(id, parent.session, config, profile, pool){
         })
       
       observeEvent(input$run,{
-        rules<-"https://data.d4science.net/NQZP"
+        rules<-"https://data.d4science.net/XXJU"
         out<-validate_task(file=input$file$datapath,format=input$format,rules=rules)
         req(out)
         
@@ -155,7 +155,7 @@ data_validation_server <- function(id, parent.session, config, profile, pool){
               )
             ),
             br(),
-            h3("COMPLIANCE SUMMARY"),
+            h3("VALIDITY SUMMARY"),
             br(),
             fluidRow(column(4,offset = 4,DTOutput(ns("summary")))),
             h3("DETAILS"),
