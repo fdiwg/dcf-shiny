@@ -26,7 +26,7 @@ data_call_server <- function(id, parent.session, config, profile, pool){
         insert_sql <- sprintf(
           "INSERT INTO dcf_data_call(id_data_call, task_id, date_start, date_end, status, creator_id, creation_date) 
            VALUES (%s, '%s', '%s', '%s', '%s', '%s', '%s');", 
-           idx, task, as(start,"character"), as(end,"character"), status, PROFILE$preferred_username, as(creation_date, "character")
+           idx, task, as(start,"character"), as(end,"character"), status, profile$preferred_username, as(creation_date, "character")
         )
         out_sql <- try(DBI::dbSendQuery(conn, insert_sql))
         created <- !is(out_sql, "try-error")
@@ -46,7 +46,7 @@ data_call_server <- function(id, parent.session, config, profile, pool){
         update_sql <- sprintf("UPDATE dcf_data_call 
                                SET date_start = '%s', date_end = '%s', status = '%s', updater_id = '%s', update_date = '%s' 
                                WHERE id_data_call = %s", 
-                              as(start,"character"), as(end,"character"), status, PROFILE$preferred_username, 
+                              as(start,"character"), as(end,"character"), status, profile$preferred_username, 
                               as(update_date, "character"), id_data_call)
         out_sql <- try(DBI::dbSendQuery(conn, update_sql))
         updated <- !is(out_sql, "try-error")
