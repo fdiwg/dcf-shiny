@@ -18,7 +18,8 @@ loadAppPackages()
 #config
 #---------------------------------------------------------------------------------------
 #default config_file path for DEPLOYMENT
-config_file <- "/etc/dcf-shiny/config.yml"
+#config_file <- "/etc/dcf-shiny/config.yml"
+config_file <- file.path(getwd(), "configs/prod/wecafc-firms-rdb.yml")
 
 #local configuration
 #If you are an R developer, you need to create a .REnviron file (no file extension) in /dcf-shiny dir
@@ -26,10 +27,7 @@ config_file <- "/etc/dcf-shiny/config.yml"
 #DCF_SHINY_CONFIG=<your config path>
 local_config_file <- Sys.getenv("DCF_SHINY_CONFIG")
 if(nzchar(local_config_file)) config_file <- local_config_file
-CONFIG <- suppressWarnings(yaml::read_yaml(config_file))
-
-#language (in case not part of configuration)
-if(is.null(CONFIG$language)) CONFIG$language <- "en"
+CONFIG <- read_dcf_config(file = config_file)
 
 #DB connections
 #---------------------------------------------------------------------------------------
@@ -65,6 +63,10 @@ fetchProfile <- function(jwt){
   }
   out_jwt$context_resource_access <- out_jwt$resource_access[[1]]
   out_jwt$jwt <- jwt
+  
+  #TODO enrich profile with other fields (flagstate, organization)
+  out_jwt$flagstate <- "FRA"
+  
   return(out_jwt)
 }
 

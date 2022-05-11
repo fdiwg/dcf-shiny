@@ -5,21 +5,31 @@ listModuleProfiles <- function(config = NULL){
   return(default_module_profiles)
 }
 
+#loadModuleProfile
+loadModuleProfile <- function(filename){
+  profile <- jsonlite::read_json(filename)
+  if(is.null(profile$enabled)) profile$enabled <- TRUE
+  if(is.null(profile$menu)) profile$menu <- FALSE
+  if(is.null(profile$icon)) profile$icon <- "angle-double-right"
+  return(profile)
+}
+
 #loadModuleScripts
 loadModuleScripts <- function(config = NULL){
   default_module_profiles <- listModuleProfiles(config)
   modules <- data.frame(
+    filename = default_module_profiles,
     name = sapply(default_module_profiles, function(x){unlist(strsplit(unlist(strsplit(x, paste0(dirname(x),"/")))[2], ".json"))[1]}),
     dirname = sapply(default_module_profiles, dirname),
     stringsAsFactors = FALSE
   )
   for(i in 1:nrow(modules)){
     module <- modules[i,]
-    enabled = TRUE
+    module_profile <- loadModuleProfile(module$filename)
     module_config = config$modules[[module$name]]
     has_config = !is.null(module_config)
-    if(has_config) if(!is.null(module_config$enabled)) enabled = module_config$enabled
-    if(enabled){
+    if(has_config) if(!is.null(module_config$enabled)) module_profile$enabled = module_config$enabled
+    if(module_profile$enabled && !module_profile$menu){
       INFO("Loading shiny module '%s' scripts...", module$name)
       source(file.path(module$dirname, paste0(module$name, "_server.R")))
       source(file.path(module$dirname, paste0(module$name, "_ui.R")))
@@ -34,9 +44,9 @@ loadModuleServers <- function(parent.session, config, profile, pool){
   default_module_profiles <- listModuleProfiles(config)
   for(module_profile in default_module_profiles){
     module <- unlist(strsplit(unlist(strsplit(module_profile, paste0(dirname(module_profile),"/")))[2], ".json"))[1]
-    outp <- jsonlite::read_json(module_profile)
-    if(outp$type != "internal"){
-      enabled = TRUE
+    outp <- loadModuleProfile(module_profile)
+    if(outp$type != "internal" && !outp$menu){
+      enabled = outp$enabled
       if(!is.null(outp$restricted)) if(outp$restricted) enabled <- any(sapply(profile$context_resource_access$roles, function(x){x %in% outp$roles}))
       module_config = config$modules[[module]]
       has_config = !is.null(module_config)
@@ -64,8 +74,8 @@ loadModuleUIs <- function(config = NULL, profile){
   module_uis <- lapply(default_module_profiles, function(module_profile){
     out <- NULL
     module <- unlist(strsplit(unlist(strsplit(module_profile, paste0(dirname(module_profile),"/")))[2], ".json"))[1]
-    outp <- jsonlite::read_json(module_profile)
-    if(outp$type != "internal"){
+    outp <- loadModuleProfile(module_profile)
+    if(outp$type != "internal" && !outp$menu){
       enabled = TRUE
       if(!is.null(outp$restricted)) if(outp$restricted) enabled <- any(sapply(profile$context_resource_access$roles, function(x){x %in% outp$roles}))
       module_config = config$modules[[module]]
@@ -101,11 +111,10 @@ sidebarMenuFromModules <- function(config = NULL, profile){
   module_profiles = lapply(default_module_profiles, function(module_profile){
     #read module profile
     module_profile_name <- unlist(strsplit(unlist(strsplit(module_profile, paste0(dirname(module_profile),"/")))[2], ".json"))[1]
-    outp <- jsonlite::read_json(module_profile)
+    outp <- loadModuleProfile(module_profile)
     outp$source <- module_profile
     outp$module <- module_profile_name
-    outp$enabled <- TRUE
-    if(outp$restricted) outp$enabled <- any(sapply(profile$context_resource_access$roles, function(x){x %in% outp$roles}))
+    if(!is.null(outp$restricted)) if(outp$restricted) outp$enabled <- any(sapply(profile$context_resource_access$roles, function(x){x %in% outp$roles}))
     #overwrite with config module definition
     m_config <- config$modules[[outp$module]]
     if(!is.null(m_config)){
@@ -125,9 +134,10 @@ sidebarMenuFromModules <- function(config = NULL, profile){
   
   #default structure
   default_structure_menu_items <- module_profiles[sapply(module_profiles, function(x){x$type == "item"})]
-  default_structure_menu_items <- module_profiles[order(sapply(module_profiles, function(x){x$rank}))]
+  default_structure_menu_items <- default_structure_menu_items[order(sapply(default_structure_menu_items, function(x){x$rank}))]
   structure_menu_items <- default_structure_menu_items
   names(structure_menu_items) <- sapply(structure_menu_items, function(x){x$name})
+  print(structure_menu_items)
   #overwrite with custom structure
   if(!is.null(config$structure)) structure_menu_items <- config$structure
   
@@ -141,18 +151,22 @@ sidebarMenuFromModules <- function(config = NULL, profile){
 
     #profiles of subitem modules associated to this menu item
     menu_subitem_profiles <- module_profiles[sapply(module_profiles, function(x){x$type == "subitem"})]
-    if(length(menu_subitem_profiles)>0) menu_subitem_profiles <- module_profiles[sapply(menu_subitem_profiles, function(x){x$parent == menu_item_name})]
-    if(length(menu_subitem_profiles)>0) menu_subitem_profiles <- menu_item_profiles[order(sapply(menu_subitem_profiles, function(x){ifelse(!is.null(x$rank), x$rank, 1)}))]
+    if(length(menu_subitem_profiles)>0) menu_subitem_profiles <- menu_subitem_profiles[sapply(menu_subitem_profiles, function(x){
+      filtered <- !is.null(x$parent)
+      if(filtered) filtered <- x$parent == menu_item_name
+      filtered
+    })]
+    if(length(menu_subitem_profiles)>0) menu_subitem_profiles <- menu_subitem_profiles[order(sapply(menu_subitem_profiles, function(x){ifelse(!is.null(x$rank), x$rank, 1)}))]
     #ui for menu item
     if(length(menu_subitem_profiles)>0){
+      print(menu_subitem_profiles)
       INFO("Loading shiny menu sub-items for '%s'...", menu_item_name)
       do.call("menuItem", c(
         text = menu_item$title, tabName = menu_item_name,
-        lapply(menu_item_profiles, function(item_profile){
+        lapply(menu_subitem_profiles, function(item_profile){
           INFO("Loading shiny menu sub-item '%s'...", item_profile$module)
           if(!item_profile$enabled) return(NULL)
-          icon = shiny::icon("angle-double-right")
-          if(!is.null(item_profile$icon)) icon = shiny::icon(item_profile$icon)
+          icon = shiny::icon(item_profile$icon)
           menuSubItem(item_profile$title, tabName = item_profile$module, icon = icon)
         })
       ))

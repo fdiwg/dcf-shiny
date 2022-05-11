@@ -1,8 +1,10 @@
 {
-  "type": "item",
-  "rank": 4,
+  "parent": "admin",
+  "type": "subitem",
+  "rank": 3,
   "name": "monitor",
   "title": "System monitor",
+  "icon": "gears",
   "restricted": true,
   "roles": ["system admin", "r-studio"]
 }

@@ -18,6 +18,7 @@
     {"package": "RPostgres", "version": "1.2.0", "repos": "https://cran.r-project.org"},
     {"package": "uuid", "version": "1.0-4", "repos": "https://cran.r-project.org"},
     {"package": "DT", "version": "0.22", "repos": "https://cran.r-project.org"},
+    {"package": "whisker", "version": "0.4", "repos": "https://cran.r-project.org"},
     {"repo": "eblondel/d4storagehub4R", "from": "github"},
     {"repo": "eblondel/ows4R", "from": "github"}
   ]

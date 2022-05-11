@@ -1,10 +1,10 @@
 {
-  "parent": "data",
+  "parent": "admin",
   "type": "subitem",
+  "name": "user_management",
+  "title": "User management",
+  "icon": "users",
   "rank": 1,
-  "name": "data_validation",
-  "title": "Data validation and share",
   "restricted": true,
   "roles": ["regional data manager", "system admin", "r-studio"]
 }
-
