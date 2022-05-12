@@ -14,40 +14,18 @@ source("assets/dcf_utils.R")
 #---------------------------------------------------------------------------------------
 loadAppPackages()
 
-#config
-#---------------------------------------------------------------------------------------
-#default config_file path for DEPLOYMENT
-#config_file <- "/etc/dcf-shiny/config.yml"
-config_file <- file.path(getwd(), "configs/prod/wecafc-firms-rdb.yml")
-
-#local configuration
-#If you are an R developer, you need to create a .REnviron file (no file extension) in /dcf-shiny dir
-#The file should include the local path for your shiny config file in that way:
-#DCF_SHINY_CONFIG=<your config path>
-local_config_file <- Sys.getenv("DCF_SHINY_CONFIG")
-if(nzchar(local_config_file)) config_file <- local_config_file
-CONFIG <- read_dcf_config(file = config_file)
-
-#DB connections
-#---------------------------------------------------------------------------------------
-POOL <- try(pool::dbPool(
-  drv = DBI::dbDriver(CONFIG$dbi$drv),
-  dbname = CONFIG$dbi$dbname,
-  host = CONFIG$dbi$host,
-  port = CONFIG$dbi$port,
-  user = CONFIG$dbi$user,
-  password = CONFIG$dbi$password
-))
-
 #global variables / environment
 #---------------------------------------------------------------------------------------
-fetchProfile <- function(jwt, config){
+#fetchProfile
+fetchProfile <- function(jwt){
   (strings <- strsplit(jwt, ".", fixed = TRUE)[[1]])
   out_jwt <- jsonlite::parse_json(rawToChar(jose::base64url_decode(strings[2])))
   out_jwt$expired <- as(Sys.time(), "numeric") > out_jwt$exp
   out_jwt$jwt <- jwt
-  out_jwt$vre_resource_access <- out_jwt$resource_access[[config$dcf$vre_resource_access]]
-  out_jwt$shiny_resource_access <- out_jwt$resource_access[[config$dcf$shiny_resource_access]]
+  
+  out_jwt$vre_context <- names(out_jwt$resource_access)[startsWith(names(out_jwt$resource_access), "%2Fd4science.research-infrastructures.eu")][[1]]
+  out_jwt$vre_resource_access <- out_jwt$resource_access[[out_jwt$vre_context]]
+  out_jwt$shiny_resource_access <- out_jwt$resource_access[["dcf-shiny"]]
   
   if(!out_jwt$expired){
     req <- httr::with_verbose(httr::POST(
@@ -56,7 +34,7 @@ fetchProfile <- function(jwt, config){
       add_headers("Authorization" = paste("Bearer", jwt)),
       body = list(
         grant_type = I("urn:ietf:params:oauth:grant-type:uma-ticket"),
-        audience = URLencode(config$dcf$vre_resource_access, reserved = TRUE)
+        audience = URLencode(out_jwt$vre_context, reserved = TRUE)
       )
     ))
     if(httr::status_code(req)==200){
@@ -71,7 +49,37 @@ fetchProfile <- function(jwt, config){
 }
 
 jwt <- Sys.getenv("SHINYPROXY_OIDC_ACCESS_TOKEN")
-PROFILE <- fetchProfile(jwt, config = CONFIG)
+PROFILE <- fetchProfile(jwt)
+
+#TODO load config from ICPROXY using jwt
+#---------------------------------------------------------------------------------------
+#CONFIG <- read_dcf_config(profile = PROFILE)
+
+#TODO current config from file, next to get from Workspace URL inherited from ICPROXY
+#---------------------------------------------------------------------------------------
+#default config_file path for DEPLOYMENT
+#config_file <- "/etc/dcf-shiny/config.yml"
+config_file <- file.path(getwd(), "configs/prod/wecafc-firms-rdb.yml")
+
+#local configuration
+#If you are an R developer, you need to create a .REnviron file (no file extension) in /dcf-shiny dir
+#The file should include the local path for your shiny config file in that way:
+#DCF_SHINY_CONFIG=<your config path>
+local_config_file <- Sys.getenv("DCF_SHINY_CONFIG")
+if(nzchar(local_config_file)) config_file <- local_config_file
+CONFIG <- read_dcf_config(file = config_file)
+
+
+#DB connections
+#---------------------------------------------------------------------------------------
+POOL <- try(pool::dbPool(
+  drv = DBI::dbDriver(CONFIG$dbi$drv),
+  dbname = CONFIG$dbi$dbname,
+  host = CONFIG$dbi$host,
+  port = CONFIG$dbi$port,
+  user = CONFIG$dbi$user,
+  password = CONFIG$dbi$password
+))
 
 #scripts
 #---------------------------------------------------------------------------------------

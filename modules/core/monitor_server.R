@@ -41,7 +41,9 @@ monitor_server <- function(id, parent.session, config, profile, pool){
                
                "DataMiner (WPS)" = {
                  status <- FALSE
-                 icproxy_req <- httr::GET(sprintf("https://registry.d4science.org/icproxy/gcube/service/ServiceEndpoint/DataAnalysis/DataMiner?gcube-scope=%s", config$dcf$vre_resource_access))
+                 icproxy_req <- httr::GET(sprintf("https://registry.d4science.org/icproxy/gcube/service/ServiceEndpoint/DataAnalysis/DataMiner"),
+                   httr::add_headers("Authorization" = paste("Bearer", profile$access$access_token))
+                 )
                  status <- httr::status_code(icproxy_req) == 200
                  if(status){
                    icproxy <- XML::xmlParse(httr::content(icproxy_req, "text"))
