@@ -15,7 +15,48 @@ source("assets/validate_task.R")
 #---------------------------------------------------------------------------------------
 loadAppPackages()
 
-#config
+#global variables / environment
+#---------------------------------------------------------------------------------------
+#fetchProfile
+fetchProfile <- function(jwt){
+  (strings <- strsplit(jwt, ".", fixed = TRUE)[[1]])
+  out_jwt <- jsonlite::parse_json(rawToChar(jose::base64url_decode(strings[2])))
+  out_jwt$expired <- as(Sys.time(), "numeric") > out_jwt$exp
+  out_jwt$jwt <- jwt
+  
+  out_jwt$vre_context <- names(out_jwt$resource_access)[startsWith(names(out_jwt$resource_access), "%2Fd4science.research-infrastructures.eu")][[1]]
+  out_jwt$vre_resource_access <- out_jwt$resource_access[[out_jwt$vre_context]]
+  out_jwt$shiny_resource_access <- out_jwt$resource_access[["dcf-shiny"]]
+  
+  if(!out_jwt$expired){
+    req <- httr::with_verbose(httr::POST(
+      "https://accounts.d4science.org/auth/realms/d4science/protocol/openid-connect/token",
+      encode = "form",
+      add_headers("Authorization" = paste("Bearer", jwt)),
+      body = list(
+        grant_type = I("urn:ietf:params:oauth:grant-type:uma-ticket"),
+        audience = URLencode(out_jwt$vre_context, reserved = TRUE)
+      )
+    ))
+    if(httr::status_code(req)==200){
+      out_jwt$access <- content(req)
+    }
+  }
+  
+  #TODO enrich profile with other fields (flagstate, organization)
+  out_jwt$flagstate <- "FRA"
+  
+  return(out_jwt)
+}
+
+jwt <- Sys.getenv("SHINYPROXY_OIDC_ACCESS_TOKEN")
+PROFILE <- fetchProfile(jwt)
+
+#TODO load config from ICPROXY using jwt
+#---------------------------------------------------------------------------------------
+#CONFIG <- read_dcf_config(profile = PROFILE)
+
+#TODO current config from file, next to get from Workspace URL inherited from ICPROXY
 #---------------------------------------------------------------------------------------
 #default config_file path for DEPLOYMENT
 #config_file <- "/etc/dcf-shiny/config.yml"
@@ -29,6 +70,7 @@ local_config_file <- Sys.getenv("DCF_SHINY_CONFIG")
 if(nzchar(local_config_file)) config_file <- local_config_file
 CONFIG <- read_dcf_config(file = config_file)
 
+
 #DB connections
 #---------------------------------------------------------------------------------------
 POOL <- try(pool::dbPool(
@@ -39,39 +81,6 @@ POOL <- try(pool::dbPool(
   user = CONFIG$dbi$user,
   password = CONFIG$dbi$password
 ))
-
-#global variables / environment
-#---------------------------------------------------------------------------------------
-fetchProfile <- function(jwt){
-  (strings <- strsplit(jwt, ".", fixed = TRUE)[[1]])
-  out_jwt <- jsonlite::parse_json(rawToChar(jose::base64url_decode(strings[2])))
-  out_jwt$expired <- as(Sys.time(), "numeric") > out_jwt$exp
-  out_jwt$context <- names(out_jwt$resource_access)[1]
-  if(!out_jwt$expired){
-    req <- httr::with_verbose(httr::POST(
-      "https://accounts.d4science.org/auth/realms/d4science/protocol/openid-connect/token",
-      encode = "form",
-      add_headers("Authorization" = paste("Bearer", jwt)),
-      body = list(
-        grant_type = I("urn:ietf:params:oauth:grant-type:uma-ticket"),
-        audience = URLencode(out_jwt$context, reserved = T)
-      )
-    ))
-    if(httr::status_code(req)==200){
-      out_jwt$access <- content(req)
-    }
-  }
-  out_jwt$context_resource_access <- out_jwt$resource_access[[1]]
-  out_jwt$jwt <- jwt
-  
-  #TODO enrich profile with other fields (flagstate, organization)
-  out_jwt$flagstate <- "FRA"
-  
-  return(out_jwt)
-}
-
-jwt <- Sys.getenv("SHINYPROXY_OIDC_ACCESS_TOKEN")
-PROFILE <- fetchProfile(jwt)
 
 #scripts
 #---------------------------------------------------------------------------------------
