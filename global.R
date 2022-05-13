@@ -25,7 +25,7 @@ fetchProfile <- function(jwt){
   
   vre_contexts <- names(out_jwt$resource_access)[startsWith(names(out_jwt$resource_access), "%2Fd4science.research-infrastructures.eu")]
   if(length(vre_contexts)==0) stop("No VRE context available!")
-  out_jwt$vre_context <- vre_context[[1]]
+  out_jwt$vre_context <- vre_contexts[[1]]
   out_jwt$vre_resource_access <- out_jwt$resource_access[[out_jwt$vre_context]]
   out_jwt$shiny_resource_access <- out_jwt$resource_access[["dcf-shiny"]]
   
