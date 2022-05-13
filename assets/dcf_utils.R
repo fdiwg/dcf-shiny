@@ -39,6 +39,12 @@ getTasks <- function(config){
   return(task_list)
 }
 
+#getTask
+getTask <- function(config,id){
+  task <- config$dcf$tasks[[id]]
+  return(task)
+}
+
 #eval_variable_expression
 eval_variable_expression <- function(str){
   eval_str <- eval(parse(text = whisker::whisker.render(str, as.list(Sys.getenv()))))

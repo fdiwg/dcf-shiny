@@ -208,7 +208,9 @@ data_validation2_server <- function(id, parent.session, config, profile, pool){
       })
       
       observeEvent(input$goGlobValid,{
-        rules<-"https://data.d4science.net/XXJU"
+        taskProfil<-getTask(config,id=input$task)
+        taskRules<-taskProfil$dsd_ref_url
+        taskName<-taskProfil$name
         
         appendTab(inputId = "tabstest",
                   session = parent.session,
@@ -291,7 +293,7 @@ data_validation2_server <- function(id, parent.session, config, profile, pool){
                                     p(strong("Date of Report : "),Sys.Date())
                              ),
                              column(6,style = "border: 1px solid black;",
-                                    p(strong("Task Name: "),input$task),
+                                    p(strong("Task Name: "),taskName),
                                     p(strong("File : "),input$file$name)
                              ),
                              column(3,style = "border: 1px solid black;",

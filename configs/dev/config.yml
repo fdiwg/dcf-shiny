@@ -14,7 +14,7 @@ dcf:
       codelist_ref_url: ""
   tasks:
     task-I.2:
-      catches: Nominal catches
+      name: Nominal catches
       url: "somewhere to describe the task"
       dsd_ref_url: "somewhere over www"
       data_call_limited_on:
