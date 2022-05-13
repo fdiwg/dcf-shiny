@@ -1,0 +1,10 @@
+{
+  "parent": "data",
+  "type": "subitem",
+  "rank": 2,
+  "name": "data_validation2",
+  "title": "Data validation test",
+  "restricted": true,
+  "roles": ["regional data manager", "system admin", "r-studio"]
+}
+
