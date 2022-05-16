@@ -5,6 +5,6 @@
   "name": "data_validation2",
   "title": "Data validation test",
   "restricted": true,
-  "roles": ["regional data manager", "system admin", "r-studio"]
+  "roles": ["country data manager", "regional data manager", "system admin", "r-studio"]
 }
 

@@ -24,9 +24,13 @@ data_validation2_server <- function(id, parent.session, config, profile, pool){
                       type="pills",
                       tabPanel(title="Home",
                                value="home",
-                               h2("Welcome on validation and upload module"),
-                               p("A descriptive text to guide the user"),
-                               p("If you are ready click on 'Start'"),
+                               h2("Welcome to the Data validation and Submission module"),
+                               p("Within this module you you will be able to:"),
+                               tags$ul(
+                                 tags$li("Check the validity of your data against standards (CWP, FIRMS, etc)"),
+                                 tags$li("Submit your data as part of data calls")
+                               ),
+                               p("If you are ready, click on 'Start'"),
                                actionButton(ns("start"),"Start")
                       )
           )
@@ -153,13 +157,13 @@ data_validation2_server <- function(id, parent.session, config, profile, pool){
           if(nrow(datacall)==1){
             Sys.setenv(DATA_CALL_YEAR = as.integer(format(datacall$creation_date, "%Y")))
             dataCall<-dataCall(TRUE)
-            output$dataCallMessage<-renderUI({tags$span(shiny::icon(c('check-circle')), "A data call is actually open for this task", style="color:green;")})
+            output$dataCallMessage<-renderUI({tags$span(shiny::icon(c('check-circle')), "A data call is currently open for this task", style="color:green;")})
           }
           
           if(nrow(datacall)==0){
             dataCall<-dataCall(FALSE)
             Sys.unsetenv("DATA_CALL_YEAR")
-            output$dataCallMessage<-renderUI({tags$span(shiny::icon(c('exclamation-triangle')), "No data call is actually open for this task, your dataset could only be test for validation but not send to manager", style="color:orange;")})
+            output$dataCallMessage<-renderUI({tags$span(shiny::icon(c('exclamation-triangle')), "No data call is currently open for this task, your dataset can only be tested for validation but not sent to manager", style="color:orange;")})
           }
         }
         })
@@ -198,7 +202,7 @@ data_validation2_server <- function(id, parent.session, config, profile, pool){
                     value="preview",
                            tagList(
                              h2("Preview"),
-                             p("Please verify if data display correspond to the data to send. If it is please click 'Next' to submit this file, otherwise click 'Previous' to select a new file."),
+                             p("Please verify if data displayed correspond to the data to send. If it is, please click 'Next' to submit this file, otherwise click 'Previous' to select a new file."),
                              DTOutput(ns("dataView")),
                              #Previous
                              actionButton(ns("goData"),"Previous"),
@@ -217,7 +221,7 @@ data_validation2_server <- function(id, parent.session, config, profile, pool){
         appendTab(inputId = "tabstest",
                   session = parent.session,
                   select=TRUE,
-                  tabPanel(title="3-Respect with Standard Format", 
+                  tabPanel(title="3-Conformity with standards", 
                            value="standard_validation",
                            tagList(
                              h2("Conformity with standard format and content"),
@@ -228,7 +232,7 @@ data_validation2_server <- function(id, parent.session, config, profile, pool){
         
         showModal(modalDialog(
           title = "Validation in progress",
-          "please wait, your dataset is currently checked for validation ...",
+          "Please wait, validity of your dataset is currently being checked ...",
           easyClose = TRUE,
           footer = NULL
         ))
@@ -239,11 +243,12 @@ data_validation2_server <- function(id, parent.session, config, profile, pool){
           data<-standardizeNames(file=data,format=input$format,rules=taskRules)
           print(head(as.data.frame(data),2))
           if(input$format=="simplified"){
+            #TODO review with @abennici
             type<-switch(input$task,
                          "task-I.2"="catch",
                          "task-II.1"="catch",
                          "task-II.2"="effort")
-            data<-simplifiedToGeneric(file=data,type)
+            data<-simplifiedToGeneric(file=data, type)
             print(head(as.data.frame(data),2))
           }
           loadedData<-loadedData(data)
@@ -260,14 +265,14 @@ data_validation2_server <- function(id, parent.session, config, profile, pool){
         
         output$gbSummary<-DT::renderDT(server = FALSE, {
           x<-unique(subset(out$errors,select="rule"))
-          x$status<-"FAIL"
+          x$status<-"FAILED"
           test<-merge(out$tests,x,by.x="code",by.y="rule",all.x=T,all.y=F)
-          test[is.na(test)]<-"PASS"
+          test[is.na(test)]<-"PASSED"
           test[startsWith(test$code,"I"),]$status<-"WARNING" 
           test<-subset(test,select=-c(code))
-          test$icon<-ifelse(test$status=="PASS",paste0(tags$span(shiny::icon("check-circle"), title = "Pass", style = "color:green;"), collapse=""),
+          test$icon<-ifelse(test$status=="PASSED",paste0(tags$span(shiny::icon("check-circle"), title = "Passed", style = "color:green;"), collapse=""),
                             ifelse(test$status=="WARNING",paste0(tags$span(shiny::icon("exclamation-triangle"), title = "Warning", style = "color:orange;"), collapse=""),
-                                   paste0(tags$span(shiny::icon("times-circle"), title = "Fail", style = "color:red;"), collapse="")))
+                                   paste0(tags$span(shiny::icon("times-circle"), title = "Failed", style = "color:red;"), collapse="")))
           
           DT::datatable(
             test, 
@@ -277,8 +282,8 @@ data_validation2_server <- function(id, parent.session, config, profile, pool){
             options = list(dom = 't',
                            ordering=F,
                            columnDefs = list(list(className = 'dt-center', targets = 1:2))))%>%
-            formatStyle("status",target = 'row',backgroundColor = styleEqual(c("PASS","WARNING","FAIL"), c("#d3f4cc","#f5dfc0","#ffbfc1")))%>%
-            formatStyle("status", fontWeight = 'bold',color= styleEqual(c("PASS","WARNING","FAIL"), c("green","orange","red")))
+            formatStyle("status",target = 'row',backgroundColor = styleEqual(c("PASSED","WARNING","FAILED"), c("#d3f4cc","#f5dfc0","#ffbfc1")))%>%
+            formatStyle("status", fontWeight = 'bold',color= styleEqual(c("PASSED","WARNING","FAILED"), c("green","orange","red")))
           
         })
         
@@ -314,9 +319,9 @@ data_validation2_server <- function(id, parent.session, config, profile, pool){
           },
           br(),
           if(out$valid){
-            p("Congratulation your data passed the validation step. You can see below the details of analysis and click 'next'")
+            p("Congratulations! Your data passed the validation step. You can see below the data analysis details and click 'next'")
           }else{
-            p("Oops somethink seems to be incorect in your data. Please see below the details of analysis and click 'finish' to return to home page and try again.")
+            p("Oops somethink seems to be incorrect in your data. Please see below the data analysis details and click 'finish' to return to home page and try again.")
           },
           br(),
           fluidRow(
@@ -360,15 +365,15 @@ data_validation2_server <- function(id, parent.session, config, profile, pool){
         
       })
       
-      #TAB 4 - CONSISTANCY WITH DATA CALL
+      #TAB 4 - CONSISTENCY WITH DATA CALL
       #TAB 4 MANAGER
       observeEvent(input$goSpecValid,{
         
           taskSupplRules<-taskProperties()$data_call_limited_on
           data<-loadedData()
           showModal(modalDialog(
-            title = "Validation of consistancy with data call in progress",
-            "please wait, your dataset is currently checked for validation ...",
+            title = "Check consistency with the ongoing data call",
+            "Please wait, your dataset is currently checked vs. the ongoing data call ...",
             easyClose = TRUE,
             footer = NULL
           ))
@@ -379,10 +384,10 @@ data_validation2_server <- function(id, parent.session, config, profile, pool){
         appendTab(inputId = "tabstest",
                   session = parent.session,
                   select=TRUE,
-                  tabPanel(title="4-Consistancy with Data Call", 
+                  tabPanel(title="4-Consistency with data Call", 
                            value="specific_validation",
                            tagList(
-                             h2("Consistancy with data call"),
+                             h2("Consistency with data call"),
                              uiOutput(ns("callValidReport"))
                            )
                   )
@@ -404,8 +409,8 @@ data_validation2_server <- function(id, parent.session, config, profile, pool){
             options = list(dom = 't',
                            ordering=F,
                            columnDefs = list(list(className = 'dt-center', targets = 1:2))))%>%
-            formatStyle("status",target = 'row',backgroundColor = styleEqual(c("PASS","WARNING","FAIL","NOT TESTED"), c("#d3f4cc","#f5dfc0","#ffbfc1","#f0f0f0")))%>%
-            formatStyle("status", fontWeight = 'bold',color= styleEqual(c("PASS","WARNING","FAIL","NOT TESTED"), c("green","orange","red","grey")))
+            formatStyle("status",target = 'row',backgroundColor = styleEqual(c("PASSED","WARNING","FAILED","NOT TESTED"), c("#d3f4cc","#f5dfc0","#ffbfc1","#f0f0f0")))%>%
+            formatStyle("status", fontWeight = 'bold',color= styleEqual(c("PASSED","WARNING","FAILED","NOT TESTED"), c("green","orange","red","grey")))
           
         })
         
@@ -436,15 +441,15 @@ data_validation2_server <- function(id, parent.session, config, profile, pool){
         
         tagList(
           if(out$valid){
-            tags$span(shiny::icon(c('check-circle')), "Data is ready to be send", style="color:green;font-size: 300%")
+            tags$span(shiny::icon(c('check-circle')), "Data is ready to be submitted", style="color:green;font-size: 300%")
           }else{
-            tags$span(shiny::icon(c('times-circle')), "Data not respect data call specification", style="color:red;font-size: 300%")
+            tags$span(shiny::icon(c('times-circle')), "Data not is not consistent with the current data call", style="color:red;font-size: 300%")
           },
           br(),
           if(out$valid){
-            p("Congratulation your data is consistancy with the actual data call. You can see below the details of analysis and click 'next'")
+            p("Congratulations! Your data is consistent with the current data call. You can see below the data analysis details and click 'next'")
           }else{
-            p("Oops somethink seems to be incorect in your data. Please see below the details of analysis and click 'finish' to return to home page and try again.")
+            p("Oops somethink seems to be incorect in your data. Please see below the data analysis details and click 'finish' to return to home page and try again.")
           },
           fluidRow(
             column(6,
@@ -495,8 +500,8 @@ data_validation2_server <- function(id, parent.session, config, profile, pool){
                   select=TRUE,
                   tabPanel("6-Thank you", 
                            tagList(
-                             h2("Your data are submited"),
-                             p("Your data are now send click to 'Finish' to return to the menu."),
+                             h2("Your data has been submitted"),
+                             p("Your data has been sent, click to 'Finish' to return to the menu."),
                              #Close
                              actionButton(ns("close3"),"Finish")
                            )

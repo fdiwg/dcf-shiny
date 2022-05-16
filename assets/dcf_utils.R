@@ -701,13 +701,13 @@ validateCallRules<-function(file,rules){
       for(date in cond){
         errors<-rbind(errors,data.frame(type="ERROR",rule="SE01",row="-",column="time_start",category="date before allowed period",message=sprintf("At least one data is associate to the inconsistant date '%s' no respect data call's start date '%s'",date,rule)))
       }
-      if(tests[tests$code=="SE01",]$status!="FAIL"){
-        tests[tests$code=="SE01",]$status<-"FAIL"
+      if(tests[tests$code=="SE01",]$status!="FAILED"){
+        tests[tests$code=="SE01",]$status<-"FAILED"
         tests[tests$code=="SE01",]$icon<-paste0(tags$span(shiny::icon("times-circle"), title = "Fail", style = "color:red;"), collapse="")
       }
     }else{
-      if(tests[tests$code=="SE01",]$status!="FAIL"){
-        tests[tests$code=="SE01",]$status<-"PASS"
+      if(tests[tests$code=="SE01",]$status!="FAILED"){
+        tests[tests$code=="SE01",]$status<-"PASSED"
         tests[tests$code=="SE01",]$icon<-paste0(tags$span(shiny::icon("check-circle"), title = "Pass", style = "color:green;"), collapse="")
       }
     }
@@ -722,13 +722,13 @@ validateCallRules<-function(file,rules){
       for(date in cond){
         errors<-rbind(errors,data.frame(type="ERROR",rule="SE01",row="-",column="time_end",category="date after allowed period",message=sprintf("At least one data is associate to the inconsistant date '%s' no respect data call's end date '%s'",date,rule)))
       }
-      if(tests[tests$code=="SE01",]$status!="FAIL"){
-        tests[tests$code=="SE01",]$status<-"FAIL"
+      if(tests[tests$code=="SE01",]$status!="FAILED"){
+        tests[tests$code=="SE01",]$status<-"FAILED"
         tests[tests$code=="SE01",]$icon<-paste0(tags$span(shiny::icon("times-circle"), title = "Fail", style = "color:red;"), collapse="")
       }
     }else{
-      if(tests[tests$code=="SE01",]$status!="FAIL"){
-        tests[tests$code=="SE01",]$status<-"PASS"
+      if(tests[tests$code=="SE01",]$status!="FAILED"){
+        tests[tests$code=="SE01",]$status<-"PASSED"
         tests[tests$code=="SE01",]$icon<-paste0(tags$span(shiny::icon("check-circle"), title = "Pass", style = "color:green;"), collapse="")
       }
     }
@@ -736,13 +736,13 @@ validateCallRules<-function(file,rules){
     cond<-year(max(data_date))==year(rule)
     if(!cond){
       errors<-rbind(errors,data.frame(type="ERROR",rule="SE02",row="-",column="time_end",category="missing last year",message=sprintf("Last year requested by the data call is missing of data",year(rule))))
-      if(tests[tests$code=="SE02",]$status!="FAIL"){
-        tests[tests$code=="SE02",]$status<-"FAIL"
+      if(tests[tests$code=="SE02",]$status!="FAILED"){
+        tests[tests$code=="SE02",]$status<-"FAILED"
         tests[tests$code=="SE02",]$icon<-paste0(tags$span(shiny::icon("times-circle"), title = "Fail", style = "color:red;"), collapse="")
       }
     }else{
-      if(tests[tests$code=="SE02",]$status!="FAIL"){
-        tests[tests$code=="SE02",]$status<-"PASS"
+      if(tests[tests$code=="SE02",]$status!="FAILED"){
+        tests[tests$code=="SE02",]$status<-"PASSED"
         tests[tests$code=="SE02",]$icon<-paste0(tags$span(shiny::icon("check-circle"), title = "Pass", style = "color:green;"), collapse="")
       }
     }
@@ -766,7 +766,7 @@ validateCallRules<-function(file,rules){
         }
       }else{
         if(tests[tests$code=="SW01",]$status!="WARNING"){
-          tests[tests$code=="SW01",]$status<-"PASS"
+          tests[tests$code=="SW01",]$status<-"PASSED"
           tests[tests$code=="SW01",]$icon<-paste0(tags$span(shiny::icon("check-circle"), title = "Pass", style = "color:green;"), collapse="")
         }
       }
@@ -785,13 +785,13 @@ validateCallRules<-function(file,rules){
       for(date in cond){
         errors<-rbind(errors,data.frame(type="ERROR",rule="SE01",row="-",column="time",category="date before allowed period",message=sprintf("At least one data is associate to the inconsistant date '%s' no respect data call's start date '%s'",date,rule[1])))
       }
-      if(tests[tests$code=="SE01",]$status!="FAIL"){
-        tests[tests$code=="SE01",]$status<-"FAIL"
+      if(tests[tests$code=="SE01",]$status!="FAILED"){
+        tests[tests$code=="SE01",]$status<-"FAILED"
         tests[tests$code=="SE01",]$icon<-paste0(tags$span(shiny::icon("times-circle"), title = "Fail", style = "color:red;"), collapse="")
       }
     }else{
-      if(tests[tests$code=="SE01",]$status!="FAIL"){
-        tests[tests$code=="SE01",]$status<-"PASS"
+      if(tests[tests$code=="SE01",]$status!="FAILED"){
+        tests[tests$code=="SE01",]$status<-"PASSED"
         tests[tests$code=="SE01",]$icon<-paste0(tags$span(shiny::icon("check-circle"), title = "Pass", style = "color:green;"), collapse="")
       }
     }
@@ -801,13 +801,13 @@ validateCallRules<-function(file,rules){
       for(date in cond){
         errors<-rbind(errors,data.frame(type="ERROR",rule="SE01",row="-",column="time",category="date after allowed period",message=sprintf("At least one data is associate to the inconsistant date '%s' no respect data call's end date '%s'",date,rule[2])))
       }
-      if(tests[tests$code=="SE01",]$status!="FAIL"){
-        tests[tests$code=="SE01",]$status<-"FAIL"
+      if(tests[tests$code=="SE01",]$status!="FAILED"){
+        tests[tests$code=="SE01",]$status<-"FAILED"
         tests[tests$code=="SE01",]$icon<-paste0(tags$span(shiny::icon("times-circle"), title = "Fail", style = "color:red;"), collapse="")
       }
     }else{
-      if(tests[tests$code=="SE01",]$status!="FAIL"){
-        tests[tests$code=="SE01",]$status<-"PASS"
+      if(tests[tests$code=="SE01",]$status!="FAILED"){
+        tests[tests$code=="SE01",]$status<-"PASSED"
         tests[tests$code=="SE01",]$icon<-paste0(tags$span(shiny::icon("check-circle"), title = "Pass", style = "color:green;"), collapse="")
       }
     }
@@ -817,13 +817,13 @@ validateCallRules<-function(file,rules){
     
     if(!cond){
       errors<-rbind(errors,data.frame(type="ERROR",rule="SE02",row="-",column="time",category="missing last year",message=sprintf("Last year requested by the data call is missing of data",year(rule[2]))))
-      if(tests[tests$code=="SE02",]$status!="FAIL"){
-        tests[tests$code=="SE02",]$status<-"FAIL"
+      if(tests[tests$code=="SE02",]$status!="FAILED"){
+        tests[tests$code=="SE02",]$status<-"FAILED"
         tests[tests$code=="SE02",]$icon<-paste0(tags$span(shiny::icon("times-circle"), title = "Fail", style = "color:red;"), collapse="")
       }
     }else{
-      if(tests[tests$code=="SE02",]$status!="FAIL"){
-        tests[tests$code=="SE02",]$status<-"PASS"
+      if(tests[tests$code=="SE02",]$status!="FAILED"){
+        tests[tests$code=="SE02",]$status<-"PASSED"
         tests[tests$code=="SE02",]$icon<-paste0(tags$span(shiny::icon("check-circle"), title = "Pass", style = "color:green;"), collapse="")
       }
     }
@@ -843,7 +843,7 @@ validateCallRules<-function(file,rules){
         }
       }else{
         if(tests[tests$code=="SW01",]$status!="WARNING"){
-          tests[tests$code=="SW01",]$status<-"PASS"
+          tests[tests$code=="SW01",]$status<-"PASSED"
           tests[tests$code=="SW01",]$icon<-paste0(tags$span(shiny::icon("check-circle"), title = "Pass", style = "color:green;"), collapse="")
         }
       }
@@ -859,27 +859,27 @@ validateCallRules<-function(file,rules){
     cond<-length(data_flag)==1
     if(cond){
       cond<-data_flag==rule
-      if(tests[tests$code=="SE03",]$status!="FAIL"){
-        tests[tests$code=="SE03",]$status<-"PASS"
+      if(tests[tests$code=="SE03",]$status!="FAILED"){
+        tests[tests$code=="SE03",]$status<-"PASSED"
         tests[tests$code=="SE03",]$icon<-paste0(tags$span(shiny::icon("check-circle"), title = "Pass", style = "color:green;"), collapse="")
       }
       if(!cond){
         errors<-rbind(errors,data.frame(type="ERROR",rule="SE03",row="-",column="flagstate",category="unallowed flagstate",message=sprintf("flagstate declared '%s' not corresponding to your administrative flagestate '%s'",data_flag,rule)))
-        if(tests[tests$code=="SE03",]$status!="FAIL"){
-          tests[tests$code=="SE03",]$status<-"FAIL"
+        if(tests[tests$code=="SE03",]$status!="FAILED"){
+          tests[tests$code=="SE03",]$status<-"FAILED"
           tests[tests$code=="SE03",]$icon<-paste0(tags$span(shiny::icon("times-circle"), title = "Fail", style = "color:red;"), collapse="")
         }
       }else{
-        if(tests[tests$code=="SE03",]$status!="FAIL"){
-          tests[tests$code=="SE03",]$status<-"PASS"
+        if(tests[tests$code=="SE03",]$status!="FAILED"){
+          tests[tests$code=="SE03",]$status<-"PASSED"
           tests[tests$code=="SE03",]$icon<-paste0(tags$span(shiny::icon("check-circle"), title = "Pass", style = "color:green;"), collapse="")
         }
       }
       
     }else{
       errors<-rbind(errors,data.frame(type="ERROR",rule="SE03",row="-",column="flagstate",category="multiple flagstate",message=sprintf("More of one flagstate are declared")))
-      if(tests[tests$code=="SE03",]$status!="FAIL"){
-        tests[tests$code=="SE03",]$status<-"FAIL"
+      if(tests[tests$code=="SE03",]$status!="FAILED"){
+        tests[tests$code=="SE03",]$status<-"FAILED"
         tests[tests$code=="SE03",]$icon<-paste0(tags$span(shiny::icon("times-circle"), title = "Fail", style = "color:red;"), collapse="")
       }
     }

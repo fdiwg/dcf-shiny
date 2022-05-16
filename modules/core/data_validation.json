@@ -3,8 +3,8 @@
   "type": "subitem",
   "rank": 1,
   "name": "data_validation",
-  "title": "Data validation and share",
+  "title": "Data validation and Submission",
   "restricted": true,
-  "roles": ["regional data manager", "system admin", "r-studio"]
+  "roles": ["country data manager", "regional data manager", "system admin", "r-studio"]
 }
 
