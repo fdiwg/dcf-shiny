@@ -11,11 +11,6 @@ data_call_server <- function(id, parent.session, config, profile, pool){
         error = NULL
       )
       
-      #getDataCalls
-      getDataCalls <- function(pool){
-        DBI::dbReadTable(pool, "dcf_data_call")
-      }
-      
       #createDataCall
       createDataCall <- function(pool, task = "", start = Sys.Date(), end = Sys.Date(), status = "OPENED"){
         conn <- pool::poolCheckout(pool)
