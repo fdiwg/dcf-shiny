@@ -17,6 +17,15 @@ data_call_server <- function(id, parent.session, config, profile, pool){
         idx <- nrow(getDataCalls(pool))+1
         creation_date <- Sys.time()
         attr(creation_date, "tzone") <- "UTC"
+        
+        #check presence of data calls
+        open_calls <- getDataCalls(pool, task = task, status = "OPENED")
+        if(nrow(open_calls)>0){
+          created <- FALSE
+          attr(created, "error") <- sprintf("There is already one open data call open for task '%s'", task)
+          return(created)
+        }
+        
         #db management
         insert_sql <- sprintf(
           "INSERT INTO dcf_data_call(id_data_call, task_id, date_start, date_end, status, creator_id, creation_date) 
@@ -116,8 +125,9 @@ data_call_server <- function(id, parent.session, config, profile, pool){
                               dateInput(ns("data_call_form_end"), "End date", value = end),
                               selectInput(ns("data_call_form_status"), "Status", choices = list("OPENED", "CLOSED"), selected = "OPENED"),
                               actionButton(ns(sprintf("data_call_%s_go", form_action)), title_prefix),
+                              actionButton(ns("data_call_cancel"), "Cancel", style = "float:right;"),
                               uiOutput(ns("data_call_error")),
-                              easyClose = TRUE, footer = NULL ))
+                              easyClose = FALSE, footer = NULL ))
       }
       output$data_call_error <- renderUI({
         if(is.null(model$error)){
@@ -149,6 +159,8 @@ data_call_server <- function(id, parent.session, config, profile, pool){
       #renderDataCalls
       renderDataCalls <- function(data){
           
+          model$error <- NULL
+        
           uuids <- NULL
           if(!is.null(data)) if(nrow(data)>0) for(i in 1:nrow(data)){
             one_uuid = uuid::UUIDgenerate() 
@@ -234,6 +246,12 @@ data_call_server <- function(id, parent.session, config, profile, pool){
         }else{
           model$error <- attr(updated, "error")
         }
+      })
+      
+      #data call/cancel
+      observeEvent(input$data_call_cancel, {
+        model$error <- NULL
+        removeModal()
       })
       
       #-----------------------------------------------------------------------------------
