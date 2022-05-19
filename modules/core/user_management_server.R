@@ -70,11 +70,6 @@ user_management_server <- function(id, parent.session, config, profile, pool){
       #list of users in DB
       #list of users that have been already administrated in the DCF database
       
-      #getDBUsers
-      getDBUsers <- function(pool){
-        DBI::dbReadTable(pool, "dcf_users")
-      }
-      
       #dbuserTableHandler
       dbuserTableHandler <- function(data, uuids){
         

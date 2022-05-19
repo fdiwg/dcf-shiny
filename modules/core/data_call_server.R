@@ -155,6 +155,8 @@ data_call_server <- function(id, parent.session, config, profile, pool){
       observeEvent(input$data_call_add_go, {
         created <- createDataCall(
           pool = pool,
+          config = config,
+          profile = profile,
           task = input$data_call_form_task,
           start = input$data_call_form_start,
           end = input$data_call_form_end,

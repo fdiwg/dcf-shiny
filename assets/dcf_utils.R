@@ -61,7 +61,8 @@ closeExpiredDataCalls <- function(pool){
 }
 
 #createDataCall
-createDataCall <- function(pool, task = "", start = Sys.Date(), end = Sys.Date(), status = "OPENED"){
+createDataCall <- function(pool, task = "", start = Sys.Date(), end = Sys.Date(), status = "OPENED",
+                           config, profile){
   conn <- pool::poolCheckout(pool)
   idx <- nrow(getDataCalls(pool))+1
   creation_date <- Sys.time()
@@ -85,8 +86,37 @@ createDataCall <- function(pool, task = "", start = Sys.Date(), end = Sys.Date()
   created <- !is(out_sql, "try-error")
   if(!created){
     attr(created, "error") <- as(out_sql, "character")
+  }else{
+    INFO("Data call successfully created for task ID '%s'", task)
+    recipients <- getDBUsers(pool = pool)
+    if(status == "OPENED") if(nrow(recipients)>0){
+      INFO("Sending data call notification to DB users")
+      for(i in 1:nrow(recipients)){
+        recipient <- recipients[i,]
+        INFO("Sending data call notification to '%s'", recipient$username)
+        sendMessage(
+          subject = sprintf("[%s] New Data call open for %s task ID '%s'", config$dcf$name, config$dcf$context, task),
+          body = sprintf(
+            "Dear %s,
+            
+            As part of the %s (%s context), a new data call has been opened for the data task ID '%s'.
+            You are kindly invited to validate and submit your data before %s.
+            
+            Best regards,
+            The %s manager for %s
+                         
+            ",
+            recipient$fullname, 
+            config$dcf$name, config$dcf$context, task,
+            as(end,"character"),
+            config$dcf$name, config$dcf$context
+          ),
+          recipients = as.list(recipient$username),
+          profile = profile
+        )
+      }
+    }
   }
-  #email notification TODO
   return(created)
 }
 
