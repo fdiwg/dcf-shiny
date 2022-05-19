@@ -43,6 +43,23 @@ getDataCalls <- function(pool,status=NULL,tasks=NULL,period=NULL){
   return(data)
 }
 
+#updateDataCallStatus
+closeExpiredDataCalls <- function(pool){
+  conn <- pool::poolCheckout(pool)
+  update_date <- Sys.time()
+  attr(update_date, "tzone") <- "UTC"
+  update_sql <- sprintf("UPDATE dcf_data_call 
+                               SET status = 'CLOSED', updater_id = '%s', update_date = '%s' 
+                               WHERE date_end < '%s'", 
+                        "system", as(update_date, "character"), as(Sys.time(),"character"))
+  out_sql <- try(DBI::dbSendQuery(conn, update_sql))
+  updated <- !is(out_sql, "try-error")
+  if(!updated){
+    attr(updated, "error") <- as(out_sql, "character")
+  }
+  return(updated)
+}
+
 #getTasks
 getTasks <- function(config,withId=FALSE){
   tasks <- config$dcf$tasks
