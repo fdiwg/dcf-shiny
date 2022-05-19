@@ -6,29 +6,24 @@ read_dcf_config <- function(file){
   #language
   if(is.null(cfg$language)) cfg$language <- "en"
   
-  #user_properties
-  if(!is.null(cfg$dcf$user_properties)){
-    for(user_prop_name in names(cfg$dcf$user_properties)){
-      user_prop <- cfg$dcf$user_properties[[user_prop_name]]
-      if(is.null(user_prop$enabled)){
-        user_prop$enabled <- TRUE
-        cfg$dcf$user_properties[[user_prop_name]]$enabled <- TRUE
-      }
-      if(user_prop$enabled){
-        if(is.null(user_prop$codelist_ref_url)){
-          stop(sprintf("No codelist ref URL for user property '%s'", user_prop_name))
-        }
-        cfg$dcf$user_properties[[user_prop_name]]$codelist_ref <- readr::read_csv(user_prop$codelist_ref_url)
-      }
+  #reporting entity
+  reporting_entity <- cfg$dcf$reporting_entities
+  if(!is.null(reporting_entity)){
+    if(is.null(reporting_entity$name)){
+      stop("No name for reporting entity")
     }
+    if(is.null(reporting_entity$codelist_ref_url)){
+      stop(sprintf("No codelist ref URL for user property '%s'", reporting_entity$name))
+    }
+    cfg$dcf$reporting_entities$codelist_ref <- readr::read_csv(cfg$dcf$reporting_entities$codelist_ref_url)
   }
   
   return(cfg)
 }
 
-#getUserProperties
-getUserProperties <- function(config, name){
-  return(config$dcf$user_properties[[name]]$codelist_ref)
+#getReportingEntityCodes
+getReportingEntityCodes <- function(config){
+  return(config$dcf$reporting_entities$codelist_ref)
 }
 
 #getDataCalls
@@ -121,7 +116,8 @@ createDataCall <- function(pool, task = "", start = Sys.Date(), end = Sys.Date()
 }
 
 #updateDataCall
-updateDataCall <- function(pool, id_data_call, task = "", start = Sys.Date(), end = NULL, status = "OPENED"){
+updateDataCall <- function(pool, id_data_call, task = "", start = Sys.Date(), end = NULL, status = "OPENED",
+                           profile){
   conn <- pool::poolCheckout(pool)
   update_date <- Sys.time()
   attr(update_date, "tzone") <- "UTC"

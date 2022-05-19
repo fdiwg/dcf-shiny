@@ -176,6 +176,7 @@ data_call_server <- function(id, parent.session, config, profile, pool){
         id_call <- ""
         updated <- updateDataCall(
           pool = pool,
+          profile = profile,
           id_data_call = input$data_call_form_id,
           task = input$data_call_form_task,
           start = input$data_call_form_start,

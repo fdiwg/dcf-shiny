@@ -14,9 +14,8 @@ user_management_server <- function(id, parent.session, config, profile, pool){
       
       #user form
       showUserModal <- function(new = TRUE, id_user = NULL, username = NULL, fullname = NULL,
-                                country = NULL, organization = NULL){
-        if(!is.null(country)) if(country=="") country <- NULL
-        if(!is.null(organization)) if(organization=="") organization <- NULL
+                                reporting_entities = NULL){
+        if(!is.null(reporting_entities)) if(reporting_entities[1]=="") reporting_entities <- NULL
         title_prefix <- ifelse(new, "Add", "Modify")
         form_action <- tolower(title_prefix)
         showModal(
@@ -27,30 +26,37 @@ user_management_server <- function(id, parent.session, config, profile, pool){
             },
             shinyjs::disabled(textInput(ns("user_form_username"), value = username, label = "User name")),
             shinyjs::disabled(textInput(ns("user_form_fullname"), value = fullname, label = "Full name")),
-            if(config$dcf$user_properties$country$enabled){
-              selectizeInput(ns("user_form_country"), label = "User country", selected = country, choices = {
-                ref_country <- getUserProperties(config, "country")
-                country_choices <- ref_country$code
-                setNames(country_choices, ref_country$label)
-              },options = list( 
-                render = I("{
-                  item: function(item, escape) {
-                    var icon_href = 'https://countryflagsapi.com/png/'+item.value.toLowerCase();
-                    return '<div><img src=\"'+icon_href+'\" height=16 width=32/> ' + item.label + '</div>'; 
-                  },
-                  option: function(item, escape) { 
-                    var icon_href = 'https://countryflagsapi.com/png/'+item.value.toLowerCase();
-                    return '<div><img src=\"'+icon_href+'\" height=16 width=32/> ' + item.label + '</div>'; 
+            if(!is.null(config$dcf$reporting_entities)){
+              #special case for country/flagstate (to display flag)
+              if(config$dcf$reporting_entities$name %in% c("country", "flagstate")){
+                selectizeInput(ns("user_form_reporting_entities"), label = "Reporting entities", selected = reporting_entities, multiple = TRUE, 
+                  choices = {
+                    ref_entity <- getReportingEntityCodes(config)
+                    entity_choices <- ref_entity$code
+                    setNames(entity_choices, ref_entity$label)
+                  },options = list( 
+                    render = I("{
+                      item: function(item, escape) {
+                        var icon_href = 'https://countryflagsapi.com/png/'+item.value.toLowerCase();
+                        return '<div><img src=\"'+icon_href+'\" height=16 width=32/> ' + item.label + '</div>'; 
+                      },
+                      option: function(item, escape) { 
+                        var icon_href = 'https://countryflagsapi.com/png/'+item.value.toLowerCase();
+                        return '<div><img src=\"'+icon_href+'\" height=16 width=32/> ' + item.label + '</div>'; 
+                      }
+                    }"
+                  ))
+                )
+              }else{
+                selectInput(ns("user_form_reporting_entities"), label = "Reporting entities", selected = reporting_entities, multiple = TRUE,
+                  choices = {
+                    ref_entity <- getReportingEntityCodes(config)
+                    entity_choices <- ref_entity$code
+                    setNames(entity_choices, ref_entity$label)
                   }
-                }")
-              ))
-            },
-            if(config$dcf$user_properties$organization$enabled){
-              selectInput(ns("user_form_organization"), label = "User organization", selected = organization, choices = {
-                ref_org <- getUserProperties(config, "organization")
-                org_choices <- ref_org$code
-                setNames(org_choices, ref_org$label)
-              })
+                )
+              }
+              
             },
             actionButton(ns(sprintf("user_%s_go", form_action)), title_prefix),
             uiOutput(ns("user_error")),
@@ -79,8 +85,7 @@ user_management_server <- function(id, parent.session, config, profile, pool){
               "User ID" = data[i,"id_user"],
               "User name" = data[i,"username"],
               "Full name" = data[i,"fullname"],
-              "Country" = data[i,"country"],
-              "Organization" = data[i,"organization"],
+              "Reporting entities" = data[i,"reporting_entities"],
               Actions = as(actionButton(inputId = ns(paste0('button_edit_', uuids[i])), class="btn btn-info", style = "margin-right: 2px;",
                                         title = "Save user", label = "", icon = icon("tasks")),"character")
             )
@@ -92,8 +97,7 @@ user_management_server <- function(id, parent.session, config, profile, pool){
             "User ID" = character(0),
             "User name" = character(0),
             "Full name" = character(0),
-            "Country" = character(0),
-            "Organization" = character(0),
+            "Reporting entities" = character(0),
             Actions = character(0)
           )
         }
@@ -112,8 +116,7 @@ user_management_server <- function(id, parent.session, config, profile, pool){
               id_user = x[,"id_user"],
               username = x[,"username"],
               fullname = x[,"fullname"],
-              country = x[,"country"],
-              organization = x[,"organization"]
+              reporting_entities = unlist(strsplit(x[,"reporting_entities"],","))
             )
           })
         })
@@ -282,57 +285,14 @@ user_management_server <- function(id, parent.session, config, profile, pool){
         renderVREUsers(getVREUsers(db_users))
       }
       
-      #createDBUser
-      createDBUser <- function(pool, username, fullname, country = NULL, organization = NULL){
-        if(is.null(country)) country = ""
-        if(is.null(organization)) organization = ""
-        conn <- pool::poolCheckout(pool)
-        idx <- nrow(getDBUsers(pool))+1
-        creation_date <- Sys.time()
-        attr(creation_date, "tzone") <- "UTC"
-        #db management
-        insert_sql <- sprintf(
-          "INSERT INTO dcf_users(id_user, username, fullname, country, organization, creator_id, creation_date) 
-           VALUES (%s, '%s', '%s', '%s', '%s', '%s', '%s');", 
-          idx, username, fullname, country, organization, profile$preferred_username, as(creation_date, "character")
-        )
-        out_sql <- try(DBI::dbSendQuery(conn, insert_sql))
-        created <- !is(out_sql, "try-error")
-        if(!created){
-          attr(created, "error") <- as(out_sql, "character")
-        }
-        return(created)
-      }
-      
-      #updateDBuser
-      updateDBUser <- function(pool, id_user, country = NULL, organization = NULL){
-        if(is.null(country)) country = ""
-        if(is.null(organization)) organization = ""
-        conn <- pool::poolCheckout(pool)
-        update_date <- Sys.time()
-        attr(update_date, "tzone") <- "UTC"
-        #db management
-        update_sql <- sprintf("UPDATE dcf_users 
-                               SET country = '%s', organization = '%s', updater_id = '%s', update_date = '%s' 
-                               WHERE id_user = %s", 
-                              country, organization, profile$preferred_username, 
-                              as(update_date, "character"), id_user)
-        out_sql <- try(DBI::dbSendQuery(conn, update_sql))
-        updated <- !is(out_sql, "try-error")
-        if(!updated){
-          attr(updated, "error") <- as(out_sql, "character")
-        }
-        return(updated)
-      }
-      
       #user management observers
       observeEvent(input$user_add_go, {
         created <- createDBUser(
           pool = pool,
+          profile = profile,
           username = input$user_form_username,
           fullname = input$user_form_fullname,
-          country = if(config$dcf$user_properties$country$enabled){input$user_form_country}else{NULL},
-          organization = if(config$dcf$user_properties$organization$enabled){input$user_form_organization}else{NULL}
+          reporting_entities = if(!is.null(config$dcf$reporting_entities)){input$user_form_reporting_entities}else{NULL}
         )
         if(created){
           model$error <- NULL
@@ -347,9 +307,9 @@ user_management_server <- function(id, parent.session, config, profile, pool){
         id_user <- ""
         updated <- updateDBUser(
           pool = pool,
+          profile = profile,
           id_user = input$user_form_id,
-          country = if(config$dcf$user_properties$country$enabled){input$user_form_country}else{NULL},
-          organization = if(config$dcf$user_properties$organization$enabled){input$user_form_organization}else{NULL}
+          reporting_entities = if(!is.null(config$dcf$reporting_entities)){input$user_form_reporting_entities}else{NULL}
         )
         if(updated){
           model$error <- NULL
