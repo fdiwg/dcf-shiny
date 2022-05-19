@@ -60,6 +60,65 @@ closeExpiredDataCalls <- function(pool){
   return(updated)
 }
 
+#createDataCall
+createDataCall <- function(pool, task = "", start = Sys.Date(), end = Sys.Date(), status = "OPENED"){
+  conn <- pool::poolCheckout(pool)
+  idx <- nrow(getDataCalls(pool))+1
+  creation_date <- Sys.time()
+  attr(creation_date, "tzone") <- "UTC"
+  
+  #check presence of data calls
+  open_calls <- getDataCalls(pool, task = task, status = "OPENED")
+  if(nrow(open_calls)>0){
+    created <- FALSE
+    attr(created, "error") <- sprintf("There is already one open data call open for task '%s'", task)
+    return(created)
+  }
+  
+  #db management
+  insert_sql <- sprintf(
+    "INSERT INTO dcf_data_call(id_data_call, task_id, date_start, date_end, status, creator_id, creation_date) 
+           VALUES (%s, '%s', '%s', '%s', '%s', '%s', '%s');", 
+    idx, task, as(start,"character"), as(end,"character"), status, profile$preferred_username, as(creation_date, "character")
+  )
+  out_sql <- try(DBI::dbSendQuery(conn, insert_sql))
+  created <- !is(out_sql, "try-error")
+  if(!created){
+    attr(created, "error") <- as(out_sql, "character")
+  }
+  #email notification TODO
+  return(created)
+}
+
+#updateDataCall
+updateDataCall <- function(pool, id_data_call, task = "", start = Sys.Date(), end = NULL, status = "OPENED"){
+  conn <- pool::poolCheckout(pool)
+  update_date <- Sys.time()
+  attr(update_date, "tzone") <- "UTC"
+  #db management
+  update_sql <- sprintf("UPDATE dcf_data_call 
+                               SET date_start = '%s', date_end = '%s', status = '%s', updater_id = '%s', update_date = '%s' 
+                               WHERE id_data_call = %s", 
+                        as(start,"character"), as(end,"character"), status, profile$preferred_username, 
+                        as(update_date, "character"), id_data_call)
+  out_sql <- try(DBI::dbSendQuery(conn, update_sql))
+  updated <- !is(out_sql, "try-error")
+  if(!updated){
+    attr(updated, "error") <- as(out_sql, "character")
+  }
+  #email notification TODO
+  return(updated)
+}
+
+#deleteDataCall (not yet used)
+deleteDataCall <- function(pool, id_data_call){
+  conn <- pool::poolCheckout(pool)
+  delete_sql <- sprintf("DELETE FROM dcf_data_call WHERE id_data_call = %s", id_data_call)
+  out_sql <- try(DBI::dbSendQuery(conn, insert_sql))
+  deleted <- !is(out_sql, "try-error")
+  deleted
+}
+
 #getTasks
 getTasks <- function(config,withId=FALSE){
   tasks <- config$dcf$tasks
