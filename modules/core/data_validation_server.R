@@ -20,7 +20,12 @@ data_validation_server <- function(id, parent.session, config, profile, pool){
       observeEvent(restart(),{
         req(isTRUE(restart()))
         output$wizard<-renderUI({
-          tabsetPanel(id = "tabstest",
+          
+          tags$div(class ="row",
+           tags$div(class = "col-md-12",
+             tagList(     
+              tags$div(class = "connecting-line"),
+              tabsetPanel(id = "wizard-tabs",
                       type="pills",
                       tabPanel(title="Home",
                                value="home",
@@ -33,7 +38,11 @@ data_validation_server <- function(id, parent.session, config, profile, pool){
                                p("If you are ready, click on 'Start'"),
                                actionButton(ns("start"),"Start")
                       )
+              )
+             )
+           )
           )
+          
         })
       })
       
@@ -48,10 +57,10 @@ data_validation_server <- function(id, parent.session, config, profile, pool){
       
       #GO BACK TAB 1 FROM TAB 2
       observeEvent(input$goData,{
-        removeTab(inputId = "tabstest", 
+        removeTab(inputId = "wizard-tabs", 
                   session = parent.session,
                   target = "preview")
-        updateTabsetPanel(inputId = "tabstest", 
+        updateTabsetPanel(inputId = "wizard-tabs", 
                           session = parent.session,
                           selected = "select_data")
       })
@@ -75,15 +84,15 @@ data_validation_server <- function(id, parent.session, config, profile, pool){
       #TAB 1 MANAGER
       observeEvent(input$start,{
         restart<-restart(FALSE)
-        appendTab(inputId = "tabstest",
+        appendTab(inputId = "wizard-tabs",
                   session = parent.session,
                   select=TRUE,
                   tabPanel(
                     title="1-Select your data", 
                     value ="select_data",
                     tagList(
-                      h2("Select your data"),
                       uiOutput(ns("task_wrapper")),
+                      uiOutput(ns("reporting_entity_wrapper")),
                       uiOutput(ns("dataCallMessage")),
                       uiOutput(ns("format_wrapper")),
                       uiOutput(ns("file_wrapper")),
@@ -92,10 +101,10 @@ data_validation_server <- function(id, parent.session, config, profile, pool){
                     )
                   )
         )
-        removeTab(inputId = "tabstest", 
+        removeTab(inputId = "wizard-tabs", 
                   session = parent.session,
                   target = "home")
-        updateTabsetPanel(inputId = "tabstest", 
+        updateTabsetPanel(inputId = "wizard-tabs", 
                           session = parent.session,
                           selected = "select_data")
       })
@@ -112,9 +121,59 @@ data_validation_server <- function(id, parent.session, config, profile, pool){
                        )
         )
       })
+      #TAB 1 REPORTING ENTITY SELECTOR
+      output$reporting_entity_wrapper <- renderUI({
+        if(!is.null(profile$reporting_entities)){
+          if(config$dcf$reporting_entities$name %in% c("country", "flagstate")){
+            selectizeInput(ns("reporting_entity"), label = "Reporting entity", selected = NULL, multiple = FALSE, 
+             choices = {
+               ref_entity <- getReportingEntityCodes(config)
+               ref_entity <- ref_entity[ref_entity$code %in% profile$reporting_entities,]
+               entity_choices <- ref_entity$code
+               setNames(entity_choices, ref_entity$label)
+             },options = list( 
+               render = I("{
+                          item: function(item, escape) {
+                            var icon_href = 'https://countryflagsapi.com/png/'+item.value.toLowerCase();
+                            return '<div><img src=\"'+icon_href+'\" height=16 width=32/> ' + item.label + '</div>'; 
+                          },
+                          option: function(item, escape) { 
+                            var icon_href = 'https://countryflagsapi.com/png/'+item.value.toLowerCase();
+                            return '<div><img src=\"'+icon_href+'\" height=16 width=32/> ' + item.label + '</div>'; 
+                          }
+                        }"
+               ),
+               placeholder = "Please select a reporting entity",
+               onInitialize = I('function() { this.setValue(""); }')
+              )
+            )
+          }else{
+            selectizeInput(ns("reporting_entity"), label = "Reporting entity", selected = NULL, multiple = FALSE,
+              choices = {
+                ref_entity <- getReportingEntityCodes(config)
+                ref_entity <- ref_entity[ref_entity$code %in% profile$reporting_entities,]
+                entity_choices <- ref_entity$code
+                setNames(entity_choices, ref_entity$label)
+              }, options = list(
+                placeholder = "Please select a reporting entity",
+                onInitialize = I('function() { this.setValue(""); }')
+              )
+            )
+          }
+        }else{
+          tags$span()
+        }
+      })
       #TAB 1 FORMAT SELECTOR
       output$format_wrapper<-renderUI({
-        if(!is.null(input$task))if(input$task!=""){
+        has_task <- FALSE
+        if(!is.null(input$task))if(input$task!="") has_task <- TRUE
+        has_reporting_entity <- TRUE
+        if(!is.null(config$dcf$reporting_entities)){
+          has_reporting_entity <- FALSE
+          if(!is.null(input$reporting_entity))if(input$reporting_entity!="") has_reporting_entity <- TRUE
+        }
+        if(has_task && has_reporting_entity){
           selectizeInput(ns("format"),
                          label="Data format",
                          multiple = F,
@@ -151,8 +210,8 @@ data_validation_server <- function(id, parent.session, config, profile, pool){
       observeEvent(input$task,{
         if(!is.null(input$task))if(input$task!=""){
         #Check Data call open
-        taskProfil<-getTaskProperties(config,id=input$task)
-        taskProperties<-taskProperties(taskProfil)
+        taskProfile<-getTaskProperties(config,id=input$task)
+        taskProperties<-taskProperties(taskProfile)
         datacall<-getDataCalls(pool,status="OPENED",tasks=input$task,period="IN")
           if(nrow(datacall)==1){
             Sys.setenv(DATA_CALL_YEAR = as.integer(format(datacall$creation_date, "%Y")))
@@ -194,14 +253,13 @@ data_validation_server <- function(id, parent.session, config, profile, pool){
       })
       #TAB 2 MANAGER
       observeEvent(input$goPreview,{
-        appendTab(inputId = "tabstest",
+        appendTab(inputId = "wizard-tabs",
                   session = parent.session,
                   select=TRUE,
                   tabPanel(
                     title="2-Preview", 
                     value="preview",
                            tagList(
-                             h2("Preview"),
                              p("Please verify if data displayed correspond to the data to send. If it is, please click 'Next' to submit this file, otherwise click 'Previous' to select a new file."),
                              DTOutput(ns("dataView")),
                              #Previous
@@ -216,15 +274,14 @@ data_validation_server <- function(id, parent.session, config, profile, pool){
       #TAB 3 - RESPECT WITH STANDARD FORMAT
       #TAB 3 MANAGER
       observeEvent(input$goGlobValid,{
-        taskRules<-taskProperties()$dsd_ref_url
+        taskRules <- taskProperties()$dsd_ref_url
         
-        appendTab(inputId = "tabstest",
+        appendTab(inputId = "wizard-tabs",
                   session = parent.session,
                   select=TRUE,
                   tabPanel(title="3-Conformity with standards", 
                            value="standard_validation",
                            tagList(
-                             h2("Conformity with standard format and content"),
                              uiOutput(ns("globalValidReport"))
                            )
                   )
@@ -237,7 +294,11 @@ data_validation_server <- function(id, parent.session, config, profile, pool){
           footer = NULL
         ))
         data<-loadedData()
-        out<-validateData(file=data,format=input$format,rules=taskRules)
+        INFO("Read Task '%s' column definitions", taskProperties()$name)
+        task_def <- readTaskColumnDefinitions(file = taskRules, format = input$format, config = config, reporting_entity = input$reporting_entity)
+        INFO("Validate data")
+        out<-validateData(file=data, task_def = task_def, config = config)
+        INFO("Successful data validation")
         gbOut<-gbOut(out)
         if(out$valid){
           data<-standardizeNames(file=data,format=input$format,rules=taskRules)
@@ -313,9 +374,9 @@ data_validation_server <- function(id, parent.session, config, profile, pool){
         
         tagList(
           if(out$valid){
-            tags$span(shiny::icon(c('check-circle')), "Data is valid", style="color:green;font-size: 300%")
+            tags$div(shiny::icon(c('check-circle')), "Data is valid", style="margin-top:5px;color:green;font-size: 200%")
           }else{
-            tags$span(shiny::icon(c('times-circle')), "Data is invalid", style="color:red;font-size: 300%")
+            tags$div(shiny::icon(c('times-circle')), "Data is invalid", style="margin-top:5px;color:red;font-size: 200%")
           },
           br(),
           if(out$valid){
@@ -367,36 +428,38 @@ data_validation_server <- function(id, parent.session, config, profile, pool){
       
       #TAB 4 - CONSISTENCY WITH DATA CALL
       #TAB 4 MANAGER
+      #TODO call validateCallRules once we added the tab
+      
       observeEvent(input$goSpecValid,{
+
+        taskSupplRules<-taskProperties()$data_call_limited_on
+        data<-loadedData()
+        showModal(modalDialog(
+          title = "Check consistency with the ongoing data call",
+          "Please wait, your dataset is currently checked vs. the ongoing data call ...",
+          easyClose = TRUE,
+          footer = NULL
+        ))
+        out<-validateCallRules(file = data,rules = taskSupplRules)
+        dcOut<-dcOut(out)
+        removeModal()
         
-          taskSupplRules<-taskProperties()$data_call_limited_on
-          data<-loadedData()
-          showModal(modalDialog(
-            title = "Check consistency with the ongoing data call",
-            "Please wait, your dataset is currently checked vs. the ongoing data call ...",
-            easyClose = TRUE,
-            footer = NULL
-          ))
-          out<-validateCallRules(data,taskSupplRules)
-          dcOut<-dcOut(out)
-          removeModal()
-          
-        appendTab(inputId = "tabstest",
+        appendTab(inputId = "wizard-tabs",
                   session = parent.session,
                   select=TRUE,
                   tabPanel(title="4-Consistency with data Call", 
                            value="specific_validation",
                            tagList(
-                             h2("Consistency with data call"),
                              uiOutput(ns("callValidReport"))
                            )
                   )
         )
 
       })
+      
       #TAB 4 REPORT ROUTINE
       output$callValidReport<-renderUI({
-        req(!is.null(dcOut()))
+        shiny::req(!is.null(dcOut()))
         out<-dcOut()
         output$dcSummary<-DT::renderDT(server = FALSE, {
           test<-out$tests
@@ -441,9 +504,9 @@ data_validation_server <- function(id, parent.session, config, profile, pool){
         
         tagList(
           if(out$valid){
-            tags$span(shiny::icon(c('check-circle')), "Data is ready to be submitted", style="color:green;font-size: 300%")
+            tags$div(shiny::icon(c('check-circle')), "Data is ready to be submitted", style="margin-top:5px;color:green;font-size: 200%")
           }else{
-            tags$span(shiny::icon(c('times-circle')), "Data not is not consistent with the current data call", style="color:red;font-size: 300%")
+            tags$div(shiny::icon(c('times-circle')), "Data not is not consistent with the current data call", style="margin-top:5px;color:red;font-size: 200%")
           },
           br(),
           if(out$valid){
@@ -479,12 +542,11 @@ data_validation_server <- function(id, parent.session, config, profile, pool){
       #TAB 5 - SEND DATA
       #TAB 5 MANAGER
       observeEvent(input$goSend,{
-        appendTab(inputId = "tabstest",
+        appendTab(inputId = "wizard-tabs",
                   session = parent.session,
                   select=TRUE,
                   tabPanel("5-Send Data", 
                            tagList(
-                             h2("Submit your data"),
                              #Next
                              actionButton(ns("send"),"Send")
                            )
@@ -495,13 +557,12 @@ data_validation_server <- function(id, parent.session, config, profile, pool){
       #TAB 6 - THANK YOU
       #TAB 6 MANAGER
       observeEvent(input$send,{
-        appendTab(inputId = "tabstest",
+        appendTab(inputId = "wizard-tabs",
                   session = parent.session,
                   select=TRUE,
                   tabPanel("6-Thank you", 
                            tagList(
-                             h2("Your data has been submitted"),
-                             p("Your data has been sent, click to 'Finish' to return to the menu."),
+                             p("Your data has been submitted, click to 'Finish' to return to the menu."),
                              #Close
                              actionButton(ns("close3"),"Finish")
                            )

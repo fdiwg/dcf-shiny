@@ -11,3 +11,63 @@ footer{
   padding-right:20px;
   padding-bottom: 16px;
 }
+
+.connecting-line {
+    height: 10px;
+    background: #e0e0e0;
+    position: absolute;
+    width: auto;
+    margin: 0 auto;
+    left: 20px;
+    right: 0;
+    top: 20px;
+    z-index: 0;
+}
+
+#wizard-tabs.nav-pills>li>a {
+    background: #ccc;
+}
+
+#wizard-tabs.nav-pills>li {
+  height: 50px;
+  background: #ccc;
+  position: relative;
+  margin: 0px 75px 0px 0px;
+}
+
+#wizard-tabs.nav-pills>li.active {
+  background: #337ab7;
+}
+
+#wizard-tabs.nav-pills>li:after {
+  content: '';
+  position: absolute;
+  left: 0; bottom: 0; width: 0; height: 0;
+  border-left: 25px solid transparent;
+  border-top: 25px solid transparent;
+  border-bottom: 25px solid transparent;
+}
+
+#wizard-tabs.nav-pills>li:before {
+  content: '';
+  position: absolute;
+  right: -25px;
+  bottom: 0;
+  width: 0;
+  height: 0;
+  border-left: 25px solid #ccc;
+  border-top: 25px solid transparent;
+  border-bottom: 25px solid transparent;
+}
+
+#wizard-tabs.nav-pills>li.active:before {
+  border-left: 25px solid #337ab7;
+}
+
+#wizard-tabs.nav-pills>li>a, #wizard-tabs.nav-pills>li>a:focus, #wizard-tabs.nav-pills>li>a:hover {
+  border-top-color: transparent;
+}
+
+#wizard-tabs.nav-pills>li>a, #wizard-tabs.nav-pills>li>a:focus, #wizard-tabs.nav-pills>li>a:hover {
+  background-color: transparent;
+}

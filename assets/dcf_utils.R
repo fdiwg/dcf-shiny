@@ -16,6 +16,7 @@ read_dcf_config <- function(file){
       stop(sprintf("No codelist ref URL for user property '%s'", reporting_entity$name))
     }
     cfg$dcf$reporting_entities$codelist_ref <- readr::read_csv(cfg$dcf$reporting_entities$codelist_ref_url)
+    if(is.null(cfg$dcf$reporting_entities$validation)) cfg$dcf$reporting_entities$validation <- TRUE
   }
   
   return(cfg)
@@ -180,37 +181,6 @@ data_time_start <- function(year){
 data_time_end <- function(year){
   as.Date(sprintf("%s-12-31", year))
 }
-#profile_property
-profile_property <- function(property){
-  PROFILE[[property]]
-}
-#profile_flagstate
-profile_flagstate <- function(){
-  profile_property("flagstate")
-}
-#profile_organization
-profile_organization <- function(){
-  profile_property("organization")
-}
-#testing
-if(FALSE){
-  #see example configs/dev/config.yml
-  
-  #to get from data call creation date
-  #for better formalism within config we use environment variable instead of globally defined R object
-  #the formalism is done with 'Mustache' templating technology with double braces
-  Sys.setenv(DATA_CALL_YEAR = as.integer(format(Sys.Date(), "%Y"))) 
-  #time
-  eval_variable_expression("data_time({{DATA_CALL_YEAR}}-1,{{DATA_CALL_YEAR}}-1)")
-  eval_variable_expression("1950,{{DATA_CALL_YEAR}}-2)")
-  #time_start
-  eval_variable_expression("data_time_start({{DATA_CALL_YEAR}}-1)")
-  #time_end
-  eval_variable_expression("data_time_end({{DATA_CALL_YEAR}}-1)")
-  #flagstate
-  eval_variable_expression("profile_flagstate()")
-}
-#
 
 #qtodate
 qtodate<- function(date,period="start"){
@@ -271,12 +241,22 @@ dateFormating<- function(date,period="start"){
   return(dates)
 }
 
+#readTaskColumnDefinitions
+readTaskColumnDefinitions<- function(file, format, config = NULL, reporting_entity = NULL){
+  task_def<-jsonlite::read_json(file)
+  task_def <- task_def$formats[[format]]$columns
+  if(!is.null(config$dcf$reporting_entities)) if(config$dcf$reporting_entities$validation){
+    if(!is.null(task_def[[config$dcf$reporting_entities$name]]$ref)) task_def[[config$dcf$reporting_entities$name]]$ref <- NULL
+    task_def[[config$dcf$reporting_entities$name]]$allowed_values <- reporting_entity
+    task_def[[config$dcf$reporting_entities$name]]$rule_type <- "reporting_entity"
+  }
+  return(task_def)
+}
+
 #validateData
-validateData<-function(file,format,rules){
+validateData<-function(file, task_def, config = NULL){
   
-  task<-jsonlite::read_json(rules)
-  
-  rules<-task$formats[[format]]$columns
+  rules<-task_def
   
   errors<-data.frame(
     type=character(),
@@ -286,12 +266,15 @@ validateData<-function(file,format,rules){
     message=character()
   )
   
+  #TODO read a file (json) with possible validity rules
+  #TODO filter on validity rules that apply this app context
   tests<-data.frame(
-    code=c("E01","E02","E03","E04","E05","I01"),
+    code=c("E01","E02","E03","E04","E05", "E06", "I01"),
     name=c("Readable Dataset",
            "Structure of Dataset",
            "No missing Values",
            "Categorial Values Respect Standards",
+           "Invalid reporting entity",
            "Valid Dates",
            "Skipped Information")
   )
@@ -318,10 +301,15 @@ validateData<-function(file,format,rules){
   data_names<-names(data)
   generic_cols<-names(unlist(lapply(rules, function(x){x$rule_type[x$rule_type=="generic"]})))
   special_cols<-names(unlist(lapply(rules, function(x){x$rule_type[x$rule_type=="special"]})))
+  reporting_entity_col <- NULL
+  if(!is.null(config$dcf$reporting_entities)) if(config$dcf$reporting_entities$validation){
+    reporting_entity_cols <- rules[sapply(rules, function(x){x$rule_type=="reporting_entity"})]
+    reporting_entity_col <- reporting_entity_cols[[1]]
+  }
   
   # ERRORS DETECTION
   ##MANDATORIES COLUMNS
-  
+  INFO("Check generic columns")
   for (i in generic_cols){
     
     x<-rules[[i]]
@@ -393,7 +381,7 @@ validateData<-function(file,format,rules){
         if(any(cond)){
           rows<-which(cond)
           for(rowid in rows){
-            errors<-rbind(errors,data.frame(type="ERROR",rule="E05",row=rowid,column=usedName,category="Invalid value",message=sprintf("value '%s' is not valid year",checkedCol[rowid])))
+            errors<-rbind(errors,data.frame(type="ERROR",rule="E06",row=rowid,column=usedName,category="Invalid value",message=sprintf("value '%s' is not valid year",checkedCol[rowid])))
           }
         }
       }
@@ -405,6 +393,7 @@ validateData<-function(file,format,rules){
   
   #CONDITIONALS COLUMNS
   ## PERID VALIDITY
+  INFO("Check special columns (time)")
   if(all(c("time","time_start","time_end")%in% special_cols)){
     
     ## TIME ON COLUMN FORMAT  
@@ -482,7 +471,7 @@ validateData<-function(file,format,rules){
         if(any(cond!="valid")){
           rows<-which(cond!="valid")
           for(rowid in rows){
-            errors<-rbind(errors,data.frame(type="ERROR",rule="E05",row=rowid,column="time",category="Invalid date",message=cond[rowid]))
+            errors<-rbind(errors,data.frame(type="ERROR",rule="E06",row=rowid,column="time",category="Invalid date",message=cond[rowid]))
           }
         }
         
@@ -527,13 +516,13 @@ validateData<-function(file,format,rules){
             if(any(date_impossible)){
               rows<-which(date_impossible)
               for(rowid in rows){
-                errors<-rbind(errors,data.frame(type="ERROR",rule="E05",row=rowid,column=usedName,category="Invalid date",message="Date after today"))
+                errors<-rbind(errors,data.frame(type="ERROR",rule="E06",row=rowid,column=usedName,category="Invalid date",message="Date after today"))
               }
             }
           }else{
             rows<-which(!valid_start)
             for(rowid in rows){
-              errors<-rbind(errors,data.frame(type="ERROR",rule="E05",row=rowid,column=usedName,category="Invalid date",message="Invalid date format"))
+              errors<-rbind(errors,data.frame(type="ERROR",rule="E06",row=rowid,column=usedName,category="Invalid date",message="Invalid date format"))
             }
           }
           
@@ -565,13 +554,13 @@ validateData<-function(file,format,rules){
             if(any(date_impossible)){
               rows<-which(date_impossible)
               for(rowid in rows){
-                errors<-rbind(errors,data.frame(type="ERROR",rule="E05",row=rowid,column=usedName,category="Invalid date",message="Date after today"))
+                errors<-rbind(errors,data.frame(type="ERROR",rule="E06",row=rowid,column=usedName,category="Invalid date",message="Date after today"))
               }
             }
           }else{
             rows<-which(!valid_end)
             for(rowid in rows){
-              errors<-rbind(errors,data.frame(type="ERROR",rule="E05",row=rowid,column=usedName,category="Invalid date",message="Invalid date format"))
+              errors<-rbind(errors,data.frame(type="ERROR",rule="E06",row=rowid,column=usedName,category="Invalid date",message="Invalid date format"))
             }
           }
           
@@ -582,7 +571,7 @@ validateData<-function(file,format,rules){
             if(!all(date_order)){
               rows<-which(!date_order)
               for(rowid in rows){
-                errors<-rbind(errors,data.frame(type="ERROR",rule="E05",row=rowid,column="-",category="Invalid date","Date end before date start"))
+                errors<-rbind(errors,data.frame(type="ERROR",rule="E06",row=rowid,column="-",category="Invalid date","Date end before date start"))
               }
             }
           }
@@ -591,6 +580,53 @@ validateData<-function(file,format,rules){
       }
     }
   } 
+  
+  #REPORTING ENTITY COLUMN
+  INFO("Check reporting entity column")
+  if(!is.null(reporting_entity_col)){
+    
+    print(reporting_entity_col)
+    x<-reporting_entity_col
+    
+    ### COLUMNS PRESENCE
+    allowed_names<-c(x$id,unlist(x$aliases))
+    cond<-any(allowed_names%in%data_names)
+    
+    if(!cond){
+      errors<-rbind(errors,data.frame(type="ERROR",rule="E02",row="-",column=x$id,category="Missing mandatory column",message=sprintf("Column '%s' is missing",x$id)))
+    }else{
+      usedName<-allowed_names[allowed_names%in%data_names]
+      checkedCol<-data[[usedName]]
+      
+      ### NA VALUES PRESENCE
+      if(!x$na_allowed){
+        cond<-any(is.na(checkedCol))
+        if(cond){
+          cond<-all(is.na(checkedCol))
+          if(cond){
+            errors<-rbind(errors,data.frame(type="ERROR",rule="E03",row="-",column=usedName,category="Not allowed missing value",message=sprintf("All values of '%s' are missing",usedName)))
+          }else{
+            rows<-which(is.na(checkedCol))
+            for(rowid in rows){
+              errors<-rbind(errors,data.frame(type="ERROR",rule="E03",row=rowid,column=usedName,category="Not allowed missing value",message=sprintf("Missing values in '%s'",usedName)))
+            }
+          }
+        }
+      }
+      
+      ### VALUES VALIDITY
+      #### VALUE IN ALLOWED VALUES
+      INFO("Check reporting entity allowed values")
+      print(x)
+      if(!is.null(x$allowed_values)){
+        ref<-unlist(x$allowed_values)
+        cond<-any(!(unique(checkedCol[!is.na(checkedCol)])%in%ref))
+        if(cond){
+          errors<-rbind(errors,data.frame(type="ERROR",rule="E05",row="-",column=usedName,category="Invalid reporting entity",message=sprintf("At least one reporting entity does not match the selected reporting entity ('%s') for the '%s' column.",x$allowed_values, usedName)))
+        }
+      }
+    }
+  }
   
   ### SUPPLEMENTARIES COLUMNS
   
@@ -763,7 +799,7 @@ simplifiedToGeneric<-function(file,type){
 }
 
 #validateCallRules
-validateCallRules<-function(file,rules){
+validateCallRules <- function(file, rules){
   
   errors<-data.frame(
     type=character(),
@@ -778,7 +814,7 @@ validateCallRules<-function(file,rules){
     name=c("Consistancy with data call period",
            "Presence of mandatory years",
            "Presence of historical serie",
-           "Consistancy with daministrative flagstate"),
+           "Consistancy with reporting entities"),
     status=c("NOT TESTED","NOT TESTED","NOT TESTED","NOT TESTED"),
     icon=rep(paste0(tags$span(shiny::icon("ban"), title = "Not tested", style = "color:grey;"), collapse=""),4)
   )
@@ -787,7 +823,7 @@ validateCallRules<-function(file,rules){
     data<-file
   }else{
     if(any(endsWith(file,c("xls","xlsx")))){
-      data<-read_excel(file,col_types = "text")
+      data <- readxl::read_excel(file,col_types = "text")
     }else if(any(endsWith(file,"csv"))){
       data<-readr::read_csv(file,col_types = readr::cols(.default = "c"))
     }else{}
@@ -948,41 +984,6 @@ validateCallRules<-function(file,rules){
           tests[tests$code=="SW01",]$status<-"PASSED"
           tests[tests$code=="SW01",]$icon<-paste0(tags$span(shiny::icon("check-circle"), title = "Pass", style = "color:green;"), collapse="")
         }
-      }
-    }
-  }
-  
-  
-  #SPACE DATA CALL CONSISTENCY 
-  if("flagstate" %in% names(rules)){
-    rule<-eval_variable_expression(rules[["flagstate"]])
-    #FIRST CHECK : ONLY ONE FLAG
-    data_flag<-unique(data$flagstate)
-    cond<-length(data_flag)==1
-    if(cond){
-      cond<-data_flag==rule
-      if(tests[tests$code=="SE03",]$status!="FAILED"){
-        tests[tests$code=="SE03",]$status<-"PASSED"
-        tests[tests$code=="SE03",]$icon<-paste0(tags$span(shiny::icon("check-circle"), title = "Pass", style = "color:green;"), collapse="")
-      }
-      if(!cond){
-        errors<-rbind(errors,data.frame(type="ERROR",rule="SE03",row="-",column="flagstate",category="unallowed flagstate",message=sprintf("flagstate declared '%s' not corresponding to your administrative flagestate '%s'",data_flag,rule)))
-        if(tests[tests$code=="SE03",]$status!="FAILED"){
-          tests[tests$code=="SE03",]$status<-"FAILED"
-          tests[tests$code=="SE03",]$icon<-paste0(tags$span(shiny::icon("times-circle"), title = "Fail", style = "color:red;"), collapse="")
-        }
-      }else{
-        if(tests[tests$code=="SE03",]$status!="FAILED"){
-          tests[tests$code=="SE03",]$status<-"PASSED"
-          tests[tests$code=="SE03",]$icon<-paste0(tags$span(shiny::icon("check-circle"), title = "Pass", style = "color:green;"), collapse="")
-        }
-      }
-      
-    }else{
-      errors<-rbind(errors,data.frame(type="ERROR",rule="SE03",row="-",column="flagstate",category="multiple flagstate",message=sprintf("More of one flagstate are declared")))
-      if(tests[tests$code=="SE03",]$status!="FAILED"){
-        tests[tests$code=="SE03",]$status<-"FAILED"
-        tests[tests$code=="SE03",]$icon<-paste0(tags$span(shiny::icon("times-circle"), title = "Fail", style = "color:red;"), collapse="")
       }
     }
   }

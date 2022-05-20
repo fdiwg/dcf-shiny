@@ -1,3 +1,11 @@
+#getDBUserReportingEntities
+getDBUserReportingEntities <- function(pool, profile){
+  conn <- pool::poolCheckout(pool)
+  user_sql <- sprintf("SELECT * FROM dcf_users WHERE username = '%s'", profile$preferred_username)
+  out_sql <- try(DBI::dbGetQuery(conn, user_sql))
+  return(unlist(strsplit(out_sql$reporting_entities,",")))
+}
+
 #getDBUsers
 getDBUsers <- function(pool){
   DBI::dbReadTable(pool, "dcf_users")
