@@ -273,8 +273,8 @@ validateData<-function(file, task_def, config = NULL){
     name=c("Readable Dataset",
            "Structure of Dataset",
            "No missing Values",
-           "Categorial Values Respect Standards",
-           "Invalid reporting entity",
+           "Conformity with Standards",
+           "Valid Reporting entity",
            "Valid Dates",
            "Skipped Information")
   )
