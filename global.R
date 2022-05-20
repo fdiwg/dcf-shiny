@@ -48,9 +48,6 @@ fetchProfile <- function(jwt){
     }
   }
   
-  #TODO enrich profile with other fields (flagstate, organization)
-  out_jwt$flagstate <- "FRA"
-  
   return(out_jwt)
 }
 
