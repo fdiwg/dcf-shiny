@@ -15,6 +15,7 @@ user_management_server <- function(id, parent.session, config, profile, pool){
       #user form
       showUserModal <- function(new = TRUE, id_user = NULL, username = NULL, fullname = NULL,
                                 reporting_entities = NULL){
+        print(reporting_entities)
         if(!is.null(reporting_entities)) if(reporting_entities[1]=="") reporting_entities <- NULL
         title_prefix <- ifelse(new, "Add", "Modify")
         form_action <- tolower(title_prefix)
@@ -109,6 +110,8 @@ user_management_server <- function(id, parent.session, config, profile, pool){
         prefix <- paste0("button_edit_")
         if(nrow(data)>0) lapply(1:nrow(data),function(i){
           x <- data[i,]
+          rep_entities <- unlist(strsplit(x[,"reporting_entities"],","))
+          if(length(rep_entities)==0) rep_entities = ""
           button_id <- paste0(prefix,uuids[i])
           observeEvent(input[[button_id]],{
             showUserModal(
@@ -116,7 +119,7 @@ user_management_server <- function(id, parent.session, config, profile, pool){
               id_user = x[,"id_user"],
               username = x[,"username"],
               fullname = x[,"fullname"],
-              reporting_entities = unlist(strsplit(x[,"reporting_entities"],","))
+              reporting_entities = rep_entities
             )
           })
         })
