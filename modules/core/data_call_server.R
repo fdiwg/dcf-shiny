@@ -1,8 +1,10 @@
-data_call_server <- function(id, parent.session, config, profile, pool){
+data_call_server <- function(id, parent.session, config, profile, components){
   moduleServer(
     id,
     function(input, output, session) {
       #-----------------------------------------------------------------------------------
+      
+      pool <- components$POOL
       
       ns <- session$ns
       

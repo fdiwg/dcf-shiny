@@ -1,8 +1,10 @@
-user_management_server <- function(id, parent.session, config, profile, pool){
+user_management_server <- function(id, parent.session, config, profile, components){
   moduleServer(
     id,
     function(input, output, session) {
       #-----------------------------------------------------------------------------------
+      
+      pool <- components$POOL
       
       ns <- session$ns
       

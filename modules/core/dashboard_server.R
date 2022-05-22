@@ -1,9 +1,11 @@
-dashboard_server <- function(id, parent.session, config, profile, pool){
+dashboard_server <- function(id, parent.session, config, profile, components){
   moduleServer(
     id,
     function(input, output, session) {
       #-----------------------------------------------------------------------------------
   
+      pool <- components$POOL
+      
       ns <- session$ns
       
       output$welcome <- renderUI({

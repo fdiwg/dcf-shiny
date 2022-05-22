@@ -7,6 +7,7 @@ options(stringsAsFactors = FALSE)
 source("assets/utils.R")
 source("assets/package_utils.R")
 source("assets/module_utils.R")
+source("assets/d4s_utils.R")
 source("assets/ui_utils.R")
 source("assets/message_utils.R")
 source("assets/user_utils.R")
@@ -73,16 +74,9 @@ if(nzchar(local_config_file)) config_file <- local_config_file
 CONFIG <- read_dcf_config(file = config_file)
 
 
-#DB connections
+#D4S components
 #---------------------------------------------------------------------------------------
-POOL <- try(pool::dbPool(
-  drv = DBI::dbDriver(CONFIG$dbi$drv),
-  dbname = CONFIG$dbi$dbname,
-  host = CONFIG$dbi$host,
-  port = CONFIG$dbi$port,
-  user = CONFIG$dbi$user,
-  password = CONFIG$dbi$password
-))
+COMPONENTS <- loadComponents(config = CONFIG, profile = PROFILE)
 
 #scripts
 #---------------------------------------------------------------------------------------
@@ -102,5 +96,5 @@ source("server.R")
 #onStop
 #---------------------------------------------------------------------------------------
 onStop(function(){
-  DBI::dbDisconnect(POOL)
+  DBI::dbDisconnect(COMPONENTS$POOL)
 })
