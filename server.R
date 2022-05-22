@@ -2,6 +2,9 @@
 #==========================================================================================
 server <- function(input, output, session) {
   
+  #initAppWorkspace
+  initAppWorkspace(config = CONFIG, components = COMPONENTS)
+  
   #enrich profile with reporting entities
   PROFILE$reporting_entities <- getDBUserReportingEntities(profile = PROFILE, pool = COMPONENTS$POOL)
   

@@ -6,6 +6,16 @@ read_dcf_config <- function(file){
   #language
   if(is.null(cfg$language)) cfg$language <- "en"
   
+  #dcf framework
+  if(is.null(cfg$dcf)){
+    stop("No 'dcf' frame in configuration")
+  }else{
+    if(is.null(cfg$dcf$name)) stop("No dcf 'name' defined in configuration")
+    if(is.null(cfg$dcf$context)) stop("No dcf 'context' defined in configuration")
+    if(is.null(cfg$dcf$workspace)) stop ("No dcf 'workspace' defined in configuration")
+    if(is.null(cfg$dcf$tasks)) stop("No dcf 'tasks' defined in configuration")
+  }
+  
   #reporting entity
   reporting_entity <- cfg$dcf$reporting_entities
   if(!is.null(reporting_entity)){
