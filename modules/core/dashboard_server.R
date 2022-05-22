@@ -30,7 +30,6 @@ dashboard_server <- function(id, parent.session, config, profile, components){
       
       output$roles <- renderDataTable({
         data.frame(
-          resource = URLdecode(config$dcf$shiny_resource_access),
           roles = paste0(profile$shiny_resource_access$roles, collapse=", ")
         )
       })
