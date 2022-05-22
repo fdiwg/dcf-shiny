@@ -3,15 +3,30 @@ language: en
 dcf:
   name: Regional Data Base (RDB)
   context: WECAFC-FIRMS DCRF
-  shiny_resource_access: dcf-shiny
-  vre_resource_access: /d4science.research-infrastructures.eu/FARM/SOFIA-TAF
-  user_properties:
-    country:
-      enabled: true
-      codelist_ref_url: ""
-    organization:
-      enabled: false
-      codelist_ref_url: ""
+  workspace: DCF-SHINY
+  reporting_entities:
+    name: flagstate
+    codelist_ref_url: "https://data.d4science.org/shub/E_Q3ovNHd1bjhSOU9rdXNPV2xDZGxjK3hvN2FrSEZIaWQ4UzhuSmlrbVhoWURsNXdFYXZHRmthL2tQQTd6d2Y0aA=="
+    validation: true
+  tasks:
+    task-I.2:
+        name: Nominal catches
+        url: "somewhere to describe the task"
+        dsd_ref_url: "https://data.d4science.net/XXJU"
+        data_call_limited_on:
+            time_end: "data_time_end({{DATA_CALL_YEAR}}-2)"
+    task-II.1:
+        name: Catch
+        url: "sometwhere to describe the task"
+        dsd_ref_url: "htts://"
+        data_call_limited_on:
+            time: "data_time({{DATA_CALL_YEAR}}-1,{{DATA_CALL_YEAR}}-1)"
+            time_start: "data_time_start({{DATA_CALL_YEAR}}-1)"
+            time_end: "data_time_end({{DATA_CALL_YEAR}}-1)"
+    task-II.2:
+        name: Effort
+        url: "sometwhere to describe the task"
+        dsd_ref_url: "somewhere over www"
   tasks:
     task-I.2:
       name: Nominal catches
