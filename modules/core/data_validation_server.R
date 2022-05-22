@@ -547,24 +547,6 @@ data_validation_server <- function(id, parent.session, config, profile, componen
       
       #TAB 5 - SEND DATA
       #TAB 5 MANAGER
-      
-      #TODO check if user app folder is created, if not create it
-      #TODO check if datacall folder is created,
-        #if yes (means we have already a submission), ask user if he/she wants to overwrite content
-          #if yes: and reupload all new files, + notification of new submission (changes)
-          #if no: finish
-        #if no, create it, upload new files, and share the folder with regional/global data manager(s) 
-          #+ notification of first submission to regional/global data manager(s), maybe by email
-          #+ confirmation by email of the submission
-      
-      #TODO content
-        #1. data file
-        #2. metadata TODO think of the elements
-        #3. report 1: conformity with standards
-        #4. report 2: consistency with data calls
-        #5. eventual custom message for the data manager (through a web form)
-        
-      
       observeEvent(input$goSend,{
         appendTab(inputId = "wizard-tabs",
                   session = parent.session,
@@ -581,6 +563,23 @@ data_validation_server <- function(id, parent.session, config, profile, componen
       #TAB 6 - THANK YOU
       #TAB 6 MANAGER
       observeEvent(input$send,{
+        
+        #TODO check if datacall folder is created,
+        #if yes (means we have already a submission), ask user if he/she wants to overwrite content
+        #if yes: and reupload all new files, + notification of new submission (changes)
+        #if no: finish
+        #if no, create it, upload new files, and share the folder with regional/global data manager(s) 
+        #+ notification of first submission to regional/global data manager(s), maybe by email
+        #+ confirmation by email of the submission
+        
+        #TODO content
+        #1. data file
+        #2. metadata TODO think of the elements
+        #3. report 1: conformity with standards
+        #4. report 2: consistency with data calls
+        #5. eventual custom message for the data manager (through a web form)
+        
+        
         appendTab(inputId = "wizard-tabs",
                   session = parent.session,
                   select=TRUE,
