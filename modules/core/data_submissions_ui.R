@@ -1,4 +1,4 @@
-data_validation_ui <- function(id){
+data_submissions_ui <- function(id){
   
   ns <- NS(id)
   
