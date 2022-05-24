@@ -1,0 +1,67 @@
+---
+title: "Report"
+subtitle: "Conformity with standards"
+date: "`r info$date`"
+output: 
+  pdf_document:
+    keep_tex: true
+    latex_engine: xelatex
+header-includes:
+  - \usepackage{fontawesome5}
+  - \usepackage{xcolor}
+  - \usepackage{colortbl}
+  - \usepackage{booktabs}
+  - \usepackage{float}
+---
+\definecolor{green1}{HTML}{008000}
+\definecolor{orange1}{HTML}{FFA500}
+\definecolor{red1}{HTML}{FF0000}
+
+# File informations
+
+* **Task ID: **`r info$task_id`  
+* **Task Name: **`r info$task_name`  
+* **File: **`r info$file`  
+* **File format: **`r info$format`  
+* **Flagstate: **`r info$flagstate`
+
+# Validity of file
+```{r,results='asis', message=FALSE, warning=FALSE, comment=FALSE,echo=FALSE}
+if(out$valid){
+  cat("\\LARGE\\color{green1}\\faCheckCircle \\color{black} Data is valid")
+}else{
+  cat("\\LARGE\\color{red1}\\faTimesCircle \\color{black} Data is invalid")
+}
+```
+
+# Summary of rules tested
+```{r,results='asis', message=FALSE, warning=FALSE, comment=FALSE,echo=FALSE}
+          x<-unique(subset(out$errors,select="rule"))
+          x$status<-"FAILED"
+          test<-merge(out$tests,x,by.x="code",by.y="rule",all.x=T,all.y=F)
+          test[is.na(test)]<-"PASSED"
+          test[startsWith(test$code,"I"),]$status<-"WARNING" 
+          test<-subset(test,select=-c(code))
+          test$icon<-ifelse(test$status=="PASSED","\\color{green1}\\faCheckCircle \\color{black}",
+                            ifelse(test$status=="WARNING","\\color{orange1}\\faExclamationTriangle \\color{black}",
+                                   "\\color{red1}\\faTimesCircle \\color{black}"))
+          
+          kableExtra::kable(test,format = "latex",booktabs = T,escape=F,align = "lrl",col.names = NULL,linesep = "")%>%
+          kableExtra::kable_styling(latex_options = c("HOLD_position"),font_size = 8,full_width = F)%>%
+          row_spec(which(test$status =="PASSED"), bold = T, color = "#008000", background = "#d3f4cc")%>%
+          row_spec(which(test$status =="WARNING"), bold = T, color = "#FFA500", background = "#f5dfc0")%>%
+          row_spec(which(test$status =="FAILED"), bold = T, color = "#FF0000", background = "#ffbfc1")
+```
+
+# Details of errors
+```{r, results='asis',message=FALSE, warning=FALSE, comment=FALSE,echo=FALSE}
+if(nrow(out$errors)==0){
+  cat("\\normalsize\\color{green1} No error detected \\color{black}")
+}else{
+  kableExtra::kable(out$errors,format = "latex", booktabs = T,linesep = "")%>%
+    kableExtra::kable_styling(latex_options = c("striped","scale_down","HOLD_position"),font_size = 12,stripe_color="#e8e8e8")%>%
+          row_spec(which(out$errors$type =="INFO"), bold = F, color = "black", background = "#fcfdd0")%>%
+          row_spec(which(out$errors$type =="WARNING"), bold = F, color = "black", background = "#FDEBD0")%>%
+          row_spec(which(out$errors$type =="ERROR"), bold = F, color = "black", background = "#F2D7D5")
+}
+```

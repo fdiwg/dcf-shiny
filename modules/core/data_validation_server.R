@@ -13,7 +13,9 @@ data_validation_server <- function(id, parent.session, config, profile, componen
       restart<-reactiveVal(TRUE)
       dataCall<-reactiveVal(FALSE)
       gbOut<-reactiveVal(NULL)
+      gbReportPath<-reactiveVal(NULL)
       dcOut<-reactiveVal(NULL)
+      dcReportPath<-reactiveVal(NULL)
       taskProperties<-reactiveVal(NULL)
       loadedData<-reactiveVal(NULL)
       submission <- reactiveValues(
@@ -297,8 +299,7 @@ data_validation_server <- function(id, parent.session, config, profile, componen
                   tabPanel(title="3-Conformity with standards", 
                            value="standard_validation",
                            tagList(
-                             uiOutput(ns("globalValidReport")),
-                             actionButton(ns("gbreport"),"Download Report",icon=icon("download"))
+                             uiOutput(ns("globalValidReport"))
                            )
                   )
         )
@@ -331,7 +332,6 @@ data_validation_server <- function(id, parent.session, config, profile, componen
           }
           loadedData<-loadedData(data)
         }
-        removeModal()
         
         print(names(loadedData()))
 
@@ -341,6 +341,20 @@ data_validation_server <- function(id, parent.session, config, profile, componen
         req(!is.null(gbOut()))
         out<-gbOut()
         
+        #PDF Report
+        info<-list(task_id=input$task,
+                   date=Sys.Date(),
+                   task_name=taskProperties()$name,
+                   file=input$file$name,
+                   format=input$format,
+                   flagstate=input$reporting_entity)
+        
+        report_path<-file.path(tempdir(), sprintf("%s_%s_%s_report_standard_conformity.pdf",Sys.Date(),input$task,input$reporting_entity))
+        gbReportPath<-gbReportPath(report_path)
+        print(report_path)
+        rmarkdown::render("assets/report_standard_conformity_template.Rmd", output_file = report_path ,output_format = "pdf_document",output_options = list(keep_tex = TRUE), params = list(out,info))
+        
+        #HTML Report
         #Table with summary of rules
         output$gbSummary<-DT::renderDT(server = FALSE, {
           x<-unique(subset(out$errors,select="rule"))
@@ -392,7 +406,7 @@ data_validation_server <- function(id, parent.session, config, profile, componen
         })
         
         #Status message
-        tagList(
+        content<-tagList(
           if(out$valid){
             tags$div(shiny::icon(c('check-circle')), "Data is valid", style="margin-top:5px;color:green;font-size: 200%")
           }else{
@@ -436,6 +450,7 @@ data_validation_server <- function(id, parent.session, config, profile, componen
             )
           ),
           br(),
+          fluidRow(downloadButton(ns("gbreport"),"Download Report",icon=icon("download"))),
           if(out$valid){
             #Next
             actionButton(ns("goSpecValid"),"Next")
@@ -444,10 +459,18 @@ data_validation_server <- function(id, parent.session, config, profile, componen
             actionButton(ns("close1"),"Finish")
           }
         )
-        #report_path<-file.path(tempdir(), sprintf("%s_%s_%s_GenericReport.pdf",Sys.Date(),input$task,input$reporting_entity))
-        #print(report_path)
-        #rmarkdown::render("assets/genericReportTemplate.Rmd", output_file = report_path ,output_format = "pdf_document",output_options = list(keep_tex = TRUE), params = list(errors=out$errors))
+        removeModal()
+        return(content)      
       })
+      
+      #Download Pdf 
+      output$gbreport <- downloadHandler(
+        filename = function(){ 
+          basename(gbReportPath()) },
+        content = function(file){
+          file.copy(gbReportPath(),file)
+        }
+      )
       
       #TAB 4 - CONSISTENCY WITH DATA CALL
       #TAB 4 MANAGER
@@ -465,7 +488,6 @@ data_validation_server <- function(id, parent.session, config, profile, componen
         ))
         out<-validateCallRules(file = data,rules = taskSupplRules)
         dcOut<-dcOut(out)
-        removeModal()
         
         appendTab(inputId = "wizard-tabs",
                   session = parent.session,
@@ -484,6 +506,13 @@ data_validation_server <- function(id, parent.session, config, profile, componen
       output$callValidReport<-renderUI({
         shiny::req(!is.null(dcOut()))
         out<-dcOut()
+        report_path<-file.path(tempdir(), sprintf("%s_%s_%s_report_datacall_consistency.pdf",Sys.Date(),input$task,input$reporting_entity))
+        dcReportPath<-dcReportPath(report_path)
+        print(report_path)
+        rmarkdown::render("assets/report_datacall_consistency_template.Rmd", output_file = report_path ,output_format = "pdf_document",output_options = list(keep_tex = TRUE), params = list(out))
+        
+        #HTML Report
+        
         output$dcSummary<-DT::renderDT(server = FALSE, {
           test<-out$tests
           
@@ -525,11 +554,11 @@ data_validation_server <- function(id, parent.session, config, profile, componen
         })
         
         
-        tagList(
+        content<-tagList(
           if(out$valid){
             tags$div(shiny::icon(c('check-circle')), "Data is ready to be submitted", style="margin-top:5px;color:green;font-size: 200%")
           }else{
-            tags$div(shiny::icon(c('times-circle')), "Data not is not consistent with the current data call", style="margin-top:5px;color:red;font-size: 200%")
+            tags$div(shiny::icon(c('times-circle')), "Data is not consistent with the current data call", style="margin-top:5px;color:red;font-size: 200%")
           },
           br(),
           if(out$valid){
@@ -552,6 +581,7 @@ data_validation_server <- function(id, parent.session, config, profile, componen
             )
           ),
           br(),
+          fluidRow(downloadButton(ns("dcreport"),"Download Report",icon=icon("download"))),
           if(out$valid){
             #Next
             actionButton(ns("goSend"),"Next")
@@ -560,7 +590,18 @@ data_validation_server <- function(id, parent.session, config, profile, componen
             actionButton(ns("close2"),"Finish")
           }
         )
+        removeModal()
+        return(content)
       })
+      
+      #Download Pdf 
+      output$dcreport <- downloadHandler(
+        filename = function(){ 
+          basename(dcReportPath()) },
+        content = function(file){
+          file.copy(dcReportPath(),file)
+        }
+      )
       
       #TAB 5 - SEND DATA
       #TAB 5 MANAGER
@@ -596,8 +637,8 @@ data_validation_server <- function(id, parent.session, config, profile, componen
         
         uploaded_data <- FALSE
         uploaded_metadata <- FALSE
-        uploaded_report_standard_conformity <- TRUE #to set to FALSE, next change to TRUE if uploaded
-        uploaded_report_datacall_consistency <- TRUE #to set to FALSE, next change to TRUE if uploaded
+        uploaded_report_standard_conformity <- FALSE #to set to FALSE, next change to TRUE if uploaded
+        uploaded_report_datacall_consistency <- FALSE #to set to FALSE, next change to TRUE if uploaded
         shared <- FALSE
         
         dc_folder <- paste0("datacall-",submission$data_call_id, "_task-", submission$task_id, "_for_", submission$reporting_entity)
@@ -664,16 +705,33 @@ data_validation_server <- function(id, parent.session, config, profile, componen
           }
           
           if(uploaded_data && uploaded_metadata){
-            #TODO upload the 2 reports here
+            if(!is.null(gbReportPath())){
+              report_standard_conformity_filename<-gbReportPath()
+              uploadedReportStandardConformityId <- store$uploadFile(folderPath = file.path(config$dcf$workspace, dc_folder), file = report_standard_conformity_filename)
+              uploaded_report_standard_conformity <- !is.null(uploadedReportStandardConformityId)
+              if(uploaded_report_standard_conformity){
+                INFO("Successful upload for standard conformity report file '%s'", report_standard_conformity_filename)
+              }
+              unlink(dc_entry_filename)
+            }
+            if(!is.null(dcReportPath())){
+              report_datacall_consistency_filename<-dcReportPath()
+              uploadedReportDatacallConsistencyId <- store$uploadFile(folderPath = file.path(config$dcf$workspace, dc_folder), file = report_datacall_consistency_filename)
+              uploaded_report_datacall_consistency <- !is.null(uploadedReportDatacallConsistencyId)
+              if(uploaded_report_datacall_consistency){
+                INFO("Successful upload for datacall consistancy report file '%s'", report_datacall_consistency_filename)
+              }
+              unlink(dc_entry_filename)
+            }
           }
           
           #sharing
           if(uploaded_data && uploaded_metadata && uploaded_report_standard_conformity && uploaded_report_datacall_consistency){
-            #progress$set(
-            #  message = sprintf("Share data submission folder with %s", config$dcf$roles$manager), 
-            #  detail = sprintf("Data call: %s; Task: %s; Reporting entity: %s", submission$data_call_id, submission$task_id, submission$reporting_entity),
-            #  value = 80
-            #)
+            progress$set(
+              message = sprintf("Share data submission folder with %s", config$dcf$roles$manager), 
+              detail = sprintf("Data call: %s; Task: %s; Reporting entity: %s", submission$data_call_id, submission$task_id, submission$reporting_entity),
+              value = 80
+            )
             #shared <- store$shareItem(itemPath = file.path(config$dcf$workspace, dc_folder), defaultAccessType = "WRITE_ALL", users = "emmanuel.blondel")
           }
           
