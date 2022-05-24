@@ -45,8 +45,6 @@ initAppWorkspace <- function(config, profile, components){
   if(is.null(profile$access)) return(NULL)
   SH <- components$STORAGEHUB
   
-  config$dcf$workspace <- sprintf("%s-%s", config$dcf$workspace, PROFILE$preferred_username)
-  
   ws <- NULL
   if(is(SH, "StoragehubManager")){
     ws <- SH$getWSItemID(folderPath = config$dcf$workspace)
@@ -56,7 +54,7 @@ initAppWorkspace <- function(config, profile, components){
         ERROR("Failed to create app workspace '%s'", config$dcf$workspace)
         stop(sprintf("Failed to create app workspace '%s'", config$dcf$workspace))
       }
-      shared <- components$STORAGEHUB$shareItem(itemPath = file.path(config$dcf$workspace, config$dcf$workspace), defaultAccessType = "WRITE_ALL", users = "emmanuel.blondel")
+      shared <- SH$shareItem(itemPath = config$dcf$workspace, defaultAccessType = "WRITE_ALL", users = "emmanuel.blondel")
     }
   }
   return(ws)
