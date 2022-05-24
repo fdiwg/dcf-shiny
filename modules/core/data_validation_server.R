@@ -297,7 +297,8 @@ data_validation_server <- function(id, parent.session, config, profile, componen
                   tabPanel(title="3-Conformity with standards", 
                            value="standard_validation",
                            tagList(
-                             uiOutput(ns("globalValidReport"))
+                             uiOutput(ns("globalValidReport")),
+                             actionButton(ns("gbreport"),"Download Report",icon=icon("download"))
                            )
                   )
         )
@@ -340,6 +341,7 @@ data_validation_server <- function(id, parent.session, config, profile, componen
         req(!is.null(gbOut()))
         out<-gbOut()
         
+        #Table with summary of rules
         output$gbSummary<-DT::renderDT(server = FALSE, {
           x<-unique(subset(out$errors,select="rule"))
           x$status<-"FAILED"
@@ -364,6 +366,7 @@ data_validation_server <- function(id, parent.session, config, profile, componen
           
         })
         
+        #Table with details of errors
         output$gbErrors<-DT::renderDT(server = FALSE, {
           if(nrow(out$errors)>0){
             DT::datatable(
@@ -388,6 +391,7 @@ data_validation_server <- function(id, parent.session, config, profile, componen
           }else{NULL}
         })
         
+        #Status message
         tagList(
           if(out$valid){
             tags$div(shiny::icon(c('check-circle')), "Data is valid", style="margin-top:5px;color:green;font-size: 200%")
@@ -401,6 +405,7 @@ data_validation_server <- function(id, parent.session, config, profile, componen
             p("Oops somethink seems to be incorrect in your data. Please see below the data analysis details and click 'finish' to return to home page and try again.")
           },
           br(),
+          #Data informations
           fluidRow(
             column(3,style = "border: 1px solid black;",
                    p(strong("Task ID: "),input$task),
@@ -439,7 +444,9 @@ data_validation_server <- function(id, parent.session, config, profile, componen
             actionButton(ns("close1"),"Finish")
           }
         )
-        
+        report_path<-file.path(tempdir(), sprintf("%s_%s_%s_GenericReport.pdf",Sys.Date(),input$task,input$reporting_entity))
+        print(report_path)
+        #rmarkdown::render("assets/genericReportTemplate.Rmd", output_file = report_path ,output_format = "pdf_document",output_options = list(keep_tex = TRUE), params = list(errors=out$errors))
       })
       
       #TAB 4 - CONSISTENCY WITH DATA CALL

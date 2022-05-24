@@ -129,9 +129,19 @@ data_submissions_server <- function(id, parent.session, config, profile, compone
         
       }
       
+      #refresh table each minute
+      autoRefresh <- reactiveTimer(60000)
+      
       #events
       
       observe({
+        autoRefresh()
+        INFO("submission table is refresh")
+        data <- store$listWSItemsByPath(folderPath = config$dcf$workspace)
+        renderSubmissions(data)
+      })
+      
+      observeEvent(input$refresh,{
         data <- store$listWSItemsByPath(folderPath = config$dcf$workspace)
         renderSubmissions(data)
       })
