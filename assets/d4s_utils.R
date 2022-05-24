@@ -44,6 +44,9 @@ loadComponents <- function(config, profile){
 initAppWorkspace <- function(config, profile, components){
   if(is.null(profile$access)) return(NULL)
   SH <- components$STORAGEHUB
+  
+  config$dcf$workspace <- sprintf("%s-%s", config$dcf$workspace, PROFILE$preferred_username)
+  
   ws <- NULL
   if(is(SH, "StoragehubManager")){
     ws <- SH$getWSItemID(folderPath = config$dcf$workspace)
