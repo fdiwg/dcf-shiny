@@ -4,6 +4,9 @@ dcf:
   name: Regional Data Base (RDB)
   context: WECAFC-FIRMS DCRF
   workspace: DCF-SHINY
+  roles:
+    submitter: country data manager
+    manager: regional data manager
   reporting_entities:
     name: flagstate
     codelist_ref_url: "https://data.d4science.org/shub/E_Q3ovNHd1bjhSOU9rdXNPV2xDZGxjK3hvN2FrSEZIaWQ4UzhuSmlrbVhoWURsNXdFYXZHRmthL2tQQTd6d2Y0aA=="
