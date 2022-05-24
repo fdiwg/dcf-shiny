@@ -148,14 +148,14 @@ data_submissions_server <- function(id, parent.session, config, profile, compone
       
       observeEvent(input$submission_deletion_ok,{
         INFO("Delete '%s'", file.path(config$dcf$workspace, selection()))
-        unshared <- store$unshareItem(itemPath = file.path(config$dcf$workspace, selection()), users = "emmanuel.blondel")
+        #unshared <- store$unshareItem(itemPath = file.path(config$dcf$workspace, selection()), users = "emmanuel.blondel")
         deleted <- FALSE
-        if(unshared){
+        #if(unshared){
           deleted <- store$deleteItem(itemPath = file.path(config$dcf$workspace, selection()))
-        }else{
-          print("Ups 1")
+        #}else{
+          #print("Ups 1")
           #TODO ups something went wrong when trying to unshare
-        }
+        #}
         if(deleted){
           removeModal()
           data <- store$listWSItemsByPath(folderPath = config$dcf$workspace)
