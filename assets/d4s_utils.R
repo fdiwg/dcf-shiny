@@ -52,10 +52,11 @@ initAppWorkspace <- function(config, profile, components){
     ws <- SH$getWSItemID(folderPath = config$dcf$workspace)
     if(is.null(ws)){
       ws <- SH$createFolder(name = config$dcf$workspace, description = sprintf("Your personal workspace for the '%s' application", config$dcf$workspace))
-      if(!is.null(ws)){
+      if(is.null(ws)){
         ERROR("Failed to create app workspace '%s'", config$dcf$workspace)
         stop(sprintf("Failed to create app workspace '%s'", config$dcf$workspace))
       }
+      shared <- components$STORAGEHUB$shareItem(itemPath = file.path(config$dcf$workspace, config$dcf$workspace), defaultAccessType = "WRITE_ALL", users = "emmanuel.blondel")
     }
   }
   return(ws)

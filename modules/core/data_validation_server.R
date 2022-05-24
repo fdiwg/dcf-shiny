@@ -669,12 +669,12 @@ data_validation_server <- function(id, parent.session, config, profile, componen
           
           #sharing
           if(uploaded_data && uploaded_metadata && uploaded_report_standard_conformity && uploaded_report_datacall_consistency){
-            progress$set(
-              message = sprintf("Share data submission folder with %s", config$dcf$roles$manager), 
-              detail = sprintf("Data call: %s; Task: %s; Reporting entity: %s", submission$data_call_id, submission$task_id, submission$reporting_entity),
-              value = 80
-            )
-            shared <- store$shareItem(itemPath = file.path(config$dcf$workspace, dc_folder), defaultAccessType = "WRITE_ALL", users = "emmanuel.blondel")
+            #progress$set(
+            #  message = sprintf("Share data submission folder with %s", config$dcf$roles$manager), 
+            #  detail = sprintf("Data call: %s; Task: %s; Reporting entity: %s", submission$data_call_id, submission$task_id, submission$reporting_entity),
+            #  value = 80
+            #)
+            #shared <- store$shareItem(itemPath = file.path(config$dcf$workspace, dc_folder), defaultAccessType = "WRITE_ALL", users = "emmanuel.blondel")
           }
           
           #notification
