@@ -129,12 +129,10 @@ data_submissions_server <- function(id, parent.session, config, profile, compone
         
       }
       
-      #events
+      data <- store$listWSItemsByPath(folderPath = config$dcf$workspace)
+      renderSubmissions(data)
       
-      observe({
-        data <- store$listWSItemsByPath(folderPath = config$dcf$workspace)
-        renderSubmissions(data)
-      })
+      #events
       
       observeEvent(input$submission_deletion_ok,{
         INFO("Delete '%s'", file.path(config$dcf$workspace, selection()))
