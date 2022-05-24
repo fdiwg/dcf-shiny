@@ -444,8 +444,8 @@ data_validation_server <- function(id, parent.session, config, profile, componen
             actionButton(ns("close1"),"Finish")
           }
         )
-        report_path<-file.path(tempdir(), sprintf("%s_%s_%s_GenericReport.pdf",Sys.Date(),input$task,input$reporting_entity))
-        print(report_path)
+        #report_path<-file.path(tempdir(), sprintf("%s_%s_%s_GenericReport.pdf",Sys.Date(),input$task,input$reporting_entity))
+        #print(report_path)
         #rmarkdown::render("assets/genericReportTemplate.Rmd", output_file = report_path ,output_format = "pdf_document",output_options = list(keep_tex = TRUE), params = list(errors=out$errors))
       })
       
