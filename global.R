@@ -33,7 +33,7 @@ fetchProfile <- function(jwt){
   
   out_jwt$vre_resource_access <- out_jwt$resource_access[[out_jwt$vre_context]]
   out_jwt$shiny_resource_access <- out_jwt$resource_access[["dcf-shiny"]]
-  
+  if(out_jwt$expired) stop("JWT token is expired")
   if(!out_jwt$expired){
     req <- httr::with_verbose(httr::POST(
       "https://accounts.d4science.org/auth/realms/d4science/protocol/openid-connect/token",

@@ -24,6 +24,7 @@
     {"package": "tidyr", "version": "1.1.0", "repos": "https://cran.r-project.org"},
     {"package": "lubridate", "version": "1.7.9", "repos": "https://cran.r-project.org"},
     {"repo": "eblondel/d4storagehub4R", "from": "github"},
-    {"repo": "eblondel/ows4R", "from": "github"}
+    {"repo": "eblondel/ows4R", "from": "github"},
+    {"repo": "eblondel/atom4R", "from": "github"}  
   ]
 }

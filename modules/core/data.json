@@ -5,5 +5,5 @@
   "title": "Data management",
   "rank": 3,
   "restricted": true,
-  "roles": ["regional data manager", "system admin", "r-studio"]
+  "roles": ["country data manager", "regional data manager", "system admin", "r-studio"]
 }

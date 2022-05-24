@@ -4,6 +4,6 @@ data_submissions_ui <- function(id){
   
   shinydashboard::tabItem(
     tabName = "data_submissions",
-    tags$p("TODO list my (user) submissions here")
+    DT::dataTableOutput(ns("tbl_data_submissions"))
   )
 }

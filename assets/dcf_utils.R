@@ -13,6 +13,9 @@ read_dcf_config <- function(file){
     if(is.null(cfg$dcf$name)) stop("No dcf 'name' defined in configuration")
     if(is.null(cfg$dcf$context)) stop("No dcf 'context' defined in configuration")
     if(is.null(cfg$dcf$workspace)) stop ("No dcf 'workspace' defined in configuration")
+    if(is.null(cfg$dcf$roles)) stop("No dcf 'roles' defined in configuration")
+    if(is.null(cfg$dcf$roles$submitter)) stop("No dcf roles 'submitter' name defined in configuration")
+    if(is.null(cfg$dcf$roles$manager)) stop("No dcf roles 'manager' name defined in configuration")
     if(is.null(cfg$dcf$tasks)) stop("No dcf 'tasks' defined in configuration")
   }
   
@@ -105,17 +108,20 @@ createDataCall <- function(pool, task = "", start = Sys.Date(), end = Sys.Date()
           body = sprintf(
             "Dear %s,
             
-            As part of the %s (%s context), a new data call has been opened for the data task ID '%s'.
+            You receive this notification because you are assigned as part of the %s (%s) as %s.
+            
+            A new data call has been opened for the data task ID '%s'.
+            
             You are kindly invited to validate and submit your data before %s.
             
             Best regards,
-            The %s manager for %s
+            The %s
                          
             ",
             recipient$fullname, 
-            config$dcf$name, config$dcf$context, task,
+            config$dcf$name, config$dcf$context, config$dcf$roles$submitter, task,
             as(end,"character"),
-            config$dcf$name, config$dcf$context
+            config$dcf$roles$manager
           ),
           recipients = as.list(recipient$username),
           profile = profile
