@@ -33,7 +33,7 @@ if(out$valid){
           test$icon<-ifelse(test$status=="PASSED","\\color{green1}\\faCheckCircle \\color{black}",
                             ifelse(test$status=="WARNING","\\color{orange1}\\faExclamationTriangle \\color{black}",
                                    ifelse(test$status=="FAILED","\\color{red1}\\faTimesCircle \\color{black}",
-                                          "\\color{grey1}\\faTimesCircle \\color{black}")))
+                                          "\\color{grey1}\\faBan \\color{black}")))
           
           kableExtra::kable(test,format = "latex",booktabs = T,escape=F,align = "lrl",col.names = NULL,linesep = "")%>%
           kableExtra::kable_styling(latex_options = c("HOLD_position"),font_size = 8,full_width = F)%>%
