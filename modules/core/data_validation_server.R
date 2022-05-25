@@ -624,6 +624,9 @@ data_validation_server <- function(id, parent.session, config, profile, componen
       
       #TAB 6 - THANK YOU
       #TAB 6 MANAGER
+      
+      
+      
       observeEvent(input$send,{
         
         progress <- shiny::Progress$new(session, min = 0, max = 100)
@@ -645,6 +648,10 @@ data_validation_server <- function(id, parent.session, config, profile, componen
         dc_folder <- paste0("datacall-",submission$data_call_id, "_task-", submission$task_id, "_for_", submission$reporting_entity)
         dc_folder_id <- store$getWSItemID(parentFolderID = config$workspace_id, folderPath = dc_folder)
         if(is.null(dc_folder_id)){
+          
+          #TODO factorize submitData
+          #---------------------
+          
           INFO("No submission yet for data call '%s' (task %s)", submission$data_call_id, submission$task_id)
           
           #create data call submission folder
@@ -775,8 +782,24 @@ data_validation_server <- function(id, parent.session, config, profile, componen
             )
           }
           
+          #---------------------
           #share data call submission folder to regional data manager(s)
-          #TODO missing capacity to list main data managers in VRE 
+          #TODO missing capacity to list main data managers in VRE
+          
+          #submitted <- submitData(new = TRUE, ...)
+          
+          appendTab(inputId = "wizard-tabs",
+                    session = parent.session,
+                    select=TRUE,
+                    tabPanel("6-Thank you", 
+                             tagList(
+                               p("Your data has been submitted, click to 'Finish' to return to the menu."),
+                               #Close
+                               actionButton(ns("close3"),"Finish")
+                             )
+                    )
+          )
+          
           
         }else{
           #TODO showModal for confirmation and upload/overwrite file
@@ -798,17 +821,7 @@ data_validation_server <- function(id, parent.session, config, profile, componen
         #5. eventual custom message for the data manager (through a web form)
         
         
-        appendTab(inputId = "wizard-tabs",
-                  session = parent.session,
-                  select=TRUE,
-                  tabPanel("6-Thank you", 
-                           tagList(
-                             p("Your data has been submitted, click to 'Finish' to return to the menu."),
-                             #Close
-                             actionButton(ns("close3"),"Finish")
-                           )
-                  )
-        )
+       
       })
 
       #-----------------------------------------------------------------------------------
