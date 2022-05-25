@@ -635,6 +635,7 @@ data_validation_server <- function(id, parent.session, config, profile, componen
           value = 0
         )
         
+        uploaded_source <- FALSE
         uploaded_data <- FALSE
         uploaded_metadata <- FALSE
         uploaded_report_standard_conformity <- FALSE #to set to FALSE, next change to TRUE if uploaded
@@ -664,17 +665,26 @@ data_validation_server <- function(id, parent.session, config, profile, componen
           
           #upload data to data call submission folder
           progress$set(
-            message = "Upload data file", 
+            message = "Upload data files", 
             detail = sprintf("Data call: %s; Task: %s; Reporting entity: %s", submission$data_call_id, submission$task_id, submission$reporting_entity),
             value = 25
           )
-          data_filename <- file.path(getwd(), paste0(dc_folder, ".csv"))
-          readr::write_csv(loadedData(), data_filename)
-          uploadedDataId <- store$uploadFile(folderPath = file.path(config$dcf$workspace, dc_folder), file = data_filename)
-          uploaded_data <- !is.null(uploadedDataId)
-          unlink(data_filename)
+          #original file
+          uploadedDataId <- store$uploadFile(folderPath = file.path(config$dcf$workspace, dc_folder),  input$file$datapath)
+          uploaded_source <- !is.null(uploadedDataId)
+          
+          #file for submission
+          if(uploaded_source){
+            INFO("Successful upload for source file '%s'", input$file$datapath)
+            data_filename <- file.path(getwd(), paste0(dc_folder, ".csv"))
+            readr::write_csv(loadedData(), data_filename)
+            uploadedDataId <- store$uploadFile(folderPath = file.path(config$dcf$workspace, dc_folder), file = data_filename)
+            uploaded_data <- !is.null(uploadedDataId)
+            unlink(data_filename)
+          }
+          
           if(uploaded_data){
-            INFO("Successful upload for data file '%s'", data_filename)
+            INFO("Successful upload for data submission file '%s'", data_filename)
             
             progress$set(
               message = "Upload metadata file", 
