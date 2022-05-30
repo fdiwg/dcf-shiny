@@ -26,22 +26,29 @@ footer{
 
 #wizard-tabs.nav-pills>li>a {
     background: #ccc;
+    cursor: not-allowed;
+    pointer-events: none;
 }
 
 #wizard-tabs.nav-pills>li {
   height: 50px;
   background: #ccc;
+  cursor: not-allowed;
+  pointer-events: none;
   position: relative;
   margin: 0px 75px 0px 0px;
 }
 
 #wizard-tabs.nav-pills>li.active {
   background: #337ab7;
+  cursor: not-allowed;
 }
 
 #wizard-tabs.nav-pills>li:after {
   content: '';
   position: absolute;
+  cursor: not-allowed;
+  pointer-events: none;
   left: 0; bottom: 0; width: 0; height: 0;
   border-left: 25px solid transparent;
   border-top: 25px solid transparent;
@@ -51,6 +58,8 @@ footer{
 #wizard-tabs.nav-pills>li:before {
   content: '';
   position: absolute;
+  cursor: not-allowed;
+  pointer-events: none;
   right: -25px;
   bottom: 0;
   width: 0;
@@ -62,12 +71,18 @@ footer{
 
 #wizard-tabs.nav-pills>li.active:before {
   border-left: 25px solid #337ab7;
+  pointer-events: none;
+  cursor: not-allowed;
 }
 
 #wizard-tabs.nav-pills>li>a, #wizard-tabs.nav-pills>li>a:focus, #wizard-tabs.nav-pills>li>a:hover {
   border-top-color: transparent;
+  cursor: not-allowed;
+  pointer-events: none;
 }
 
 #wizard-tabs.nav-pills>li>a, #wizard-tabs.nav-pills>li>a:focus, #wizard-tabs.nav-pills>li>a:hover {
   background-color: transparent;
+  cursor: not-allowed;
+  pointer-events: none;
 }
