@@ -1,7 +1,6 @@
 ---
-title: "Report"
+title: "Report of validation"
 subtitle: "Conformity with data call"
-date: "`r Sys.Date()`"
 output: 
   pdf_document:
     keep_tex: true
@@ -17,6 +16,17 @@ header-includes:
 \definecolor{orange1}{HTML}{FFA500}
 \definecolor{red1}{HTML}{FF0000}
 \definecolor{grey1}{HTML}{808080}
+
+\begin{center}
+\vspace{-0.5cm}
+\noindent\rule{8cm}{0.4pt}
+
+`r sprintf('Datacall-%s Task: %s [%s] for %s',submission$data_call_id,submission$task_name,submission$task_id,submission$reporting_entity)`\\
+`r config$dcf$context`\\
+`r config$dcf$name`\\
+`r Sys.Date()`\\
+\noindent\rule{8cm}{0.4pt}
+\end{center}
 
 # Validity of file
 ```{r,results='asis', message=FALSE, warning=FALSE, comment=FALSE,echo=FALSE}

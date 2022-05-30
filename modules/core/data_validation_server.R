@@ -18,13 +18,18 @@ data_validation_server <- function(id, parent.session, config, profile, componen
       dcReportPath<-reactiveVal(NULL)
       taskProperties<-reactiveVal(NULL)
       loadedData<-reactiveVal(NULL)
+      transformation<-reactiveValues(
+        data_reformat = FALSE,
+        data_rename = FALSE
+      )
       submission <- reactiveValues(
         data_call_id = NULL,
         task_id = NULL,
+        task_name =NULL,
         reporting_entity = NULL,
         notes = "-"
       )
-      
+      submitted<-reactiveVal(NULL)
       #Initialize module content (Home page)
       #-----------------------------------------------------------------------------------
       #HOME
@@ -86,6 +91,11 @@ data_validation_server <- function(id, parent.session, config, profile, componen
       #GO BACK HOME FROM TAB 6
       observeEvent(input$close3,{
         restartProcess()
+      })
+      #GO BACK HOME FROM TAB 6 MODAL
+      observeEvent(input$close4,{
+        restartProcess()
+        removeModal()
       })
       
       
@@ -233,6 +243,7 @@ data_validation_server <- function(id, parent.session, config, profile, componen
             dataCall<-dataCall(TRUE)
             submission$data_call_id = datacall$id_data_call
             submission$task_id = datacall$task_id
+            submission$task_name =taskProperties()$name
             output$dataCallMessage<-renderUI({tags$span(shiny::icon(c('check-circle')), "A data call is currently open for this task", style="color:green;")})
           }
           
@@ -316,10 +327,12 @@ data_validation_server <- function(id, parent.session, config, profile, componen
         INFO("Validate data")
         out<-validateData(file=data, task_def = task_def, config = config)
         INFO("Successful data validation")
-        gbOut<-gbOut(out)
         if(out$valid){
           submission$reporting_entity <- input$reporting_entity
           data<-standardizeNames(file=data,format=input$format,rules=taskRules)
+          if(!identical(names(data),names(loadedData()))){
+            transformation$data_rename<-TRUE
+          }
           print(head(as.data.frame(data),2))
           if(input$format=="simplified"){
             #TODO review with @abennici
@@ -328,11 +341,12 @@ data_validation_server <- function(id, parent.session, config, profile, componen
                          "task-II.1"="catch",
                          "task-II.2"="effort")
             data<-simplifiedToGeneric(file=data, type)
+            transformation$data_reformat<-TRUE
             print(head(as.data.frame(data),2))
           }
           loadedData<-loadedData(data)
         }
-        
+        gbOut<-gbOut(out)
         print(names(loadedData()))
 
       })
@@ -349,10 +363,10 @@ data_validation_server <- function(id, parent.session, config, profile, componen
                    format=input$format,
                    flagstate=input$reporting_entity)
         
-        report_path<-file.path(tempdir(), sprintf("%s_%s_%s_report_standard_conformity.pdf",Sys.Date(),input$task,input$reporting_entity))
+        report_path<-file.path(tempdir(), sprintf("datacall-%s_task-%s_for_%s_report_standard_conformity.pdf",submission$data_call_id,input$task,input$reporting_entity))
         gbReportPath<-gbReportPath(report_path)
         print(report_path)
-        rmarkdown::render("assets/report_standard_conformity_template.Rmd", output_file = report_path ,output_format = "pdf_document",output_options = list(keep_tex = TRUE), params = list(out,info))
+        rmarkdown::render("assets/report_standard_conformity_template.Rmd", output_file = report_path ,output_format = "pdf_document",output_options = list(keep_tex = TRUE), params = list(out,info,config))
         
         #HTML Report
         #Table with summary of rules
@@ -450,7 +464,12 @@ data_validation_server <- function(id, parent.session, config, profile, componen
             )
           ),
           br(),
-          fluidRow(downloadButton(ns("gbreport"),"Download Report",icon=icon("download"))),
+          tagList(
+              if(transformation$data_rename|transformation$data_reformat){h3("DATA TRANSFORMATION")},
+              if(transformation$data_rename){p("Please notice that some columns of the data file used a no official name and have been automatically renamed")},
+              if(transformation$data_reformat){p("Please notice that the data file is in simplified format and have been automatically converted to generic format")}
+          ),
+          downloadButton(ns("gbreport"),"Download Report",icon=icon("download")),
           if(out$valid){
             #Next
             actionButton(ns("goSpecValid"),"Next")
@@ -506,10 +525,10 @@ data_validation_server <- function(id, parent.session, config, profile, componen
       output$callValidReport<-renderUI({
         shiny::req(!is.null(dcOut()))
         out<-dcOut()
-        report_path<-file.path(tempdir(), sprintf("%s_%s_%s_report_datacall_consistency.pdf",Sys.Date(),input$task,input$reporting_entity))
+        report_path<-file.path(tempdir(), sprintf("datacall-%s_task-%s_for_%s_report_datacall_consistency.pdf",submission$data_call_id,input$task,input$reporting_entity))
         dcReportPath<-dcReportPath(report_path)
         print(report_path)
-        rmarkdown::render("assets/report_datacall_consistency_template.Rmd", output_file = report_path ,output_format = "pdf_document",output_options = list(keep_tex = TRUE), params = list(out))
+        rmarkdown::render("assets/report_datacall_consistency_template.Rmd", output_file = report_path ,output_format = "pdf_document",output_options = list(keep_tex = TRUE), params = list(out,submission,config))
         
         #HTML Report
         
@@ -581,7 +600,7 @@ data_validation_server <- function(id, parent.session, config, profile, componen
             )
           ),
           br(),
-          fluidRow(downloadButton(ns("dcreport"),"Download Report",icon=icon("download"))),
+          downloadButton(ns("dcreport"),"Download Report",icon=icon("download")),
           if(out$valid){
             #Next
             actionButton(ns("goSend"),"Next")
@@ -625,9 +644,7 @@ data_validation_server <- function(id, parent.session, config, profile, componen
       #TAB 6 - THANK YOU
       #TAB 6 MANAGER
       
-      
-      
-      observeEvent(input$send,{
+      submitData<- function(new=TRUE,session,dc_folder,submission,profile,store,config,input){
         
         progress <- shiny::Progress$new(session, min = 0, max = 100)
         on.exit(progress$close())
@@ -641,17 +658,16 @@ data_validation_server <- function(id, parent.session, config, profile, componen
         uploaded_source <- FALSE
         uploaded_data <- FALSE
         uploaded_metadata <- FALSE
-        uploaded_report_standard_conformity <- FALSE #to set to FALSE, next change to TRUE if uploaded
-        uploaded_report_datacall_consistency <- FALSE #to set to FALSE, next change to TRUE if uploaded
+        uploaded_report_standard_conformity <- FALSE 
+        uploaded_report_datacall_consistency <- FALSE 
         shared <- FALSE
         
-        dc_folder <- paste0("datacall-",submission$data_call_id, "_task-", submission$task_id, "_for_", submission$reporting_entity)
-        dc_folder_id <- store$getWSItemID(parentFolderID = config$workspace_id, folderPath = dc_folder)
-        if(is.null(dc_folder_id)){
-          
-          #TODO factorize submitData
-          #---------------------
-          
+        dc_title <- sprintf("Data submission for data call '%s' - task %s - reporting entity '%s'", 
+                            submission$data_call_id, submission$task_id, submission$reporting_entity)
+        dc_description <- sprintf("Data submission created by %s for data call '%s' - task %s - reporting entity '%s'. Notes from data submitter: %s", 
+                                  profile$name, submission$data_call_id, submission$task_id, submission$reporting_entity, submission$notes)
+        
+        if(new){
           INFO("No submission yet for data call '%s' (task %s)", submission$data_call_id, submission$task_id)
           
           #create data call submission folder
@@ -660,149 +676,168 @@ data_validation_server <- function(id, parent.session, config, profile, componen
             detail = sprintf("Data call: %s; Task: %s; Reporting entity: %s", submission$data_call_id, submission$task_id, submission$reporting_entity),
             value = 10
           )
-          dc_title <- sprintf("Data submission for data call '%s' - task %s - reporting entity '%s'", 
-                              submission$data_call_id, submission$task_id, submission$reporting_entity)
-          dc_description <- sprintf("Data submission created by %s for data call '%s' - task %s - reporting entity '%s'. Notes from data submitter: %s", 
-                                    profile$name, submission$data_call_id, submission$task_id, submission$reporting_entity, submission$notes)
           dc_folder_id <- store$createFolder(
             folderPath = config$dcf$workspace, 
             name = dc_folder,
             description = dc_description
           )
+        }else{
+          INFO("A submission is already created for data call '%s' (task %s)", submission$data_call_id, submission$task_id)
+        }
+        
+        #upload data to data call submission folder
+        progress$set(
+          message = "Upload data files", 
+          detail = sprintf("Data call: %s; Task: %s; Reporting entity: %s", submission$data_call_id, submission$task_id, submission$reporting_entity),
+          value = 25
+        )
+        #original file
+        uploadedDataId <- store$uploadFile(folderPath = file.path(config$dcf$workspace, dc_folder),  input$file$datapath)
+        uploaded_source <- !is.null(uploadedDataId)
+        
+        #file for submission
+        if(uploaded_source){
+          INFO("Successful upload for source file '%s'", input$file$datapath)
+          data_filename <- file.path(getwd(), paste0(dc_folder, ".csv"))
+          readr::write_csv(loadedData(), data_filename)
+          uploadedDataId <- store$uploadFile(folderPath = file.path(config$dcf$workspace, dc_folder), file = data_filename)
+          uploaded_data <- !is.null(uploadedDataId)
+          unlink(data_filename)
+        }
+        
+        if(uploaded_data){
+          INFO("Successful upload for data submission file '%s'", data_filename)
           
-          #upload data to data call submission folder
           progress$set(
-            message = "Upload data files", 
+            message = "Upload metadata file", 
             detail = sprintf("Data call: %s; Task: %s; Reporting entity: %s", submission$data_call_id, submission$task_id, submission$reporting_entity),
-            value = 25
+            value = 50
           )
-          #original file
-          uploadedDataId <- store$uploadFile(folderPath = file.path(config$dcf$workspace, dc_folder),  input$file$datapath)
-          uploaded_source <- !is.null(uploadedDataId)
           
-          #file for submission
-          if(uploaded_source){
-            INFO("Successful upload for source file '%s'", input$file$datapath)
-            data_filename <- file.path(getwd(), paste0(dc_folder, ".csv"))
-            readr::write_csv(loadedData(), data_filename)
-            uploadedDataId <- store$uploadFile(folderPath = file.path(config$dcf$workspace, dc_folder), file = data_filename)
-            uploaded_data <- !is.null(uploadedDataId)
-            unlink(data_filename)
+          #metadata
+          dc_entry_filename <- file.path(getwd(), paste0(dc_folder, ".xml"))
+          dc_entry <- atom4R::DCEntry$new()
+          dc_entry$addDCDateSubmitted(dc_entry$updated)
+          dc_entry$addDCTitle(dc_title)
+          dc_entry$addDCAbstract(dc_description)
+          dc_entry$addDCCreator(profile$name)
+          dc_entry$addDCConformsTo(paste(config$dcf$context, "DCF"))
+          dc_entry$addDCConformsTo("FIRMS data exchange format specifications")
+          dc_entry$addDCConformsTo("CWP Standards for fishery purpose")
+          dc_entry$addDCCoverage(paste0(config$dcf$reporting_entities$name,":",submission$reporting_entity))
+          dc_entry$addDCSource(store$getPublicFileLink(path = file.path(config$dcf$workspace, dc_folder, basename(data_filename))))
+          dc_entry$addDCFormat("text/csv")
+          dc_entry$save(dc_entry_filename)
+          uploadedMetadataId <- store$uploadFile(folderPath = file.path(config$dcf$workspace, dc_folder), file = dc_entry_filename)
+          uploaded_metadata <- !is.null(uploadedMetadataId) 
+          if(uploaded_metadata){
+            INFO("Successful upload for metadata file '%s'", dc_entry_filename)
           }
-          
-          if(uploaded_data){
-            INFO("Successful upload for data submission file '%s'", data_filename)
-            
-            progress$set(
-              message = "Upload metadata file", 
-              detail = sprintf("Data call: %s; Task: %s; Reporting entity: %s", submission$data_call_id, submission$task_id, submission$reporting_entity),
-              value = 50
-            )
-            
-            #metadata
-            dc_entry_filename <- file.path(getwd(), paste0(dc_folder, ".xml"))
-            dc_entry <- atom4R::DCEntry$new()
-            dc_entry$addDCDateSubmitted(dc_entry$updated)
-            dc_entry$addDCTitle(dc_title)
-            dc_entry$addDCAbstract(dc_description)
-            dc_entry$addDCCreator(profile$name)
-            dc_entry$addDCConformsTo(paste(config$dcf$context, "DCF"))
-            dc_entry$addDCConformsTo("FIRMS data exchange format specifications")
-            dc_entry$addDCConformsTo("CWP Standards for fishery purpose")
-            dc_entry$addDCCoverage(paste0(config$dcf$reporting_entities$name,":",submission$reporting_entity))
-            dc_entry$addDCSource(store$getPublicFileLink(path = file.path(config$dcf$workspace, dc_folder, basename(data_filename))))
-            dc_entry$addDCFormat("text/csv")
-            dc_entry$save(dc_entry_filename)
-            uploadedMetadataId <- store$uploadFile(folderPath = file.path(config$dcf$workspace, dc_folder), file = dc_entry_filename)
-            uploaded_metadata <- !is.null(uploadedMetadataId) 
-            if(uploaded_metadata){
-              INFO("Successful upload for metadata file '%s'", dc_entry_filename)
+          unlink(dc_entry_filename)
+        }
+        
+        if(uploaded_data && uploaded_metadata){
+          if(!is.null(gbReportPath())){
+            report_standard_conformity_filename<-gbReportPath()
+            uploadedReportStandardConformityId <- store$uploadFile(folderPath = file.path(config$dcf$workspace, dc_folder), file = report_standard_conformity_filename)
+            uploaded_report_standard_conformity <- !is.null(uploadedReportStandardConformityId)
+            if(uploaded_report_standard_conformity){
+              INFO("Successful upload for standard conformity report file '%s'", report_standard_conformity_filename)
             }
             unlink(dc_entry_filename)
           }
-          
-          if(uploaded_data && uploaded_metadata){
-            if(!is.null(gbReportPath())){
-              report_standard_conformity_filename<-gbReportPath()
-              uploadedReportStandardConformityId <- store$uploadFile(folderPath = file.path(config$dcf$workspace, dc_folder), file = report_standard_conformity_filename)
-              uploaded_report_standard_conformity <- !is.null(uploadedReportStandardConformityId)
-              if(uploaded_report_standard_conformity){
-                INFO("Successful upload for standard conformity report file '%s'", report_standard_conformity_filename)
-              }
-              unlink(dc_entry_filename)
+          if(!is.null(dcReportPath())){
+            report_datacall_consistency_filename<-dcReportPath()
+            uploadedReportDatacallConsistencyId <- store$uploadFile(folderPath = file.path(config$dcf$workspace, dc_folder), file = report_datacall_consistency_filename)
+            uploaded_report_datacall_consistency <- !is.null(uploadedReportDatacallConsistencyId)
+            if(uploaded_report_datacall_consistency){
+              INFO("Successful upload for datacall consistancy report file '%s'", report_datacall_consistency_filename)
             }
-            if(!is.null(dcReportPath())){
-              report_datacall_consistency_filename<-dcReportPath()
-              uploadedReportDatacallConsistencyId <- store$uploadFile(folderPath = file.path(config$dcf$workspace, dc_folder), file = report_datacall_consistency_filename)
-              uploaded_report_datacall_consistency <- !is.null(uploadedReportDatacallConsistencyId)
-              if(uploaded_report_datacall_consistency){
-                INFO("Successful upload for datacall consistancy report file '%s'", report_datacall_consistency_filename)
-              }
-              unlink(dc_entry_filename)
-            }
+            unlink(dc_entry_filename)
           }
-          
-          #sharing
-          if(uploaded_data && uploaded_metadata && uploaded_report_standard_conformity && uploaded_report_datacall_consistency){
-            progress$set(
-              message = sprintf("Share data submission folder with %s", config$dcf$roles$manager), 
-              detail = sprintf("Data call: %s; Task: %s; Reporting entity: %s", submission$data_call_id, submission$task_id, submission$reporting_entity),
-              value = 80
-            )
-            #shared <- store$shareItem(itemPath = file.path(config$dcf$workspace, dc_folder), defaultAccessType = "WRITE_ALL", users = "emmanuel.blondel")
-          }
-          
-          #notification
-          if(shared){
-            #send notification
-            progress$set(
-              message = sprintf("Notify %s", config$dcf$roles$manager), 
-              detail = sprintf("Data call: %s; Task: %s; Reporting entity: %s", submission$data_call_id, submission$task_id, submission$reporting_entity),
-              value = 90
-            )
-            sent <- sendMessage(subject = sprintf("New data submission for data call '%s' - task '%s' - reporting entity '%s'",
-                                          submission$data_call_id, submission$task_id, submission$reporting_entity),
-                        body = sprintf("Dear manager,
-                                          
-                                         You receive this notification because you are assigned as part of the %s (%s) as %s.
-                                         
-                                         New data has been submitted by %s (as %s) for data call '%s' - task '%s' - reporting entity '%s' and shared for your review.
-                                         
-                                         Best regards,
-                                         The system bot",
-                                       config$dcf$name, config$dcf$context, config$dcf$roles$manager, 
-                                       config$dcf$roles$submitter, profile$name, submission$data_call_id, submission$task_id, submission$reporting_entity),
-                        recipients = list("emmanuel.blondel"),
-                        profile = profile
-            )
-            progress$set(
-              message = "Successful data submission", 
-              detail = sprintf("Data call: %s; Task: %s; Reporting entity: %s", submission$data_call_id, submission$task_id, submission$reporting_entity),
-              value = 100
-            )
-          }
-          
-          #---------------------
-          #share data call submission folder to regional data manager(s)
-          #TODO missing capacity to list main data managers in VRE
-          
-          #submitted <- submitData(new = TRUE, ...)
-          
-          appendTab(inputId = "wizard-tabs",
-                    session = parent.session,
-                    select=TRUE,
-                    tabPanel("6-Thank you", 
-                             tagList(
-                               p("Your data has been submitted, click to 'Finish' to return to the menu."),
-                               #Close
-                               actionButton(ns("close3"),"Finish")
-                             )
-                    )
+        }
+        
+        #sharing
+        if(uploaded_data && uploaded_metadata && uploaded_report_standard_conformity && uploaded_report_datacall_consistency){
+          progress$set(
+            message = sprintf("Share data submission folder with %s", config$dcf$roles$manager), 
+            detail = sprintf("Data call: %s; Task: %s; Reporting entity: %s", submission$data_call_id, submission$task_id, submission$reporting_entity),
+            value = 80
+          )
+          #shared <- store$shareItem(itemPath = file.path(config$dcf$workspace, dc_folder), defaultAccessType = "WRITE_ALL", users = "emmanuel.blondel")
+        }
+        
+        #notification
+        if(shared){
+          #send notification
+          progress$set(
+            message = sprintf("Notify %s", config$dcf$roles$manager), 
+            detail = sprintf("Data call: %s; Task: %s; Reporting entity: %s", submission$data_call_id, submission$task_id, submission$reporting_entity),
+            value = 90
           )
           
+          if(new){
+            body<-"Dear manager,
+                                            
+                                           You receive this notification because you are assigned as part of the %s (%s) as %s.
+                                           
+                                           New data has been submitted by %s (as %s) for data call '%s' - task '%s' - reporting entity '%s' and shared for your review.
+                                           
+                                           Best regards,
+                                           The system bot"
+          }else{
+            body<-"Dear manager,
+                                            
+                                           You receive this notification because you are assigned as part of the %s (%s) as %s.
+                                           
+                                           New data has been submitted by %s (as %s) for data call '%s' - task '%s' - reporting entity '%s' and shared for your review.
+                                           
+                                           Notice that a submission was already provided by this user for this datacall and the present one replaces and cancels the previous one.
+                                           
+                                           Best regards,
+                                           The system bot"
+          }
           
+          sent <- sendMessage(subject = sprintf("New data submission for data call '%s' - task '%s' - reporting entity '%s'",
+                                                submission$data_call_id, submission$task_id, submission$reporting_entity),
+                              body = sprintf(body,
+                                             config$dcf$name, config$dcf$context, config$dcf$roles$manager, 
+                                             profile$name, config$dcf$roles$submitter, submission$data_call_id, submission$task_id, submission$reporting_entity),
+                              recipients = list("emmanuel.blondel"),
+                              profile = profile
+          )
+          progress$set(
+            message = "Successful data submission", 
+            detail = sprintf("Data call: %s; Task: %s; Reporting entity: %s", submission$data_call_id, submission$task_id, submission$reporting_entity),
+            value = 100
+          )
+        }
+        
+      }
+      
+      observeEvent(input$send,{
+        
+        dc_folder <- paste0("datacall-",submission$data_call_id, "_task-", submission$task_id, "_for_", submission$reporting_entity)
+        dc_folder_id <- store$getWSItemID(parentFolderID = config$workspace_id, folderPath = dc_folder)
+        if(is.null(dc_folder_id)){
+
+          submitData(new=TRUE,session,dc_folder,submission,profile,store,config,input)
+          submitted<-submitted(TRUE)
+          #share data call submission folder to regional data manager(s)
+          #TODO missing capacity to list main data managers in VRE
         }else{
-          #TODO showModal for confirmation and upload/overwrite file
+          showModal(modalDialog(
+            title = "Caution a submission was already deposited for this datacall",
+            tagList(
+              p("Would you do really overwrite your precedent submission by this one ?"),
+              p("Click 'Update' to send and overwrite your precedent submission or click 'Cancel' to return to menu without sending your submission.")
+            ),
+            easyClose = F,
+            footer = tagList(
+              actionButton(ns("update"),"Yes"),
+              actionButton(ns("close4"),"Cancel")
+            )
+          ))
         }
         
         #TODO check if datacall folder is created,
@@ -822,6 +857,30 @@ data_validation_server <- function(id, parent.session, config, profile, componen
         
         
        
+      })
+      
+      observeEvent(input$update,{
+        removeModal()
+        dc_folder <- paste0("datacall-",submission$data_call_id, "_task-", submission$task_id, "_for_", submission$reporting_entity)
+        submitData(new=FALSE,session,dc_folder,submission,profile,store,config,input)
+        submitted<-submitted(TRUE)
+        
+      })
+      
+      observeEvent(req(!is.null(submitted())),{
+        if(submitted()){
+          appendTab(inputId = "wizard-tabs",
+                    session = parent.session,
+                    select=TRUE,
+                    tabPanel("6-Thank you", 
+                             tagList(
+                               p("Your data has been submitted, click to 'Finish' to return to the menu."),
+                               #Close
+                               actionButton(ns("close3"),"Finish")
+                             )
+                    )
+          )
+        }
       })
 
       #-----------------------------------------------------------------------------------
