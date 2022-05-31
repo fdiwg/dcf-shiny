@@ -1,10 +1,7 @@
-#loadComponents
-loadComponents <- function(config, profile){
-  
-  components <- list()
-  
+#loadDBI
+loadDBI <- function(config){
   #DB
-  components$POOL <- try(pool::dbPool(
+  POOL <- try(pool::dbPool(
     drv = DBI::dbDriver(config$dbi$drv),
     dbname = config$dbi$dbname,
     host = config$dbi$host,
@@ -12,7 +9,14 @@ loadComponents <- function(config, profile){
     user = config$dbi$user,
     password = config$dbi$password
   ))
-  attr(components$POOL, "description") <- "Database"
+  attr(POOL, "description") <- "Database"
+  return(POOL)
+}
+
+#loadComponents
+loadComponents <- function(profile){
+  
+  components <- list()
   
   #STORAGEHUB
   components$STORAGEHUB <- try(d4storagehub4R::StoragehubManager$new(token = profile$access$access_token, token_type = "jwt"))

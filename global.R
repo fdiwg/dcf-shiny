@@ -55,15 +55,15 @@ fetchProfile <- function(jwt){
 jwt <- Sys.getenv("SHINYPROXY_OIDC_ACCESS_TOKEN")
 PROFILE <- fetchProfile(jwt)
 
-#TODO load config from ICPROXY using jwt
+#D4S components
 #---------------------------------------------------------------------------------------
-#CONFIG <- read_dcf_config(profile = PROFILE)
+COMPONENTS <- loadComponents(profile = PROFILE)
+
 
 #TODO current config from file, next to get from Workspace URL inherited from ICPROXY
 #---------------------------------------------------------------------------------------
-#default config_file path for DEPLOYMENT
-#config_file <- "/etc/dcf-shiny/config.yml"
-config_file <- file.path(getwd(), "configs/prod/wecafc-firms-rdb.yml")
+#default config_file path for DEPLOYMENT (hidden file)
+config_file <- COMPONENTS$STORAGEHUB$downloadItem("dcf-shiny-config/config.yml", tempdir())
 
 #local configuration
 #If you are an R developer, you need to create a .REnviron file (no file extension) in /dcf-shiny dir
@@ -73,10 +73,9 @@ local_config_file <- Sys.getenv("DCF_SHINY_CONFIG")
 if(nzchar(local_config_file)) config_file <- local_config_file
 CONFIG <- read_dcf_config(file = config_file)
 
-
-#D4S components
+#DBI component to add
 #---------------------------------------------------------------------------------------
-COMPONENTS <- loadComponents(config = CONFIG, profile = PROFILE)
+COMPONENTS$POOL <- loadDBI(config = CONFIG)
 
 #scripts
 #---------------------------------------------------------------------------------------
