@@ -51,7 +51,7 @@ initAppWorkspace <- function(config, profile, components){
   
   ws <- NULL
   if(is(SH, "StoragehubManager")){
-    ws <- SH$getWSItemID(folderPath = config$dcf$workspace)
+    ws <- SH$getWSItemID(itemPath = config$dcf$workspace)
     if(is.null(ws)){
       ws <- SH$createFolder(name = config$dcf$workspace, description = sprintf("Your personal workspace for the '%s' application", config$dcf$workspace))
       if(is.null(ws)){
