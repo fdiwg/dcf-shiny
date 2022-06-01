@@ -692,7 +692,7 @@ data_validation_server <- function(id, parent.session, config, profile, componen
           value = 25
         )
         #original file
-        uploadedDataId <- store$uploadFile(folderPath = file.path(config$dcf$workspace, dc_folder),  input$file$datapath)
+        uploadedDataId <- store$uploadFile(folderPath = file.path(config$dcf$workspace, dc_folder), file = input$file$datapath)
         uploaded_source <- !is.null(uploadedDataId)
         
         #file for submission
