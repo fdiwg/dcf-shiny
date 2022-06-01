@@ -5,11 +5,19 @@ MAINTAINER Emmanuel Blondel "eblondel.pro@gmail.com"
 # system libraries of general use
 RUN apt-get update && apt-get install -y \
     sudo \
+    pandoc \
+    pandoc-citeproc \
+    texlive-latex-base \
+    texlive-fonts-recommended \
+    texlive-formats-extra \
     libssl-dev \
     libcurl4-openssl-dev \
     libxml2-dev \
+    libv8-dev \
+	libsodium-dev \
     libsecret-1-dev \
-    git 
+    git
+    
 #geospatial
 RUN /rocker_scripts/install_geospatial.sh
 
