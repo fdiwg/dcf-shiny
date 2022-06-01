@@ -818,7 +818,7 @@ data_validation_server <- function(id, parent.session, config, profile, componen
       observeEvent(input$send,{
         
         dc_folder <- paste0("datacall-",submission$data_call_id, "_task-", submission$task_id, "_for_", submission$reporting_entity)
-        dc_folder_id <- store$getWSItemID(parentFolderID = config$workspace_id, folderPath = dc_folder)
+        dc_folder_id <- store$getWSItemID(parentFolderID = config$workspace_id, itemPath = dc_folder)
         if(is.null(dc_folder_id)){
 
           submitData(new=TRUE,session,dc_folder,submission,profile,store,config,input)
@@ -839,24 +839,6 @@ data_validation_server <- function(id, parent.session, config, profile, componen
             )
           ))
         }
-        
-        #TODO check if datacall folder is created,
-        #if yes (means we have already a submission), ask user if he/she wants to overwrite content
-          #if yes: and reupload all new files, + notification of new submission (changes)
-          #if no: finish
-        #if no, create it, upload new files, and share the folder with regional/global data manager(s) 
-        #+ notification of first submission to regional/global data manager(s), maybe by email
-        #+ confirmation by email of the submission
-        
-        #TODO content
-        #1. data file
-        #2. metadata TODO think of the elements
-        #3. report 1: conformity with standards
-        #4. report 2: consistency with data calls
-        #5. eventual custom message for the data manager (through a web form)
-        
-        
-       
       })
       
       observeEvent(input$update,{
