@@ -94,7 +94,7 @@ data_user_submissions_server <- function(id, parent.session, config, profile, co
           uuids <- c(uuids, one_uuid)
         }
         
-        output$tbl_data_submissions <- DT::renderDT(
+        output$tbl_my_submissions <- DT::renderDT(
           submissionsTableHandler(data, uuids),
           selection='single', escape=FALSE,rownames=FALSE,
           options=list(
