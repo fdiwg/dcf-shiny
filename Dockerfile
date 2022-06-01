@@ -7,8 +7,11 @@ RUN apt-get update && apt-get install -y \
     sudo \
     pandoc \
     pandoc-citeproc \
+    texlive-xetex \
     texlive-latex-base \
+    texlive-latex-recommended \
     texlive-fonts-recommended \
+    texlive-fonts-extra \
     texlive-formats-extra \
     libssl-dev \
     libcurl4-openssl-dev \
