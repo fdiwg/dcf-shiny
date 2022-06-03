@@ -4,6 +4,7 @@ data_admin_submissions_ui <- function(id){
   
   shinydashboard::tabItem(
     tabName = "data_admin_submissions",
-    DT::dataTableOutput(ns("tbl_all_submissions"))
+    h3("All submissions"),hr(),
+    withSpinner(DT::dataTableOutput(ns("tbl_all_submissions")))
   )
 }
