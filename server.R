@@ -3,7 +3,7 @@
 server <- function(input, output, session) {
   
   #initAppWorkspace
-  CONFIG$dcf$workspace <- sprintf("%s-%s", CONFIG$dcf$workspace, PROFILE$preferred_username)
+  CONFIG$dcf$user_workspace <- sprintf("%s-%s", CONFIG$dcf$workspace, PROFILE$preferred_username)
   CONFIG$workspace_id <- initAppWorkspace(config = CONFIG, profile = PROFILE, components = COMPONENTS)
   
   #enrich profile with reporting entities

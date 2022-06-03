@@ -677,7 +677,7 @@ data_validation_server <- function(id, parent.session, config, profile, componen
             value = 10
           )
           dc_folder_id <- store$createFolder(
-            folderPath = config$dcf$workspace, 
+            folderPath = config$dcf$user_workspace, 
             name = dc_folder,
             description = dc_description
           )

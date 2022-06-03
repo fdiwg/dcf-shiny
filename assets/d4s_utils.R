@@ -51,14 +51,14 @@ initAppWorkspace <- function(config, profile, components){
   
   ws <- NULL
   if(is(SH, "StoragehubManager")){
-    ws <- SH$getWSItemID(itemPath = config$dcf$workspace)
+    ws <- SH$getWSItemID(itemPath = config$dcf$user_workspace)
     if(is.null(ws)){
-      ws <- SH$createFolder(name = config$dcf$workspace, description = sprintf("Your personal workspace for the '%s' application", config$dcf$workspace))
+      ws <- SH$createFolder(name = config$dcf$user_workspace, description = sprintf("Your personal workspace for the '%s' application", config$dcf$user_workspace))
       if(is.null(ws)){
-        ERROR("Failed to create app workspace '%s'", config$dcf$workspace)
-        stop(sprintf("Failed to create app workspace '%s'", config$dcf$workspace))
+        ERROR("Failed to create app workspace '%s'", config$dcf$user_workspace)
+        stop(sprintf("Failed to create app workspace '%s'", config$dcf$user_workspace))
       }
-      shared <- SH$shareItem(itemPath = config$dcf$workspace, defaultAccessType = "WRITE_ALL", users = "emmanuel.blondel")
+      shared <- SH$shareItem(itemPath = config$dcf$user_workspace, defaultAccessType = "WRITE_ALL", users = "emmanuel.blondel")
     }
   }
   return(ws)

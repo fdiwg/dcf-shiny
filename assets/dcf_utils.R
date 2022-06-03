@@ -1018,3 +1018,65 @@ validateCallRules <- function(file, rules){
   return(out)
   
 }
+
+#getSubmissions
+getSubmissions <- function(config, store, user_only = FALSE){
+  items <- store$listWSItems()
+  workspace_filter <- paste0(config$dcf$workspace,"-")
+  if(user_only) workspace_filter <- config$dcf$user_workspace
+  user_folders <- items[sapply(items$title, startsWith, workspace_filter),]
+  all_items <- do.call("rbind", lapply(1:nrow(user_folders), function(i){
+    user_folder <- user_folders[i,]
+    user_items <- store$listWSItemsByPath(folderPath = user_folder$path)
+    user_submissions <- NULL
+    if(length(user_items)>0){
+      user_submissions <- do.call("rbind", lapply(1:nrow(user_items), function(j){
+        user_item <- user_items[j,]
+        
+        data_call_folder <- basename(user_item$name)
+        data_call_props <- unlist(strsplit(data_call_folder, "_for_"))
+        reporting_entity <- data_call_props[2]
+        data_call_props <- unlist(strsplit(data_call_props[1],"_"))
+        data_call_id <- unlist(strsplit(data_call_props[1], "datacall-"))[2]
+        task_id <- unlist(strsplit(data_call_props[2], "task-"))
+        task_id <- paste0(task_id[2:length(task_id)], collapse = "task-")
+        
+        #fetch metadata
+        dcfile_item <- store$getWSItem(parentFolderID = user_item$id, itemPath = paste0(data_call_folder,".xml"))
+        dcfile <- store$downloadItem(item = dcfile_item, wd = tempdir())
+        dc_entry <- atom4R::readDCEntry(dcfile)
+        status <- "SUBMITTED"
+        if(!is.null(dc_entry$dateAccepted)) status <- "ACCEPTED"
+        
+        user_submission <- data.frame(
+          id = user_item$id,
+          data_call_id = data_call_id,
+          task_id = task_id,
+          reporting_entity = reporting_entity,
+          owner = user_item$owner,
+          creationTime = as.POSIXct(user_item$creationTime/1000, origin = "1970-01-01"),
+          lastModifiedBy = user_item$lastModifiedBy,
+          lastModificationTime = as.POSIXct(user_item$lastModificationTime/1000, origin = "1970-01-01"),
+          status = status,
+          stringsAsFactors = FALSE
+        )
+        return(user_submission)
+      }))
+    }else{
+      user_submissions <- data.frame(
+        id = character(0),
+        data_call_id = character(0),
+        task_id = character(0),
+        reporting_entity = character(0),
+        owner = character(0),
+        creationTime = character(0),
+        lastModifiedBy = character(0),
+        lastModificationTime = character(0),
+        status = character(0),
+        stringsAsFactors = FALSE
+      )
+    }
+    return(user_submissions)
+  }))
+  return(all_items)
+}

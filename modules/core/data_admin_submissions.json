@@ -1,0 +1,9 @@
+{
+  "parent": "data",
+  "type": "subitem",
+  "rank": 2,
+  "name": "data_user_submissions",
+  "title": "All submissions",
+  "restricted": true,
+  "roles": ["regional data manager", "system admin", "r-studio"]
+}

@@ -1,4 +1,4 @@
-data_user_submissions_server <- function(id, parent.session, config, profile, components){
+data_admin_submissions_server <- function(id, parent.session, config, profile, components){
   moduleServer(
     id,
     function(input, output, session) {
@@ -24,30 +24,10 @@ data_user_submissions_server <- function(id, parent.session, config, profile, co
           })
         })
       }
-      manageButtonDeleteEvents <- function(data, uuids){
-        prefix <- paste0("button_delete_")
-        if(length(data)>0) if(nrow(data)>0) lapply(1:nrow(data),function(i){
-          x <- data[i,]
-          button_id <- paste0(prefix,uuids[i])
-          observeEvent(input[[button_id]],{
-            folder_name = x$title
-            selection(folder_name)
-            showModal(modalDialog(
-              title = "Danger zone",
-              p(sprintf("Are you sure to delete data submission '%s'?", folder_name)),
-              actionButton(ns("submission_deletion_cancel"), "Cancel"),
-              actionButton(ns("submission_deletion_ok"), "Delete"),
-              easyClose = FALSE,
-              icon = icon("exclamation-triangle"),
-              footer = NULL 
-            ))
-          })
-        })
-      }
       
       #submissionsTableHandler
       submissionsTableHandler <- function(data, uuids){
-        if(length(data)>0){
+        if(length(data)>0) if(nrow(data)>0){
           data <- do.call("rbind", lapply(1:nrow(data), function(i){
             item <- data[i,]
             out_tib <- tibble::tibble(
@@ -63,9 +43,7 @@ data_user_submissions_server <- function(id, parent.session, config, profile, co
               Actions = as(
                 tagList(
                   actionButton(inputId = ns(paste0('button_browse_', uuids[i])), class="btn btn-info", style = "margin-right: 2px;",
-                               title = "Browse data submission", label = "", icon = icon("tasks")),
-                  actionButton(inputId = ns(paste0('button_delete_', uuids[i])), class="btn btn-danger", style = "margin-right: 2px;",
-                               title = "Delete data submission", label = "", icon = icon("trash"))
+                               title = "Browse data submission", label = "", icon = icon("tasks"))
                 )
                 ,"character")
             )
@@ -73,7 +51,7 @@ data_user_submissions_server <- function(id, parent.session, config, profile, co
           }
           ))
         }else{
-          data <- tibble::tibble( 
+          data <- tibble::tibble(
             "Submission ID" = character(0),
             "Data call ID" = character(0),
             "Task ID" = character(0),
@@ -89,16 +67,17 @@ data_user_submissions_server <- function(id, parent.session, config, profile, co
         return(data)
       }
       
+      
       #renderSubmissions
       renderSubmissions <- function(data){
-
+        
         uuids <- NULL
         if(length(data)>0) if(nrow(data)>0) for(i in 1:nrow(data)){
           one_uuid = uuid::UUIDgenerate() 
           uuids <- c(uuids, one_uuid)
         }
         
-        output$tbl_my_submissions <- DT::renderDT(
+        output$tbl_all_submissions <- DT::renderDT(
           submissionsTableHandler(data, uuids),
           selection='single', escape=FALSE,rownames=FALSE,
           options=list(
@@ -129,7 +108,6 @@ data_user_submissions_server <- function(id, parent.session, config, profile, co
         
         #manage action buttons
         manageButtonBrowseEvents(data, uuids)
-        manageButtonDeleteEvents(data, uuids)
         
       }
       
@@ -137,45 +115,19 @@ data_user_submissions_server <- function(id, parent.session, config, profile, co
       autoRefresh <- reactiveTimer(60000)
       
       #events
-      
       observe({
         autoRefresh()
         INFO("submission table is refresh")
-        data <- getSubmissions(config = config, store = store, user_only = TRUE)
+        data <- getSubmissions(config = config, store = store, user_only = FALSE)
         renderSubmissions(data)
       })
       
       observeEvent(input$refresh,{
-        data <- getSubmissions(config = config, store = store, user_only = TRUE)
+        data <- getSubmissions(config = config, store = store, user_only = FALSE)
         renderSubmissions(data)
-      })
-      
-      observeEvent(input$submission_deletion_ok,{
-        INFO("Delete '%s'", file.path(config$dcf$workspace, selection()))
-        #unshared <- store$unshareItem(itemPath = file.path(config$dcf$workspace, selection()), users = "emmanuel.blondel")
-        deleted <- FALSE
-        #if(unshared){
-          deleted <- store$deleteItem(itemPath = file.path(config$dcf$workspace, selection()))
-        #}else{
-          #print("Ups 1")
-          #TODO ups something went wrong when trying to unshare
-        #}
-        if(deleted){
-          removeModal()
-          data <- getSubmissions(config = config, store = store, user_only = TRUE)
-          renderSubmissions(data)
-        }else{
-          print("Ups 2")
-          #TODO ups seomthing went wrong when trying to delete
-        }
-      })
-      observeEvent(input$submission_deletion_cancel,{
-        selection(NULL)
-        removeModal()
       })
       
       #-----------------------------------------------------------------------------------
     }
   )
 }
-  
