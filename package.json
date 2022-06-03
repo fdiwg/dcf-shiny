@@ -26,8 +26,10 @@
     {"package": "rmarkdown", "version": "2.5", "repos": "https://cran.r-project.org"},
     {"package": "knitr", "version": "1.29", "repos": "https://cran.r-project.org"},
     {"package": "kableExtra", "version": "1.3.4", "repos": "https://cran.r-project.org"},
+    {"package": "geosapi", "version": "0.6.1", "repos": "https://cran.r-project.org"},
+    {"package": "geonapi", "version": "0.5.3", "repos": "https://cran.r-project.org"},
     {"repo": "eblondel/d4storagehub4R", "from": "github"},
     {"repo": "eblondel/ows4R", "from": "github"},
-    {"repo": "eblondel/atom4R", "from": "github"}  
+    {"repo": "eblondel/atom4R", "from": "github"}
   ]
 }

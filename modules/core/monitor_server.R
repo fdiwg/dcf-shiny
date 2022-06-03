@@ -15,10 +15,12 @@ monitor_server <- function(id, parent.session, config, profile, components){
             name = resource_name, 
             description = attr(resource, "description"), 
             status = {
-              if(!is(resource, "try-error")){
-                paste0(tags$span(shiny::icon("check-circle"), title = "Connected", style = "color:green;", "Connected"), collapse="")
-              }else{
+              if(is(resource, "try-error")){
                 paste0(tags$span(shiny::icon("times-circle"), title = "Failed to connect", style = "color:red;", "Failed to connect"), collapse="")
+              }else if(is(resource, "unavailable")){
+                paste0(tags$span(shiny::icon("times-circle"), title = "Unavailable", style = "color:black;", "Unavailable"), collapse="")
+              }else{
+                paste0(tags$span(shiny::icon("check-circle"), title = "Connected", style = "color:green;", "Connected"), collapse="")
               }
             }
           )
