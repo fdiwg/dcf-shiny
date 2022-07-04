@@ -19,6 +19,7 @@ RUN apt-get update && apt-get install -y \
     libv8-dev \
 	libsodium-dev \
     libsecret-1-dev \
+    librdf0-dev \
     git
     
 #geospatial
