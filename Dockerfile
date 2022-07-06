@@ -3,8 +3,9 @@ FROM rocker/r-ver:4.0.5
 MAINTAINER Emmanuel Blondel "eblondel.pro@gmail.com"
 
 # system libraries of general use
-RUN apt-get update && apt-get install -y \
+RUN apt-get update -qq && apt-get -y --no-install-recommends install \
     sudo \
+    libxml2-dev \
     pandoc \
     pandoc-citeproc \
     texlive-xetex \
@@ -15,7 +16,6 @@ RUN apt-get update && apt-get install -y \
     texlive-formats-extra \
     libssl-dev \
     libcurl4-openssl-dev \
-    libxml2-dev \
     libv8-dev \
 	libsodium-dev \
     libsecret-1-dev \
