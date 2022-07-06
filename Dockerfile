@@ -13,13 +13,13 @@ RUN apt-get update && apt-get install -y \
     texlive-fonts-recommended \
     texlive-fonts-extra \
     texlive-formats-extra \
+    librdf0-dev \
     libssl-dev \
     libcurl4-openssl-dev \
     libxml2-dev \
     libv8-dev \
 	libsodium-dev \
     libsecret-1-dev \
-    librdf0-dev \
     git
     
 #geospatial
