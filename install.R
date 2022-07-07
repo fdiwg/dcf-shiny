@@ -11,5 +11,5 @@ invisible(lapply(package$dependencies, function(pkg){
   if(!is.null(pkg$version)) version <- paste0("[",pkg$version,"]")
   cat(sprintf("Install package '%s' %s from '%s'\n", pkg$package, version, from))
   pkg_args <- pkg[names(pkg)!="from"]
-  do.call(pkg_installer, pkg_args)
+  do.call(pkg_installer, pkg_args, dependencies = if(!is.null(pkg$dependencies)) pkg$dependencies else NA)
 }))
