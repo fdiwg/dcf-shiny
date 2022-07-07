@@ -50,9 +50,9 @@ RUN apt-get update && apt-get install -y \
     vim \
     wget
     
-RUN apt_install librdf0-dev
+RUN apt-get install -y librdf0-dev
 RUN install2.r --error --skipinstalled --ncpus -1 redland
-RUN apt_install \
+RUN apt-get install -y \
     libcurl4-openssl-dev \
     libgit2-dev \
     libxslt-dev \
