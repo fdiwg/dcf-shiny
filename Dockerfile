@@ -2,14 +2,7 @@ FROM rocker/r-ver:4.0.5
 
 MAINTAINER Emmanuel Blondel "eblondel.pro@gmail.com"
 
-# general system libraries
-# Note: this includes rdf/redland system libraries
-RUN /rocker_scripts/install_verse.sh
-
-# geospatial system libraries
-RUN /rocker_scripts/install_geospatial.sh
-
-# additional system libraries for LaTeX reporting & keyring
+# system libraries for LaTeX reporting & keyring
 RUN apt-get update && apt-get install -y \
     sudo \
     pandoc \
@@ -23,6 +16,13 @@ RUN apt-get update && apt-get install -y \
 	libsodium-dev \
     libsecret-1-dev \
     git
+    
+# general system libraries
+# Note: this includes rdf/redland system libraries
+RUN /rocker_scripts/install_verse.sh
+
+# geospatial system libraries
+RUN /rocker_scripts/install_geospatial.sh
 
 # install R core package dependencies
 RUN install2.r --error --skipinstalled --ncpus -1 httpuv
