@@ -2,10 +2,16 @@ FROM rocker/r-ver:4.0.5
 
 MAINTAINER Emmanuel Blondel "eblondel.pro@gmail.com"
 
-# system libraries of general use
-RUN apt-get update -qq && apt-get -y --no-install-recommends install \
+# general system libraries
+# Note: this includes rdf/redland system libraries
+RUN /rocker_scripts/install_verse.sh
+
+# geospatial system libraries
+RUN /rocker_scripts/install_geospatial.sh
+
+# additional system libraries for LaTeX reporting & keyring
+RUN apt-get update && apt-get install -y \
     sudo \
-    libxml2-dev \
     pandoc \
     pandoc-citeproc \
     texlive-xetex \
@@ -14,15 +20,9 @@ RUN apt-get update -qq && apt-get -y --no-install-recommends install \
     texlive-fonts-recommended \
     texlive-fonts-extra \
     texlive-formats-extra \
-    libssl-dev \
-    libcurl4-openssl-dev \
-    libv8-dev \
 	libsodium-dev \
     libsecret-1-dev \
     git
-    
-#geospatial
-RUN /rocker_scripts/install_geospatial.sh
 
 # install R core package dependencies
 RUN install2.r --error --skipinstalled --ncpus -1 httpuv
