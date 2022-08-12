@@ -11,19 +11,109 @@ data_admin_submissions_server <- function(id, parent.session, config, profile, c
       
       #reactives
       selection <- reactiveVal(NULL)
+      model <- reactiveValues(
+        error = NULL
+      )
+      
+      #modals
+      showSubmissionActionModal <- function(data_call_folder, id_data_submission, accept = FALSE){
+        title_prefix <- ifelse(accept, "Accept", "Reject")
+        form_action <- tolower(title_prefix)
+        showModal(
+          modalDialog(
+            title = "",
+            shinyjs::hidden(textInput(ns("data_submission_call_folder"), value = data_call_folder, label = "")),
+            shinyjs::hidden(textInput(ns("data_submission_id"), value = id_data_submission, label = "")),
+            tags$p(sprintf("Are you sure to %s the data submission?", form_action)),
+            actionButton(ns(sprintf("data_submission_%s_go", form_action)), title_prefix),
+            actionButton(ns("data_submission_cancel"), "Cancel", style = "float:right;"),
+            uiOutput(ns("data_submission_error")),
+            easyClose = FALSE, footer = NULL 
+          )
+        )
+      }
       
       #manage button handlers
+      #Browse TODO
       manageButtonBrowseEvents <- function(data, uuids){
         prefix <- paste0("button_browse_")
         if(length(data)>0) if(nrow(data)>0) lapply(1:nrow(data),function(i){
           x <- data[i,]
           button_id <- paste0(prefix,uuids[i])
           observeEvent(input[[button_id]],{
-            folder_name = x$title
-            selection(folder_name)
+            #TODO
           })
         })
       }
+      #Accept
+      manageButtonAcceptEvents <- function(data, uuids){
+        prefix <- paste0("button_accept_")
+        if(length(data)>0) if(nrow(data)>0) lapply(1:nrow(data),function(i){
+          x <- data[i,]
+          button_id <- paste0(prefix,uuids[i])
+          observeEvent(input[[button_id]],{
+            showSubmissionActionModal(
+              data_call_folder = x$data_call_folder,
+              id_data_submission = x$id,
+              accept = TRUE
+            )
+          })
+        })
+      }
+      #Reject
+      manageButtonRejectEvents <- function(data, uuids){
+        prefix <- paste0("button_reject_")
+        if(length(data)>0) if(nrow(data)>0) lapply(1:nrow(data),function(i){
+          x <- data[i,]
+          button_id <- paste0(prefix,uuids[i])
+          observeEvent(input[[button_id]],{
+            showSubmissionActionModal(
+              data_call_folder = x$data_call_folder,
+              id_data_submission = x$id,
+              accept = FALSE
+            )
+          })
+        })
+      }
+      
+      #observers on modals actions
+      #data submission accept/cancel
+      observeEvent(input$data_submission_accept_go, {
+        accepted <- try(acceptSubmission(
+          config = config, store = store,
+          data_call_folder = input$data_submission_call_folder,
+          data_submission_id = input$data_submission_id
+        ))
+        if(!is(accepted, "try-error")){
+          model$error <- NULL
+          removeModal()
+          data <- getSubmissions(config = config, store = store, user_only = FALSE)
+          renderSubmissions(data)
+        }else{
+          model$error <- "Unexpected error during submission acceptance!"
+        }
+      })
+      #data submission reject/cancel
+      observeEvent(input$data_submission_reject_go, {
+        rejected <- try(rejectSubmission(
+          config = config, store = store,
+          data_call_folder = input$data_submission_call_folder,
+          data_submission_id = input$data_submission_id
+        ))
+        if(!is(rejected, "try-error")){
+          model$error <- NULL
+          removeModal()
+          data <- getSubmissions(config = config, store = store, user_only = FALSE)
+          renderSubmissions(data)
+        }else{
+          model$error <- "Unexpected error during submission rejection!"
+        }
+      })
+      #data submission status/cancel
+      observeEvent(input$data_submission_cancel, {
+        model$error <- NULL
+        removeModal()
+      })
       
       #submissionsTableHandler
       submissionsTableHandler <- function(data, uuids){
@@ -33,6 +123,7 @@ data_admin_submissions_server <- function(id, parent.session, config, profile, c
             out_tib <- tibble::tibble(
               "Submission ID" = item$id,
               "Data call ID" = item$data_call_id,
+              "Data call Folder" = item$data_call_folder,
               "Task ID" = item$task_id,
               "Reporting entity" = item$reporting_entity,
               "Owner" = item$owner,
@@ -43,7 +134,11 @@ data_admin_submissions_server <- function(id, parent.session, config, profile, c
               Actions = as(
                 tagList(
                   actionButton(inputId = ns(paste0('button_browse_', uuids[i])), class="btn btn-info", style = "margin-right: 2px;",
-                               title = "Browse data submission", label = "", icon = icon("tasks"))
+                               title = "Browse data submission", label = "", icon = icon("tasks")),
+                  actionButton(inputId = ns(paste0('button_accept_', uuids[i])), class="btn btn-success", style = "margin-right: 2px;",
+                               title = "Accept data submission", label = "", icon = icon("check")),
+                  actionButton(inputId = ns(paste0('button_reject_', uuids[i])), class="btn btn-danger", style = "margin-right: 2px;",
+                               title = "Reject data submission", label = "", icon = icon("remove"))
                 )
                 ,"character")
             )
@@ -54,6 +149,7 @@ data_admin_submissions_server <- function(id, parent.session, config, profile, c
           data <- tibble::tibble(
             "Submission ID" = character(0),
             "Data call ID" = character(0),
+            "Data call Folder" = character(0),
             "Task ID" = character(0),
             "Reporting entity" = character(0),
             "Owner" = character(0),
@@ -108,6 +204,8 @@ data_admin_submissions_server <- function(id, parent.session, config, profile, c
         
         #manage action buttons
         manageButtonBrowseEvents(data, uuids)
+        manageButtonAcceptEvents(data, uuids)
+        manageButtonRejectEvents(data, uuids)
         
       }
       

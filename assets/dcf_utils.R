@@ -1046,11 +1046,18 @@ getSubmissions <- function(config, store, user_only = FALSE){
         dcfile <- store$downloadItem(item = dcfile_item, wd = tempdir())
         dc_entry <- atom4R::readDCEntry(dcfile)
         status <- "SUBMITTED"
-        if(!is.null(dc_entry$dateAccepted)) status <- "ACCEPTED"
+        if(!is.null(dc_entry$dateAccepted)){
+          if(all(dc_entry$dateAccepted != "NA")){
+            status <- "ACCEPTED"
+          }else{
+            status <- "REJECTED"
+          }
+        }
         
         user_submission <- data.frame(
           id = user_item$id,
           data_call_id = data_call_id,
+          data_call_folder = data_call_folder,
           task_id = task_id,
           reporting_entity = reporting_entity,
           owner = user_item$owner,
@@ -1066,6 +1073,7 @@ getSubmissions <- function(config, store, user_only = FALSE){
       user_submissions <- data.frame(
         id = character(0),
         data_call_id = character(0),
+        data_call_folder = character(0),
         task_id = character(0),
         reporting_entity = character(0),
         owner = character(0),
@@ -1079,4 +1087,24 @@ getSubmissions <- function(config, store, user_only = FALSE){
     return(user_submissions)
   }))
   return(all_items)
+}
+
+#acceptSubmission
+acceptSubmission <- function(config, store, data_call_folder, data_submission_id){
+  dcfile_item <- store$getWSItem(parentFolderID = data_submission_id, itemPath = paste0(data_call_folder,".xml"))
+  dcfile <- store$downloadItem(item = dcfile_item, wd = tempdir())
+  dc_entry <- atom4R::readDCEntry(dcfile)
+  dc_entry$addDCDateAccepted(Sys.time())
+  dc_entry$save(file = dcfile)
+  store$uploadFile(folderID = data_submission_id, file = dcfile)
+}
+
+#rejectSubmission
+rejectSubmission <- function(config, store, data_call_folder, data_submission_id){
+  dcfile_item <- store$getWSItem(parentFolderID = data_submission_id, itemPath = paste0(data_call_folder,".xml"))
+  dcfile <- store$downloadItem(item = dcfile_item, wd = tempdir())
+  dc_entry <- atom4R::readDCEntry(dcfile)
+  dc_entry$dateAccepted <- NA 
+  dc_entry$save(file = dcfile)
+  store$uploadFile(folderID = data_submission_id, file = dcfile)
 }
