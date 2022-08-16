@@ -179,7 +179,7 @@ data_admin_submissions_server <- function(id, parent.session, config, profile, c
           options=list(
             lengthChange = FALSE,
             paging = FALSE,
-            searching = FALSE,
+            searching = TRUE,
             preDrawCallback = JS(
               'function() {
                   Shiny.unbindAll(this.api().table().node()); }'
