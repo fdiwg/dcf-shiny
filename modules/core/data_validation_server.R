@@ -823,8 +823,10 @@ data_validation_server <- function(id, parent.session, config, profile, componen
 
           submitData(new=TRUE,session,dc_folder,submission,profile,store,config,input)
           submitted<-submitted(TRUE)
-          #share data call submission folder to regional data manager(s)
-          #TODO missing capacity to list main data managers in VRE
+          
+          managers <- getDBUsersWithRole(pool = pool, profile = profile, role = config$dcf$roles$manager)
+          #notify managers of the data submission (first)
+          
         }else{
           showModal(modalDialog(
             title = "Caution a submission was already deposited for this datacall",
@@ -846,6 +848,9 @@ data_validation_server <- function(id, parent.session, config, profile, componen
         dc_folder <- paste0("datacall-",submission$data_call_id, "_task-", submission$task_id, "_for_", submission$reporting_entity)
         submitData(new=FALSE,session,dc_folder,submission,profile,store,config,input)
         submitted<-submitted(TRUE)
+        
+        managers <- getDBUsersWithRole(pool = pool, profile = profile, role = config$dcf$roles$manager)
+        #notify managers of the data submission (overwrite)
         
       })
       

@@ -81,6 +81,18 @@ loadComponents <- function(profile){
   return(components)
 }
 
+#getAppUserRoles
+getAppUserRoles <- function(profile){
+  req <- httr::with_verbose(
+    httr::GET("https://cdn.d4science.org/services/d4s-vre-manager/users-with-roles?apps=1c2231ee-1779-4e50-9769-3ac9feb57c88", 
+        httr::add_headers("Authorization" = paste("Bearer", profile$access$access_token))
+    )
+  )
+  json <- httr::content(req)
+  names(json) <- sapply(json, function(x){x$username})
+  return(json)
+}
+
 #initAppWorkspace
 initAppWorkspace <- function(config, profile, components){
   if(is.null(profile$access)) return(NULL)
