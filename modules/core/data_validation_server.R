@@ -798,12 +798,13 @@ data_validation_server <- function(id, parent.session, config, profile, componen
                                            The system bot"
           }
           
+          dcf_managers <- getDBUsersWithRole(pool = pool, profile = profile, role = config$dcf$roles$manager)
           sent <- sendMessage(subject = sprintf("New data submission for data call '%s' - task '%s' - reporting entity '%s'",
                                                 submission$data_call_id, submission$task_id, submission$reporting_entity),
                               body = sprintf(body,
                                              config$dcf$name, config$dcf$context, config$dcf$roles$manager, 
                                              profile$name, config$dcf$roles$submitter, submission$data_call_id, submission$task_id, submission$reporting_entity),
-                              recipients = list("emmanuel.blondel"),
+                              recipients = as.list(dcf_managers$username),
                               profile = profile
           )
           progress$set(
@@ -820,13 +821,8 @@ data_validation_server <- function(id, parent.session, config, profile, componen
         dc_folder <- paste0("datacall-",submission$data_call_id, "_task-", submission$task_id, "_for_", submission$reporting_entity)
         dc_folder_id <- store$getWSItemID(parentFolderID = config$workspace_id, itemPath = dc_folder)
         if(is.null(dc_folder_id)){
-
           submitData(new=TRUE,session,dc_folder,submission,profile,store,config,input)
           submitted<-submitted(TRUE)
-          
-          managers <- getDBUsersWithRole(pool = pool, profile = profile, role = config$dcf$roles$manager)
-          #notify managers of the data submission (first)
-          
         }else{
           showModal(modalDialog(
             title = "Caution a submission was already deposited for this datacall",
@@ -848,10 +844,6 @@ data_validation_server <- function(id, parent.session, config, profile, componen
         dc_folder <- paste0("datacall-",submission$data_call_id, "_task-", submission$task_id, "_for_", submission$reporting_entity)
         submitData(new=FALSE,session,dc_folder,submission,profile,store,config,input)
         submitted<-submitted(TRUE)
-        
-        managers <- getDBUsersWithRole(pool = pool, profile = profile, role = config$dcf$roles$manager)
-        #notify managers of the data submission (overwrite)
-        
       })
       
       observeEvent(req(!is.null(submitted())),{
