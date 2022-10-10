@@ -97,7 +97,9 @@ createDataCall <- function(pool, task = "", start = Sys.Date(), end = Sys.Date()
     attr(created, "error") <- as(out_sql, "character")
   }else{
     INFO("Data call successfully created for task ID '%s'", task)
-    recipients <- getDBUsers(pool = pool)
+    
+    dcf_submitters <- getDBUsersWithRole(pool = pool, profile = profile, role = config$dcf$roles$submitter)
+    recipients <- as.list(dcf_submitters$username)
     if(status == "OPENED") if(nrow(recipients)>0){
       INFO("Sending data call notification to DB users")
       for(i in 1:nrow(recipients)){
