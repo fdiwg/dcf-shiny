@@ -159,7 +159,7 @@ updateDataCall <- function(pool, id_data_call, task = "", start = Sys.Date(), en
 deleteDataCall <- function(pool, id_data_call){
   conn <- pool::poolCheckout(pool)
   delete_sql <- sprintf("DELETE FROM dcf_data_call WHERE id_data_call = %s", id_data_call)
-  out_sql <- try(DBI::dbSendQuery(conn, insert_sql))
+  out_sql <- try(DBI::dbSendQuery(conn, delete_sql))
   deleted <- !is(out_sql, "try-error")
   deleted
 }
