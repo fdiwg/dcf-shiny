@@ -112,7 +112,7 @@ user_management_server <- function(id, parent.session, config, profile, componen
         prefix <- paste0("button_edit_")
         if(nrow(data)>0) lapply(1:nrow(data),function(i){
           x <- data[i,]
-          rep_entities <- unlist(strsplit(x[,"reporting_entities"],","))
+          rep_entities <- unlist(strsplit(x$reporting_entities,","))
           if(length(rep_entities)==0) rep_entities = ""
           button_id <- paste0(prefix,uuids[i])
           observeEvent(input[[button_id]],{
@@ -285,7 +285,7 @@ user_management_server <- function(id, parent.session, config, profile, componen
       
       #renderAll
       renderAll <-function(pool){
-        db_users <- getDBUsers(pool)
+        db_users <- as.data.frame(getDBUsers(pool))
         renderDBUsers(db_users)
         renderVREUsers(getVREUsers(db_users))
       }
