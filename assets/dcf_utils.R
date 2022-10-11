@@ -42,8 +42,10 @@ getReportingEntityCodes <- function(config){
 
 #getDataCalls
 getDataCalls <- function(pool,status=NULL,tasks=NULL,period=NULL){
+  
   data<-DBI::dbReadTable(pool, "dcf_data_call")
-  if(!is.null(status))data<-subset(data,status%in%status)
+  if(!is.null(status))data<-data[data$status%in%status,]
+  print(status)
   if(!is.null(tasks))data<-subset(data,task_id%in%tasks)
   if(!is.null(period)){
     if(period=="IN")data<-subset(data,date_start<=Sys.Date()&date_end>=Sys.Date())
@@ -79,6 +81,7 @@ createDataCall <- function(pool, task = "", start = Sys.Date(), end = Sys.Date()
   
   #check presence of data calls
   open_calls <- getDataCalls(pool, task = task, status = "OPENED")
+  
   if(nrow(open_calls)>0){
     created <- FALSE
     attr(created, "error") <- sprintf("There is already one open data call open for task '%s'", task)
