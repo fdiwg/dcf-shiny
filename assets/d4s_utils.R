@@ -96,6 +96,7 @@ getAppUserRoles <- function(profile){
 #initAppWorkspace
 initAppWorkspace <- function(config, profile, components){
   if(is.null(profile$access)) return(NULL)
+  pool <- components$POOL
   SH <- components$STORAGEHUB
   
   ws <- NULL
@@ -107,8 +108,9 @@ initAppWorkspace <- function(config, profile, components){
         ERROR("Failed to create app workspace '%s'", config$dcf$user_workspace)
         stop(sprintf("Failed to create app workspace '%s'", config$dcf$user_workspace))
       }
-      shared <- SH$shareItem(itemPath = config$dcf$user_workspace, defaultAccessType = "WRITE_ALL", users = "emmanuel.blondel")
     }
+    dcf_managers <- getDBUsersWithRole(pool = pool, profile = profile, role = config$dcf$roles$manager)
+    shared <- SH$shareItem(itemPath = config$dcf$user_workspace, defaultAccessType = "WRITE_ALL", users = dcf_managers$username) #TODO check it works over existing sharing
   }
   return(ws)
 }
