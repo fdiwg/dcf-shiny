@@ -1096,6 +1096,7 @@ acceptSubmission <- function(config, store, data_call_folder, data_submission_id
   dcfile_item <- store$getWSItem(parentFolderID = data_submission_id, itemPath = paste0(data_call_folder,".xml"))
   dcfile <- store$downloadItem(item = dcfile_item, wd = tempdir())
   dc_entry <- atom4R::readDCEntry(dcfile)
+  dc_entry$dateAccepted <- list()
   dc_entry$addDCDateAccepted(Sys.time())
   dc_entry$save(file = dcfile)
   store$uploadFile(folderID = data_submission_id, file = dcfile)
@@ -1106,7 +1107,8 @@ rejectSubmission <- function(config, store, data_call_folder, data_submission_id
   dcfile_item <- store$getWSItem(parentFolderID = data_submission_id, itemPath = paste0(data_call_folder,".xml"))
   dcfile <- store$downloadItem(item = dcfile_item, wd = tempdir())
   dc_entry <- atom4R::readDCEntry(dcfile)
-  dc_entry$dateAccepted <- NA 
+  dc_entry$dateAccepted <- list()
+  dc_entry$addDCDateAccepted(NA)
   dc_entry$save(file = dcfile)
   store$uploadFile(folderID = data_submission_id, file = dcfile)
 }
