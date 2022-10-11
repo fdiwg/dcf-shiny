@@ -10,6 +10,7 @@ data_call_server <- function(id, parent.session, config, profile, components){
       
       #Data call management (CRUD)
       model <- reactiveValues(
+        data_call_to_delete = NULL,
         error = NULL
       )
       
@@ -28,8 +29,14 @@ data_call_server <- function(id, parent.session, config, profile, components){
               "Creation date" = data[i, "creation_date"],
               "Updater" = data[i,"updater_id"],
               "Update date" = data[i,"update_date"],
-              Actions = as(actionButton(inputId = ns(paste0('button_edit_', uuids[i])), class="btn btn-info", style = "margin-right: 2px;",
-                                        title = "Edit data call", label = "", icon = icon("tasks")),"character")
+              Actions = as(
+                tagList(
+                  actionButton(inputId = ns(paste0('button_edit_', uuids[i])), class="btn btn-info", style = "margin-right: 2px;",
+                               title = "Edit data call", label = "", icon = icon("tasks")),
+                  actionButton(inputId = ns(paste0('button_delete_', uuids[i])), class="btn btn-danger", style = "margin-right: 2px;",
+                               title = "Delete data call", label = "", icon = icon("trash"))
+                ),  
+              "character")
             )
             return(out_tib)
           }
@@ -98,6 +105,28 @@ data_call_server <- function(id, parent.session, config, profile, components){
           })
         })
       }
+      manageButtonDeleteEvents <- function(data, uuids){
+        prefix <- paste0("button_delete_")
+        if(nrow(data)>0) lapply(1:nrow(data),function(i){
+          x <- data[i,]
+          button_id <- paste0(prefix,uuids[i])
+          observeEvent(input[[button_id]],{
+            model$data_call_to_delete <- x$id_data_call
+            showModal(modalDialog(
+              title = "Danger zone",
+              tagList(
+                p(sprintf("Do you really want to delete data call '%s' (Task %s, start on %s - end on %s) ?", x$id_data_call, x$task_id, x$date_start, x$date_end)),
+                p("Click 'Yes' to confirm deletion or click 'Cancel'.")
+              ),
+              easyClose = F,
+              footer = tagList(
+                actionButton(ns("data_call_delete_go"),"Yes"),
+                actionButton(ns("data_call_delete_cancel"),"Cancel")
+              )
+            ))
+          })
+        })
+      }
       
       #renderDataCalls
       renderDataCalls <- function(data){
@@ -141,6 +170,7 @@ data_call_server <- function(id, parent.session, config, profile, components){
           
           #manage action buttons
           manageButtonEditEvents(data, uuids)
+          manageButtonDeleteEvents(data, uuids)
           
         }
       
@@ -199,6 +229,29 @@ data_call_server <- function(id, parent.session, config, profile, components){
         model$error <- NULL
         removeModal()
       })
+      #data deletion
+      #data call/modify
+      observeEvent(input$data_call_delete_go, {
+        deleted <- deleteDataCall(
+          pool = pool,
+          id_data_call = model$data_call_to_delete
+        )
+        if(deleted){
+          model$error <- NULL
+          removeModal()
+          renderDataCalls(getDataCalls(pool))
+        }else{
+          model$error <- attr(deleted, "error")
+        }
+        model$data_call_to_delete <- NULL
+      })
+      #data deletion/cancel
+      observeEvent(input$data_call_delete_cancel,{
+        model$data_call_to_delete <- NULL
+        removeModal()
+      })
+      
+      
       
       #-----------------------------------------------------------------------------------
     }

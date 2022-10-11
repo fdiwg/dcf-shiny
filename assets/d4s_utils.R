@@ -81,9 +81,22 @@ loadComponents <- function(profile){
   return(components)
 }
 
+#getAppUserRoles
+getAppUserRoles <- function(profile){
+  req <- httr::with_verbose(
+    httr::GET("https://cdn.d4science.org/services/d4s-vre-manager/users-with-roles?apps=1c2231ee-1779-4e50-9769-3ac9feb57c88", 
+        httr::add_headers("Authorization" = paste("Bearer", profile$access$access_token))
+    )
+  )
+  json <- httr::content(req)
+  names(json) <- sapply(json, function(x){x$username})
+  return(json)
+}
+
 #initAppWorkspace
 initAppWorkspace <- function(config, profile, components){
   if(is.null(profile$access)) return(NULL)
+  pool <- components$POOL
   SH <- components$STORAGEHUB
   
   ws <- NULL
@@ -95,8 +108,9 @@ initAppWorkspace <- function(config, profile, components){
         ERROR("Failed to create app workspace '%s'", config$dcf$user_workspace)
         stop(sprintf("Failed to create app workspace '%s'", config$dcf$user_workspace))
       }
-      shared <- SH$shareItem(itemPath = config$dcf$user_workspace, defaultAccessType = "WRITE_ALL", users = "emmanuel.blondel")
     }
+    dcf_managers <- getDBUsersWithRole(pool = pool, profile = profile, role = config$dcf$roles$manager)
+    shared <- SH$shareItem(itemPath = config$dcf$user_workspace, defaultAccessType = "WRITE_ALL", users = dcf_managers$username) #TODO check it works over existing sharing
   }
   return(ws)
 }

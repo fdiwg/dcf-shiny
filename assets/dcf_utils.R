@@ -100,7 +100,9 @@ createDataCall <- function(pool, task = "", start = Sys.Date(), end = Sys.Date()
     attr(created, "error") <- as(out_sql, "character")
   }else{
     INFO("Data call successfully created for task ID '%s'", task)
-    recipients <- getDBUsers(pool = pool)
+    
+    dcf_submitters <- getDBUsersWithRole(pool = pool, profile = profile, role = config$dcf$roles$submitter)
+    recipients <- as.list(dcf_submitters$username)
     if(status == "OPENED") if(nrow(recipients)>0){
       INFO("Sending data call notification to DB users")
       for(i in 1:nrow(recipients)){
@@ -160,7 +162,7 @@ updateDataCall <- function(pool, id_data_call, task = "", start = Sys.Date(), en
 deleteDataCall <- function(pool, id_data_call){
   conn <- pool::poolCheckout(pool)
   delete_sql <- sprintf("DELETE FROM dcf_data_call WHERE id_data_call = %s", id_data_call)
-  out_sql <- try(DBI::dbSendQuery(conn, insert_sql))
+  out_sql <- try(DBI::dbSendQuery(conn, delete_sql))
   deleted <- !is(out_sql, "try-error")
   deleted
 }
@@ -1097,6 +1099,7 @@ acceptSubmission <- function(config, store, data_call_folder, data_submission_id
   dcfile_item <- store$getWSItem(parentFolderID = data_submission_id, itemPath = paste0(data_call_folder,".xml"))
   dcfile <- store$downloadItem(item = dcfile_item, wd = tempdir())
   dc_entry <- atom4R::readDCEntry(dcfile)
+  dc_entry$dateAccepted <- list()
   dc_entry$addDCDateAccepted(Sys.time())
   dc_entry$save(file = dcfile)
   store$uploadFile(folderID = data_submission_id, file = dcfile)
@@ -1107,7 +1110,8 @@ rejectSubmission <- function(config, store, data_call_folder, data_submission_id
   dcfile_item <- store$getWSItem(parentFolderID = data_submission_id, itemPath = paste0(data_call_folder,".xml"))
   dcfile <- store$downloadItem(item = dcfile_item, wd = tempdir())
   dc_entry <- atom4R::readDCEntry(dcfile)
-  dc_entry$dateAccepted <- NA 
+  dc_entry$dateAccepted <- list()
+  dc_entry$addDCDateAccepted(NA)
   dc_entry$save(file = dcfile)
   store$uploadFile(folderID = data_submission_id, file = dcfile)
 }

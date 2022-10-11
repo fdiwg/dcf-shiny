@@ -9,8 +9,28 @@ getDBUserReportingEntities <- function(pool, profile){
 }
 
 #getDBUsers
-getDBUsers <- function(pool){
-  DBI::dbReadTable(pool, "dcf_users")
+getDBUsers <- function(pool, profile = NULL){
+  dcf_users <- tibble::as.tibble(DBI::dbReadTable(pool, "dcf_users"))
+  if(!is.null(profile)){
+    user_roles <- getAppUserRoles(profile)
+    dcf_users$roles <- sapply(1:nrow(dcf_users), function(i){
+      roles <- list()
+      dcf_user = dcf_users[i,]
+      app_user <- user_roles[names(user_roles)==dcf_user$username][[1]]
+      if(length(app_user$roles)>0){
+        roles <- sapply(app_user$roles, function(x){x$name})
+      }
+      return(roles)
+    })
+  }
+  return(dcf_users)
+}
+
+#getDBUsersWithRole
+getDBUsersWithRole <- function(pool, profile, role){
+  users <- getDBUsers(pool, profile)
+  users <- users[sapply(users$roles, function(x){ role %in% x }),]
+  return(users)
 }
 
 #createDBUser
