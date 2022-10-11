@@ -1,0 +1,10 @@
+{
+  "parent": "welcome",
+  "type": "subitem",
+  "rank": 2,
+  "name": "user_notification",
+  "title": "My Notifications",
+  "icon": "envelope",
+  "restricted": true,
+  "roles": ["country data manager", "system admin", "r-studio"]
+}
