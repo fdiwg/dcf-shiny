@@ -209,6 +209,7 @@ data_call_server <- function(id, parent.session, config, profile, components){
         updated <- updateDataCall(
           pool = pool,
           profile = profile,
+          config = config,
           id_data_call = input$data_call_form_id,
           task = input$data_call_form_task,
           start = input$data_call_form_start,
@@ -234,7 +235,10 @@ data_call_server <- function(id, parent.session, config, profile, components){
       observeEvent(input$data_call_delete_go, {
         deleted <- deleteDataCall(
           pool = pool,
+          config=config,
+          profile=profile,
           id_data_call = model$data_call_to_delete
+
         )
         if(deleted){
           model$error <- NULL

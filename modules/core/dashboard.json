@@ -1,5 +1,6 @@
 {
-  "type": "item",
+  "parent": "welcome",
+  "type": "subitem",
   "rank": 1,
   "name": "dashboard",
   "title": "Dashboard",
