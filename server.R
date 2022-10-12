@@ -10,7 +10,10 @@ server <- function(input, output, session) {
   PROFILE$reporting_entities <- getDBUserReportingEntities(profile = PROFILE, pool = COMPONENTS$POOL)
   
   #in case of expired data calls we automatically close them
-  closeExpiredDataCalls(COMPONENTS$POOL) 
+  closeExpiredDataCalls(pool=COMPONENTS$POOL,config=CONFIG,profile = PROFILE) 
+  
+  #in case of started data calls we automatically open them
+  openStartedDataCalls(pool=COMPONENTS$POOL,config=CONFIG,profile = PROFILE) 
   
   #load module servers
   loadModuleServers(parent.session = session, config = CONFIG, profile = PROFILE, components = COMPONENTS)
