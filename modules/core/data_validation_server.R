@@ -646,6 +646,12 @@ data_validation_server <- function(id, parent.session, config, profile, componen
       
       submitData<- function(new=TRUE,session,dc_folder,submission,profile,store,config,input){
         
+        uploadedOriginalDataId<-NULL
+        uploadedDataId<-NULL
+        uploadedMetadataId<-NULL
+        uploadedReportStandardConformityId<-NULL
+        uploadedReportDatacallConsistencyId<-NULL
+        
         progress <- shiny::Progress$new(session, min = 0, max = 100)
         on.exit(progress$close())
         
@@ -655,11 +661,6 @@ data_validation_server <- function(id, parent.session, config, profile, componen
           value = 0
         )
         
-        uploaded_source <- FALSE
-        uploaded_data <- FALSE
-        uploaded_metadata <- FALSE
-        uploaded_report_standard_conformity <- FALSE 
-        uploaded_report_datacall_consistency <- FALSE 
         shared <- FALSE
         
         dc_title <- sprintf("Data submission for data call '%s' - task %s - reporting entity '%s'", 
@@ -692,20 +693,18 @@ data_validation_server <- function(id, parent.session, config, profile, componen
           value = 25
         )
         #original file
-        uploadedDataId <- store$uploadFile(folderPath = file.path(config$dcf$workspace, dc_folder), file = input$file$datapath)
-        uploaded_source <- !is.null(uploadedDataId)
+        uploadedOriginalDataId <- store$uploadFile(folderPath = file.path(config$dcf$user_workspace, dc_folder), file = input$file$datapath)
         
         #file for submission
-        if(uploaded_source){
+        if(!is.null(uploadedOriginalDataId)){
           INFO("Successful upload for source file '%s'", input$file$datapath)
           data_filename <- file.path(getwd(), paste0(dc_folder, ".csv"))
           readr::write_csv(loadedData(), data_filename)
-          uploadedDataId <- store$uploadFile(folderPath = file.path(config$dcf$workspace, dc_folder), file = data_filename)
-          uploaded_data <- !is.null(uploadedDataId)
+          uploadedDataId <- store$uploadFile(folderPath = file.path(config$dcf$user_workspace, dc_folder), file = data_filename)
           unlink(data_filename)
         }
         
-        if(uploaded_data){
+        if(!is.null(uploadedDataId)){
           INFO("Successful upload for data submission file '%s'", data_filename)
           
           progress$set(
@@ -725,32 +724,30 @@ data_validation_server <- function(id, parent.session, config, profile, componen
           dc_entry$addDCConformsTo("FIRMS data exchange format specifications")
           dc_entry$addDCConformsTo("CWP Standards for fishery purpose")
           dc_entry$addDCCoverage(paste0(config$dcf$reporting_entities$name,":",submission$reporting_entity))
-          dc_entry$addDCSource(store$getPublicFileLink(path = file.path(config$dcf$workspace, dc_folder, basename(data_filename))))
+          dc_entry$addDCSource(store$getPublicFileLink(path = file.path(config$dcf$user_workspace, dc_folder, basename(data_filename))))
           dc_entry$addDCFormat("text/csv")
           dc_entry$save(dc_entry_filename)
-          uploadedMetadataId <- store$uploadFile(folderPath = file.path(config$dcf$workspace, dc_folder), file = dc_entry_filename)
-          uploaded_metadata <- !is.null(uploadedMetadataId) 
-          if(uploaded_metadata){
+          uploadedMetadataId <- store$uploadFile(folderPath = file.path(config$dcf$user_workspace, dc_folder), file = dc_entry_filename)
+          
+          if(!is.null(uploadedMetadataId) ){
             INFO("Successful upload for metadata file '%s'", dc_entry_filename)
           }
           unlink(dc_entry_filename)
         }
         
-        if(uploaded_data && uploaded_metadata){
+        if(!is.null(uploadedDataId) && !is.null(uploadedMetadataId)){
           if(!is.null(gbReportPath())){
             report_standard_conformity_filename<-gbReportPath()
-            uploadedReportStandardConformityId <- store$uploadFile(folderPath = file.path(config$dcf$workspace, dc_folder), file = report_standard_conformity_filename)
-            uploaded_report_standard_conformity <- !is.null(uploadedReportStandardConformityId)
-            if(uploaded_report_standard_conformity){
+            uploadedReportStandardConformityId <- store$uploadFile(folderPath = file.path(config$dcf$user_workspace, dc_folder), file = report_standard_conformity_filename)
+            if(!is.null(uploadedReportStandardConformityId)){
               INFO("Successful upload for standard conformity report file '%s'", report_standard_conformity_filename)
             }
             unlink(dc_entry_filename)
           }
           if(!is.null(dcReportPath())){
             report_datacall_consistency_filename<-dcReportPath()
-            uploadedReportDatacallConsistencyId <- store$uploadFile(folderPath = file.path(config$dcf$workspace, dc_folder), file = report_datacall_consistency_filename)
-            uploaded_report_datacall_consistency <- !is.null(uploadedReportDatacallConsistencyId)
-            if(uploaded_report_datacall_consistency){
+            uploadedReportDatacallConsistencyId <- store$uploadFile(folderPath = file.path(config$dcf$user_workspace, dc_folder), file = report_datacall_consistency_filename)
+            if(!is.null(uploadedReportDatacallConsistencyId)){
               INFO("Successful upload for datacall consistancy report file '%s'", report_datacall_consistency_filename)
             }
             unlink(dc_entry_filename)
@@ -758,13 +755,14 @@ data_validation_server <- function(id, parent.session, config, profile, componen
         }
         
         #sharing
-        if(uploaded_data && uploaded_metadata && uploaded_report_standard_conformity && uploaded_report_datacall_consistency){
+        if(!is.null(uploadedDataId) && !is.null(uploadedMetadataId) && !is.null(uploadedReportStandardConformityId) && !is.null(uploadedReportDatacallConsistencyId)){
           progress$set(
             message = sprintf("Share data submission folder with %s", config$dcf$roles$manager), 
             detail = sprintf("Data call: %s; Task: %s; Reporting entity: %s", submission$data_call_id, submission$task_id, submission$reporting_entity),
             value = 80
           )
-          #shared <- store$shareItem(itemPath = file.path(config$dcf$workspace, dc_folder), defaultAccessType = "WRITE_ALL", users = "emmanuel.blondel")
+          #shared <- store$shareItem(itemPath = file.path(config$dcf$user_workspace, dc_folder), defaultAccessType = "WRITE_ALL", users = "emmanuel.blondel")
+          shared=TRUE
         }
         
         #notification
@@ -805,8 +803,27 @@ data_validation_server <- function(id, parent.session, config, profile, componen
                                              config$dcf$name, config$dcf$context, config$dcf$roles$manager, 
                                              profile$name, config$dcf$roles$submitter, submission$data_call_id, submission$task_id, submission$reporting_entity),
                               recipients = as.list(dcf_managers$username),
+                              attachment_ids =list(uploadedOriginalDataId,uploadedDataId,uploadedMetadataId ,uploadedReportStandardConformityId,uploadedReportDatacallConsistencyId) ,
                               profile = profile
           )
+          
+          sendMessage(subject = sprintf("Your submission for data call '%s' - task '%s' - reporting entity '%s' is submitted",
+                                        submission$data_call_id, submission$task_id, submission$reporting_entity),
+                      body = sprintf("Dear %s,
+                      
+                                      Thank you for your data deposit.
+                      
+                                      Your data for data call '%s' - task '%s' - reporting entity '%s' has been successfully submitted to %s and will be reviewed soon.
+                                           
+                                      Best regards,
+                                      The system bot",
+                              
+                                     profile$name, submission$data_call_id, submission$task_id, submission$reporting_entity, config$dcf$roles$manager),
+                      recipients = list(profile$preferred_username),
+                      attachment_ids =list(uploadedOriginalDataId,uploadedDataId,uploadedMetadataId ,uploadedReportStandardConformityId,uploadedReportDatacallConsistencyId) ,
+                      profile = profile
+          )
+          
           progress$set(
             message = "Successful data submission", 
             detail = sprintf("Data call: %s; Task: %s; Reporting entity: %s", submission$data_call_id, submission$task_id, submission$reporting_entity),
