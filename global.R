@@ -36,7 +36,7 @@ fetchProfile <- function(jwt){
   if(out_jwt$expired) stop("JWT token is expired")
   if(!out_jwt$expired){
     req <- httr::with_verbose(httr::POST(
-      "https://accounts.d4science.org/auth/realms/d4science/protocol/openid-connect/token",
+      sprintf("%s/protocol/openid-connect/token",out_jwt$iss),
       encode = "form",
       add_headers("Authorization" = paste("Bearer", jwt)),
       body = list(
