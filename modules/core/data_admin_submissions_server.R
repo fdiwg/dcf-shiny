@@ -23,7 +23,7 @@ data_admin_submissions_server <- function(id, parent.session, config, profile, c
       
       output$datacall_selector<-renderUI({
       selectizeInput(ns("datacall"),
-                     label="Inspect submission for datacall :",
+                     label="Inspect submissions for data call :",
                      multiple = F,
                      choices = setNames(datacalls$id_data_call,sprintf("%s (%s/%s) [%s]",datacalls$task_id,datacalls$date_start,datacalls$date_end,datacalls$status)) ,
                      selected=NULL,
@@ -234,7 +234,8 @@ data_admin_submissions_server <- function(id, parent.session, config, profile, c
               "Task ID" = item$task_id,
               "Flag" = paste0('<img src="https://countryflagsapi.com/png/', tolower(item$reporting_entity),'" height=16 width=32></img>'),
               "Reporting entity" = item$reporting_entity,
-              "Owner" = item$owner,
+              "Temporal extent" = item$temporal_extent,
+              "Submitter" = item$submitter,
               "Creation time" = item$creationTime,
               "Last modified by" = item$lastModifiedBy,
               "Last modification time" = item$lastModificationTime,
@@ -308,7 +309,7 @@ data_admin_submissions_server <- function(id, parent.session, config, profile, c
         
       output$percent<-renderUI({
         box(width = 12,
-            progressGroup("Number of transmissions",transmitted_submissions, min = 0, max = nb_entities, color = "aqua"),
+            progressGroup("Number of submissions",transmitted_submissions, min = 0, max = nb_entities, color = "aqua"),
             progressGroup("Percentage of validation", round(transmitted_submissions/nb_entities*100,0), min = 0, max = 100, color = "aqua")
         )
       })

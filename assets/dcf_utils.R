@@ -1398,7 +1398,10 @@ getSubmissions <- function(config, store, user_only = FALSE,data_calls_id = NULL
               status <- "REJECTED"
             }
           }
-          
+        }
+        temporal_extent <- "-"
+        if(!is.null(dc_entry$temporal)){
+          temporal_extent <- dc_entry$temporal[[1]]$value
         }
         
         user_submission <- data.frame(
@@ -1407,7 +1410,8 @@ getSubmissions <- function(config, store, user_only = FALSE,data_calls_id = NULL
           data_call_folder = data_call_folder,
           task_id = task_id,
           reporting_entity = reporting_entity,
-          owner = user_item$owner,
+          temporal_coverage = temporal_extent,
+          submitter = user_item$owner,
           creationTime = as.POSIXct(user_item$creationTime/1000, origin = "1970-01-01"),
           lastModifiedBy = user_item$lastModifiedBy,
           lastModificationTime = as.POSIXct(user_item$lastModificationTime/1000, origin = "1970-01-01"),
@@ -1423,7 +1427,8 @@ getSubmissions <- function(config, store, user_only = FALSE,data_calls_id = NULL
         data_call_folder = character(0),
         task_id = character(0),
         reporting_entity = character(0),
-        owner = character(0),
+        temporal_extent = character(0),
+        submitter = character(0),
         creationTime = character(0),
         lastModifiedBy = character(0),
         lastModificationTime = character(0),

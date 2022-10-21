@@ -726,6 +726,11 @@ data_validation_server <- function(id, parent.session, config, profile, componen
           dc_entry$addDCCoverage(paste0(config$dcf$reporting_entities$name,":",submission$reporting_entity))
           dc_entry$addDCSource(store$getPublicFileLink(path = file.path(config$dcf$user_workspace, dc_folder, basename(data_filename))))
           dc_entry$addDCFormat("text/csv")
+          
+          start <- min(as.Date(loadedData()$time_start))
+          end <- max(as.Date(loadedData()$time_end))
+          dc_entry$addDCTemporal(paste(start,end,sep="/"))
+          
           dc_entry$save(dc_entry_filename)
           uploadedMetadataId <- store$uploadFile(folderPath = file.path(config$dcf$user_workspace, dc_folder), file = dc_entry_filename)
           
