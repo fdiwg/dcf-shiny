@@ -1515,16 +1515,16 @@ sendReminder <- function(pool,data_call_id,reporting_entity=NULL,role=NULL,confi
   data_call <- getDataCalls(pool, id_data_call = data_call_id)
   
   if(nrow(recipients)==0){
-    sended <- FALSE
-    attr(sended, "error") <- sprintf("There is currently no person assign for reporting entity '%s'", reporting_entity)
-    return(sended)
+    sent <- FALSE
+    attr(sent, "error") <- sprintf("There is currently no person assign for reporting entity '%s'", reporting_entity)
+    return(sent)
   }
 
       INFO("Sending reminder notification to DB users")
-      for(i in 1:nrow(recipients)){
+      sent <- all(do.call("c", lapply(1:nrow(recipients), function(i){
         recipient <- recipients[i,]
         INFO("Sending data call notification to '%s'", recipient$username)
-        sendMessage(
+        notif_sent <- sendMessage(
           subject = sprintf("[%s] Kind reminder for Data call open for %s task ID '%s'", config$dcf$name, config$dcf$context, data_call$task_id),
           body = sprintf(
             "Dear %s,
@@ -1547,9 +1547,8 @@ sendReminder <- function(pool,data_call_id,reporting_entity=NULL,role=NULL,confi
           recipients = as.list(recipient$username),
           profile = profile
         )
-      }
+        return(notif_sent)
+      })))
       
-      sended <- TRUE
-      
-  return(sended)
+  return(sent)
 }
