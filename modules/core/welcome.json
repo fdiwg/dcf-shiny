@@ -1,8 +1,0 @@
-{
-  "type": "item",
-  "menu": true,
-  "name": "welcome",
-  "title": "Dashboard",
-  "rank": 1,
-  "restricted": false
-}
