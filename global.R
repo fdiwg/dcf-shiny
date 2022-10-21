@@ -46,6 +46,8 @@ fetchProfile <- function(jwt){
     ))
     if(httr::status_code(req)==200){
       out_jwt$access <- content(req)
+    }else{
+      stop("JWT Token is not authorized!")
     }
   }
   
