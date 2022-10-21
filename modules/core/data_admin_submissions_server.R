@@ -80,7 +80,7 @@ data_admin_submissions_server <- function(id, parent.session, config, profile, c
               if(!sended){
                 attr(sended, "error")
               }else{
-                "Your reminder has successfully sent"
+                "Your reminder has been successfully sent"
               }
             ),
             easyClose = TRUE, footer = NULL,size="l" 
