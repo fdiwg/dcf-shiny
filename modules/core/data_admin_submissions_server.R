@@ -401,7 +401,7 @@ data_admin_submissions_server <- function(id, parent.session, config, profile, c
       
       output$table_wrapper<-renderUI({
         if(!is.null(input$datacall))if(input$datacall!=""){
-          withSpinner(DT::dataTableOutput(ns("tbl_all_submissions")))
+          withSpinner(DT::dataTableOutput(ns("tbl_all_submissions")), type = 4)
         }else{tags$span(shiny::icon(c('exclamation-triangle')), "No data call is currently selected", style="color:orange;")}
       })
       
