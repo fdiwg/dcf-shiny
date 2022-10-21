@@ -5,6 +5,20 @@ data_admin_submissions_ui <- function(id){
   shinydashboard::tabItem(
     tabName = "data_admin_submissions",
     h3("All submissions"),hr(),
-    withSpinner(DT::dataTableOutput(ns("tbl_all_submissions")))
+    fluidRow(
+      div(
+        class = "col-md-3",
+        uiOutput(ns("datacall_selector"))
+        ),
+      div(
+        class = "col-md-3",
+        uiOutput(ns("percent"))
+      ),
+      div(
+        class = "col-md-4",
+        uiOutput(ns("indicators"))
+      )
+    ),
+    uiOutput(ns("table_wrapper"))
   )
 }

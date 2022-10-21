@@ -9,7 +9,7 @@ getDBUserReportingEntities <- function(pool, profile){
 }
 
 #getDBUsers
-getDBUsers <- function(pool, profile = NULL){
+getDBUsers <- function(pool, profile = NULL,reporting_entities=NULL){
   dcf_users <- tibble::as.tibble(DBI::dbReadTable(pool, "dcf_users"))
   if(!is.null(profile)){
     user_roles <- getAppUserRoles(profile)
@@ -23,13 +23,21 @@ getDBUsers <- function(pool, profile = NULL){
       return(roles)
     })
   }
+  if(!is.null(reporting_entities)){
+    pattern<-paste0(reporting_entities,collapse = "|")
+    dcf_users<-dcf_users[grepl(pattern,dcf_users$reporting_entities),]
+  }
   return(dcf_users)
 }
 
 #getDBUsersWithRole
-getDBUsersWithRole <- function(pool, profile, role){
+getDBUsersWithRole <- function(pool, profile, role,reporting_entities=NULL){
   users <- getDBUsers(pool, profile)
   users <- users[sapply(users$roles, function(x){ role %in% x }),]
+  if(!is.null(reporting_entities)){
+    pattern<-paste0(reporting_entities,collapse = "|")
+    users<-users[grepl(pattern,users$reporting_entities),]
+  }
   return(users)
 }
 

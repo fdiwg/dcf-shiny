@@ -1316,8 +1316,31 @@ validateCallRules <- function(file, rules){
   
 }
 
+#completeWithMissingEntities
+completeWithMissingEntities<-function(config,data){
+  reporting_entities<-config$dcf$reporting_entities$codelist_ref
+  missing_entities<-subset(reporting_entities,!code%in%data$reporting_entity)$code
+  if(length(missing_entities>0)){
+    missing <- data.frame(
+      id = rep("",length(missing_entities)),
+      data_call_id = rep(unique(data$data_call_id),length(missing_entities)),
+      data_call_folder = rep(unique(data$data_call_folder),length(missing_entities)),
+      task_id = rep(unique(data$task_id),length(missing_entities)),
+      reporting_entity = missing_entities,
+      owner = rep("",length(missing_entities)),
+      creationTime = rep(NA,length(missing_entities)),
+      lastModifiedBy = rep("",length(missing_entities)),
+      lastModificationTime = rep(NA,length(missing_entities)),
+      status = rep("MISSING",length(missing_entities)),
+      stringsAsFactors = FALSE)
+    
+    data<-rbind(data,missing)
+  }
+  return(data)
+}
+
 #getSubmissions
-getSubmissions <- function(config, store, user_only = FALSE){
+getSubmissions <- function(config, store, user_only = FALSE,data_calls_id = NULL,full_entities=FALSE){
   items <- store$listWSItems()
   workspace_filter <- paste0(config$dcf$workspace,"-")
   if(user_only) workspace_filter <- config$dcf$user_workspace
@@ -1337,6 +1360,23 @@ getSubmissions <- function(config, store, user_only = FALSE){
         data_call_id <- unlist(strsplit(data_call_props[1], "datacall-"))[2]
         task_id <- unlist(strsplit(data_call_props[2], "task-"))
         task_id <- paste0(task_id[2:length(task_id)], collapse = "task-")
+        
+        if(!is.null(data_calls_id)) if(!data_call_id%in%data_calls_id){
+        user_submissions <- data.frame(
+          id = character(0),
+          data_call_id = character(0),
+          data_call_folder = character(0),
+          task_id = character(0),
+          reporting_entity = character(0),
+          owner = character(0),
+          creationTime = character(0),
+          lastModifiedBy = character(0),
+          lastModificationTime = character(0),
+          status = character(0),
+          stringsAsFactors = FALSE
+        )
+        return(user_submissions)
+        }
         
         #fetch metadata
         dcfile_item <- store$getWSItem(parentFolderID = user_item$id, itemPath = paste0(data_call_folder,".xml"))
@@ -1383,6 +1423,10 @@ getSubmissions <- function(config, store, user_only = FALSE){
     }
     return(user_submissions)
   }))
+  
+  if(full_entities){
+    all_items<-completeWithMissingEntities(config,all_items)
+  }
   return(all_items)
 }
 
@@ -1406,4 +1450,89 @@ rejectSubmission <- function(config, store, data_call_folder, data_submission_id
   dc_entry$addDCDateAccepted(NA)
   dc_entry$save(file = dcfile)
   store$uploadFile(folderID = data_submission_id, file = dcfile)
+}
+
+#listItemsSubmission
+listItemsSubmission <- function(store, submission_id){
+  store$listWSItems(parentFolderID = submission_id, showHidden = FALSE)
+}
+
+#copyItemsSubmission
+copyItemsSubmission <- function(store, data_submission_id, wd=tempdir()){
+  items<-store$listWSItems(parentFolderID = data_submission_id, showHidden = FALSE)
+  if(nrow(items)>0){
+    items_info <- do.call("rbind", lapply(1:nrow(items), function(i){
+      item <- items[i,]
+      dcfile_item <- store$getWSItem(parentFolderID = data_submission_id, itemPath = item$name)
+      dcfile <- store$downloadItem(item = dcfile_item, wd = wd)
+      
+      item_info <- data.frame(
+        id = item$id,
+        name = item$name,
+        path = dcfile,
+        stringsAsFactors = FALSE
+      )
+      return(item_info)
+    }))
+  }else{
+    item_info <- data.frame(
+      id = character(0),
+      name = character(0),
+      path = character(0),
+      stringsAsFactors = FALSE
+    )
+  }
+
+  return(items_info)
+}
+
+#createDataCall
+sendReminder <- function(pool,data_call_id,reporting_entity=NULL,role=NULL,config, profile){
+  
+  #check existing entities
+  
+  #recipients<-getDBUsersWithRole(pool,profile,role,reporting_entity)
+  recipients<-getDBUsers(pool,profile,reporting_entity)
+  print(recipients)
+  #get datacall info
+  data_call <- getDataCalls(pool, id_data_call = data_call_id)
+  
+  if(nrow(recipients)==0){
+    sended <- FALSE
+    attr(sended, "error") <- sprintf("There is currently no person assign for reporting entity '%s'", reporting_entity)
+    return(sended)
+  }
+
+      INFO("Sending reminder notification to DB users")
+      for(i in 1:nrow(recipients)){
+        recipient <- recipients[i,]
+        INFO("Sending data call notification to '%s'", recipient$username)
+        sendMessage(
+          subject = sprintf("[%s] Kindly reminder for Data call open for %s task ID '%s'", config$dcf$name, config$dcf$context, data_call$tasks),
+          body = sprintf(
+            "Dear %s,
+            
+            You receive this notification because you are assigned as part of the %s (%s) as %s.
+            
+            We haven't yet receipt your data for task ID '%s'.
+            
+            You are kindly invited to validate and submit your data before %s.
+            
+            Best regards,
+            The %s
+                         
+            ",
+            recipient$fullname, 
+            config$dcf$name, config$dcf$context, config$dcf$roles$submitter, data_call$tasks,
+            as(data_call$date_end,"character"),
+            config$dcf$roles$manager
+          ),
+          recipients = as.list(recipient$username),
+          profile = profile
+        )
+      }
+      
+      sended <- TRUE
+      
+  return(sended)
 }
