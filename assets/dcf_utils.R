@@ -1525,7 +1525,7 @@ sendReminder <- function(pool,data_call_id,reporting_entity=NULL,role=NULL,confi
         recipient <- recipients[i,]
         INFO("Sending data call notification to '%s'", recipient$username)
         sendMessage(
-          subject = sprintf("[%s] Kindly reminder for Data call open for %s task ID '%s'", config$dcf$name, config$dcf$context, data_call$tasks),
+          subject = sprintf("[%s] Kind reminder for Data call open for %s task ID '%s'", config$dcf$name, config$dcf$context, data_call$task_id),
           body = sprintf(
             "Dear %s,
             
@@ -1540,7 +1540,7 @@ sendReminder <- function(pool,data_call_id,reporting_entity=NULL,role=NULL,confi
                          
             ",
             recipient$fullname, 
-            config$dcf$name, config$dcf$context, config$dcf$roles$submitter, data_call$tasks,
+            config$dcf$name, config$dcf$context, config$dcf$roles$submitter, data_call$task_id,
             as(data_call$date_end,"character"),
             config$dcf$roles$manager
           ),
