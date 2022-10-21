@@ -1384,7 +1384,6 @@ getSubmissions <- function(config, store, user_only = FALSE,data_calls_id = NULL
         dc_entry <- atom4R::readDCEntry(dcfile)
         status <- "SUBMITTED"
         if(!is.null(dc_entry$dateAccepted)){
-          print(dc_entry$dateAccepted)
           if(is.list(dc_entry$dateAccepted)){
             if(all(dc_entry$dateAccepted[[1]]$value != "NA")){
               status <- "ACCEPTED"
