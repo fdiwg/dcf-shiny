@@ -154,11 +154,13 @@ data_admin_submissions_server <- function(id, parent.session, config, profile, c
     observeEvent(input$item, {
       req(input$item)
       if(endsWith(input$item,".pdf")){
+        #data reports
         print("CLICK ON PDF")
-      output$display <- renderUI({
-        tags$iframe(style="height:600px; width:100%", src=paste0("tmp/",input$item))
-      })
+        output$display <- renderUI({
+          tags$iframe(style="height:600px; width:100%", src=paste0("tmp/",input$item))
+        })
       }else if(endsWith(input$item,".csv")){
+        #data files
         output$display_table <-DT::renderDT(
           readr::read_csv(file.path(tempdir(),input$item)),
           escape=FALSE,rownames=FALSE,
@@ -173,7 +175,25 @@ data_admin_submissions_server <- function(id, parent.session, config, profile, c
         output$display<- renderUI({
           DT::dataTableOutput(ns("display_table"))
         })
+      }else if(endsWith(input$item,".xml")){
+        #metadata
+        dcentry <- atom4R::readDCEntry(file.path(tempdir(),input$item))
+        output$display_table <-DT::renderDT(
+          dcentry$asDataFrame(),
+          escape=FALSE,rownames=FALSE,
+          options=list(
+            pageLength = 10,
+            searching = TRUE,
+            autoWidth = FALSE,
+            scrollX=TRUE,
+            scrollCollapse=TRUE)
+        )
+        
+        output$display<- renderUI({
+          DT::dataTableOutput(ns("display_table"))
+        })
       }else {
+        #nothing in principle
         output$display<- renderUI({
           NULL
         })
