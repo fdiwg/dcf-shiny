@@ -77,6 +77,11 @@ CONFIG <- read_dcf_config(file = config_file)
 #---------------------------------------------------------------------------------------
 COMPONENTS$POOL <- loadDBI(config = CONFIG)
 
+#Add resource path towards temporary directory for iframe display
+#---------------------------------------------------------------------------------------
+addResourcePath(prefix = "tmp", directoryPath = tempdir())
+print(tempdir())
+
 #scripts
 #---------------------------------------------------------------------------------------
 

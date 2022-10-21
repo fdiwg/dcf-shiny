@@ -8,12 +8,31 @@ data_admin_submissions_server <- function(id, parent.session, config, profile, c
       
       #store
       store <- components$STORAGEHUB
+      pool <- components$POOL
       
       #reactives
       selection <- reactiveVal(NULL)
       model <- reactiveValues(
         error = NULL
       )
+      
+      datacalls<-getDataCalls(pool)
+      datacalls<-datacalls[order(datacalls$date_end, datacalls$status,decreasing = T),]
+      
+      print(datacalls)
+      
+      output$datacall_selector<-renderUI({
+      selectizeInput(ns("datacall"),
+                     label="Inspect submission for datacall :",
+                     multiple = F,
+                     choices = setNames(datacalls$id_data_call,sprintf("%s (%s/%s) [%s]",datacalls$task_id,datacalls$date_start,datacalls$date_end,datacalls$status)) ,
+                     selected=NULL,
+                     options = list(
+                       placeholder = "Please select a datacall",
+                       onInitialize = I('function() { this.setValue(""); }')
+                     )
+      )
+    })
       
       #modals
       showSubmissionActionModal <- function(data_call_folder, id_data_submission, accept = FALSE){
@@ -33,6 +52,42 @@ data_admin_submissions_server <- function(id, parent.session, config, profile, c
         )
       }
       
+      showSubmissionBrowseModal <- function(items){
+        showModal(
+          modalDialog(
+            title = "",
+            selectizeInput(ns("item"),
+                           label="Show submitted item :",
+                           multiple = F,
+                           choices = items$name,
+                           selected=NULL,
+                           options = list(
+                             placeholder = "Please select a item",
+                             onInitialize = I('function() { this.setValue(""); }')
+                           )
+            ),
+            uiOutput(ns("display")),
+            easyClose = TRUE, footer = NULL,size="l" 
+          )
+        )
+      }
+      
+      showReminderModal <- function(sended){
+        showModal(
+          modalDialog(
+            title = "",
+            p(
+              if(!sended){
+                attr(sended, "error")
+              }else{
+                "Your reminder has successfully sent"
+              }
+            ),
+            easyClose = TRUE, footer = NULL,size="l" 
+          )
+        )
+      }
+      
       #manage button handlers
       #Browse TODO
       manageButtonBrowseEvents <- function(data, uuids){
@@ -41,10 +96,30 @@ data_admin_submissions_server <- function(id, parent.session, config, profile, c
           x <- data[i,]
           button_id <- paste0(prefix,uuids[i])
           observeEvent(input[[button_id]],{
-            #TODO
+            items<-copyItemsSubmission(store, data_submission_id=x$id, wd=tempdir())
+             showSubmissionBrowseModal(
+               items = items
+             )
           })
         })
       }
+      
+      #Browse TODO
+      manageButtonReminderEvents <- function(data, uuids){
+        prefix <- paste0("button_reminder_")
+        if(length(data)>0) if(nrow(data)>0) lapply(1:nrow(data),function(i){
+          x <- data[i,]
+          button_id <- paste0(prefix,uuids[i])
+          observeEvent(input[[button_id]],{
+            shinyjs::disable(button_id)
+            sended<-sendReminder(pool,data_call_id=x$data_call_id,reporting_entity=x$reporting_entity,role=config$dcf$roles$submitter,config, profile)
+            showReminderModal(
+               sended = sended
+            )
+          })
+        })
+      }
+      
       #Accept
       manageButtonAcceptEvents <- function(data, uuids){
         prefix <- paste0("button_accept_")
@@ -75,6 +150,36 @@ data_admin_submissions_server <- function(id, parent.session, config, profile, c
           })
         })
       }
+    
+    observeEvent(input$item, {
+      req(input$item)
+      if(endsWith(input$item,".pdf")){
+        print("CLICK ON PDF")
+      output$display <- renderUI({
+        tags$iframe(style="height:600px; width:100%", src=paste0("tmp/",input$item))
+      })
+      }else if(endsWith(input$item,".csv")){
+        output$display_table <-DT::renderDT(
+          readr::read_csv(file.path(tempdir(),input$item)),
+          escape=FALSE,rownames=FALSE,
+          options=list(
+            pageLength = 5,
+            searching = TRUE,
+            autoWidth = FALSE,
+            scrollX=TRUE,
+            scrollCollapse=TRUE)
+          )
+        
+        output$display<- renderUI({
+          DT::dataTableOutput(ns("display_table"))
+        })
+      }else {
+        output$display<- renderUI({
+          NULL
+        })
+      }
+    })
+      
       
       #observers on modals actions
       #data submission accept/cancel
@@ -87,8 +192,9 @@ data_admin_submissions_server <- function(id, parent.session, config, profile, c
         if(!is(accepted, "try-error")){
           model$error <- NULL
           removeModal()
-          data <- getSubmissions(config = config, store = store, user_only = FALSE)
+          data <- getSubmissions(config = config, store = store, user_only = FALSE,data_calls_id=input$datacall,full_entities=TRUE)
           renderSubmissions(data)
+          renderBars(data)
         }else{
           model$error <- "Unexpected error during submission acceptance!"
         }
@@ -103,8 +209,9 @@ data_admin_submissions_server <- function(id, parent.session, config, profile, c
         if(!is(rejected, "try-error")){
           model$error <- NULL
           removeModal()
-          data <- getSubmissions(config = config, store = store, user_only = FALSE)
+          data <- getSubmissions(config = config, store = store, user_only = FALSE,data_calls_id=input$datacall,full_entities=TRUE)
           renderSubmissions(data)
+          renderBars(data)
         }else{
           model$error <- "Unexpected error during submission rejection!"
         }
@@ -125,22 +232,47 @@ data_admin_submissions_server <- function(id, parent.session, config, profile, c
               "Data call ID" = item$data_call_id,
               "Data call Folder" = item$data_call_folder,
               "Task ID" = item$task_id,
+              "Flag" = paste0('<img src="https://countryflagsapi.com/png/', tolower(item$reporting_entity),'" height=16 width=32></img>'),
               "Reporting entity" = item$reporting_entity,
               "Owner" = item$owner,
               "Creation time" = item$creationTime,
               "Last modified by" = item$lastModifiedBy,
               "Last modification time" = item$lastModificationTime,
               "Status" = item$status,
-              Actions = as(
-                tagList(
-                  actionButton(inputId = ns(paste0('button_browse_', uuids[i])), class="btn btn-info", style = "margin-right: 2px;",
-                               title = "Browse data submission", label = "", icon = icon("tasks")),
-                  actionButton(inputId = ns(paste0('button_accept_', uuids[i])), class="btn btn-success", style = "margin-right: 2px;",
-                               title = "Accept data submission", label = "", icon = icon("check")),
-                  actionButton(inputId = ns(paste0('button_reject_', uuids[i])), class="btn btn-danger", style = "margin-right: 2px;",
-                               title = "Reject data submission", label = "", icon = icon("remove"))
-                )
-                ,"character")
+              Actions = ifelse(item$status=="MISSING",as(
+                          tagList(
+                            actionButton(inputId = ns(paste0('button_reminder_', uuids[i])), class="btn btn-warning", style = "margin-right: 2px;",
+                                        title = "Send a reminder", label = "", icon = icon("bell"))
+                            ),"character"),
+                        ifelse(item$status=="ACCEPTED",as(
+                          tagList(
+                            actionButton(inputId = ns(paste0('button_browse_', uuids[i])), class="btn btn-info", style = "margin-right: 2px;",
+                                         title = "Browse data submission", label = "", icon = icon("eye")),
+                            actionButton(inputId = ns(paste0('button_reject_', uuids[i])), class="btn btn-danger", style = "margin-right: 2px;",
+                                         title = "Reject data submission", label = "", icon = icon("remove")),
+                            actionButton(inputId = ns(paste0('button_download_', uuids[i])), class="btn btn-default", style = "margin-right: 2px;",
+                                         title = "Download data submission", label = "", icon = icon("download"))
+                          ),"character"),
+                        ifelse(item$status=="REJECTED",as(
+                          tagList(
+                            actionButton(inputId = ns(paste0('button_browse_', uuids[i])), class="btn btn-info", style = "margin-right: 2px;",
+                                         title = "Browse data submission", label = "", icon = icon("eye")),
+                            actionButton(inputId = ns(paste0('button_accept_', uuids[i])), class="btn btn-success", style = "margin-right: 2px;",
+                                         title = "Accept data submission", label = "", icon = icon("check")),
+                            actionButton(inputId = ns(paste0('button_reminder_', uuids[i])), class="btn btn-warning", style = "margin-right: 2px;",
+                                         title = "Send a reminder", label = "", icon = icon("bell"))
+                          ),"character"),  as(
+                          tagList(
+                            actionButton(inputId = ns(paste0('button_browse_', uuids[i])), class="btn btn-info", style = "margin-right: 2px;",
+                                         title = "Browse data submission", label = "", icon = icon("eye")),
+                            actionButton(inputId = ns(paste0('button_accept_', uuids[i])), class="btn btn-success", style = "margin-right: 2px;",
+                                         title = "Accept data submission", label = "", icon = icon("check")),
+                            actionButton(inputId = ns(paste0('button_reject_', uuids[i])), class="btn btn-danger", style = "margin-right: 2px;",
+                                         title = "Reject data submission", label = "", icon = icon("remove")),
+                            actionButton(inputId = ns(paste0('button_download_', uuids[i])), class="btn btn-default", style = "margin-right: 2px;",
+                                         title = "Download data submission", label = "", icon = icon("download"))
+                          ),"character")
+                )))
             )
             return(out_tib)
           }
@@ -151,6 +283,7 @@ data_admin_submissions_server <- function(id, parent.session, config, profile, c
             "Data call ID" = character(0),
             "Data call Folder" = character(0),
             "Task ID" = character(0),
+            "Flag" = character(0),
             "Reporting entity" = character(0),
             "Owner" = character(0),
             "Creation time" = character(0),
@@ -163,6 +296,31 @@ data_admin_submissions_server <- function(id, parent.session, config, profile, c
         return(data)
       }
       
+      #renderBars
+      renderBars<- function(data){
+        
+        nb_entities<-length(unique(data$reporting_entity))
+        accepted_submissions<-length(unique(subset(data,status=="ACCEPTED")$reporting_entity))
+        pending_submissions<-length(unique(subset(data,status=="SUBMITTED")$reporting_entity))
+        transmitted_submissions<-length(unique(subset(data,status%in%c("ACCEPTED","SUBMITTED"))$reporting_entity))
+        
+        nb_duplicate<-sum(duplicated(subset(data,status!="MISSING",select=c(reporting_entity,data_call_folder))))
+        
+      output$percent<-renderUI({
+        box(width = 12,
+            progressGroup("Number of transmissions",transmitted_submissions, min = 0, max = nb_entities, color = "aqua"),
+            progressGroup("Percentage of validation", round(transmitted_submissions/nb_entities*100,0), min = 0, max = 100, color = "aqua")
+        )
+      })
+      
+        output$indicators<-renderUI({
+          div(
+          infoBox("Pending submissions", pending_submissions, icon = icon("envelope"), fill = TRUE,color="orange",width = 6),
+          infoBox("Duplicate submissions",nb_duplicate, icon = icon("exclamation-triangle"), fill = TRUE,color="red",width = 6)
+          )
+        })
+      
+      }
       
       #renderSubmissions
       renderSubmissions <- function(data){
@@ -173,7 +331,8 @@ data_admin_submissions_server <- function(id, parent.session, config, profile, c
           uuids <- c(uuids, one_uuid)
         }
         
-        output$tbl_all_submissions <- DT::renderDT(
+        output$tbl_all_submissions <- DT::renderDT({
+          datatable(
           submissionsTableHandler(data, uuids),
           selection='single', escape=FALSE,rownames=FALSE,
           options=list(
@@ -189,21 +348,19 @@ data_admin_submissions_server <- function(id, parent.session, config, profile, c
             ),
             autoWidth = FALSE,
             columnDefs = list(
-              list(width = '100px', targets = c(0)),
-              list(width = '400px', targets = c(1),
-                   render = JS("function(data, type, full, meta) {
-                           var html = data;
-                           if(data.startsWith(\"http://\") | data.startsWith(\"https://\")){
-                              html = '<a href=\"' + data + '\" target=\"_blank\">'+data+'</a>';
-                           }
-                           return html;
-                        }"))
+              list(width = '100px', targets = c(0))
             )
           )
-        )
+          )%>% formatStyle(
+            'Status',
+            target = 'row',
+            backgroundColor = styleEqual(c("MISSING","SUBMITTED","ACCEPTED","REJECTED"), c('#ffd6d6', '#FFE4AD','#CEF3D6','#ffd6d6'))
+          )
+        })
         
         #manage action buttons
         manageButtonBrowseEvents(data, uuids)
+        manageButtonReminderEvents(data, uuids)
         manageButtonAcceptEvents(data, uuids)
         manageButtonRejectEvents(data, uuids)
         
@@ -213,16 +370,37 @@ data_admin_submissions_server <- function(id, parent.session, config, profile, c
       autoRefresh <- reactiveTimer(60000)
       
       #events
-      observe({
-        autoRefresh()
-        INFO("submission table is refresh")
-        data <- getSubmissions(config = config, store = store, user_only = FALSE)
+      observeEvent(input$datacall,{
+        req(input$datacall)
+        if(!is.null(input$datacall))if(input$datacall!=""){
+        data <- getSubmissions(config = config, store = store, user_only = FALSE,data_calls_id=input$datacall,full_entities=TRUE)
+        INFO("DATACALL SELECTOR CLICK")
         renderSubmissions(data)
+        renderBars(data)
+        }
+      })
+      
+      observe({
+        req(input$datacall)
+        if(!is.null(input$datacall))if(input$datacall!=""){
+        autoRefresh()
+        INFO("all submissions table is refresh")
+        }
       })
       
       observeEvent(input$refresh,{
-        data <- getSubmissions(config = config, store = store, user_only = FALSE)
+        req(input$datacall)
+        if(!is.null(input$datacall))if(input$datacall!=""){
+        data <- getSubmissions(config = config, store = store, user_only = FALSE,data_calls_id=input$datacall,full_entities=TRUE)
         renderSubmissions(data)
+        renderBars(data)
+        }
+      })
+      
+      output$table_wrapper<-renderUI({
+        if(!is.null(input$datacall))if(input$datacall!=""){
+          withSpinner(DT::dataTableOutput(ns("tbl_all_submissions")))
+        }else{tags$span(shiny::icon(c('exclamation-triangle')), "No data call is currently selected", style="color:orange;")}
       })
       
       #-----------------------------------------------------------------------------------
