@@ -145,7 +145,7 @@ data_validation_server <- function(id, parent.session, config, profile, componen
       #TAB 1 REPORTING ENTITY SELECTOR
       output$reporting_entity_wrapper <- renderUI({
         if(!is.null(profile$reporting_entities)) {
-          if(profile$reporting_entities != ""){
+          if(all(profile$reporting_entities != "")){
             if(config$dcf$reporting_entities$name %in% c("country", "flagstate")){
               selectizeInput(ns("reporting_entity"), label = "Reporting entity", selected = NULL, multiple = FALSE, 
                choices = {
