@@ -31,11 +31,19 @@ data_admin_submissions_server <- function(id, parent.session, config, profile, c
                        placeholder = "Please select a datacall",
                        onInitialize = I('function() { this.setValue(""); }')
                      )
-      )
-    })
+        )
+      })
+      
+      output$data_submission_error <- renderUI({
+        if(is.null(model$error)){
+          tags$div(style="display:none;")
+        }else{
+          tags$div(model$error, class="alert alert-danger", role="alert")
+        }
+      })
       
       #modals
-      showSubmissionActionModal <- function(data_call_folder, id_data_submission, accept = FALSE){
+      showSubmissionActionModal <- function(data_call_folder, id_data_submission,task,submitter,end,data_call_id,reporting_entity,accept = FALSE){
         title_prefix <- ifelse(accept, "Accept", "Reject")
         form_action <- tolower(title_prefix)
         showModal(
@@ -43,7 +51,13 @@ data_admin_submissions_server <- function(id, parent.session, config, profile, c
             title = "",
             shinyjs::hidden(textInput(ns("data_submission_call_folder"), value = data_call_folder, label = "")),
             shinyjs::hidden(textInput(ns("data_submission_id"), value = id_data_submission, label = "")),
+            shinyjs::hidden(textInput(ns("data_submission_task"), value = task, label = "")),
+            shinyjs::hidden(textInput(ns("data_submission_submitter"), value = submitter, label = "")),
+            shinyjs::hidden(textInput(ns("data_submission_end"), value =as(end,"character"), label = "")),
+            shinyjs::hidden(textInput(ns("data_submission_data_call_id"), value =data_call_id, label = "")),
+            shinyjs::hidden(textInput(ns("data_submission_reporting_entity"), value =reporting_entity, label = "")),
             tags$p(sprintf("Are you sure to %s the data submission?", form_action)),
+            textInput(ns("data_submission_comment"), value = "-", label = "Add a comment"),
             actionButton(ns(sprintf("data_submission_%s_go", form_action)), title_prefix),
             actionButton(ns("data_submission_cancel"), "Cancel", style = "float:right;"),
             uiOutput(ns("data_submission_error")),
@@ -130,6 +144,11 @@ data_admin_submissions_server <- function(id, parent.session, config, profile, c
             showSubmissionActionModal(
               data_call_folder = x$data_call_folder,
               id_data_submission = x$id,
+              task=x$task_id,
+              submitter=x$submitter,
+              end=x$end,
+              data_call_id=x$data_call_id,
+              reporting_entity=x$reporting_entity,
               accept = TRUE
             )
           })
@@ -145,6 +164,11 @@ data_admin_submissions_server <- function(id, parent.session, config, profile, c
             showSubmissionActionModal(
               data_call_folder = x$data_call_folder,
               id_data_submission = x$id,
+              task=x$task_id,
+              submitter=x$submitter,
+              end=x$date_end,
+              data_call_id=x$data_call_id,
+              reporting_entity=x$reporting_entity,
               accept = FALSE
             )
           })
@@ -205,13 +229,23 @@ data_admin_submissions_server <- function(id, parent.session, config, profile, c
       #data submission accept/cancel
       observeEvent(input$data_submission_accept_go, {
         accepted <- try(acceptSubmission(
-          config = config, store = store,
+          config = config,pool=pool,profile =profile, store = store,
           data_call_folder = input$data_submission_call_folder,
-          data_submission_id = input$data_submission_id
+          data_submission_id = input$data_submission_id,
+          task=input$data_submission_task,
+          data_call_id=,input$data_submission_data_call_id,
+          reporting_entity=input$data_submission_reporting_entity,
+          username=input$data_submission_submitter,
+          comment=input$data_submission_comment
         ))
         if(!is(accepted, "try-error")){
-          model$error <- NULL
-          removeModal()
+          if(!accepted){
+            model$error <- attr(accepted,"error")
+          }else{
+            model$error <- NULL
+            removeModal()
+          }
+          
           data <- getSubmissions(config = config, store = store, user_only = FALSE,data_calls_id=input$datacall,full_entities=TRUE)
           renderSubmissions(data)
           renderBars(data)
@@ -222,9 +256,13 @@ data_admin_submissions_server <- function(id, parent.session, config, profile, c
       #data submission reject/cancel
       observeEvent(input$data_submission_reject_go, {
         rejected <- try(rejectSubmission(
-          config = config, store = store,
+          config = config, pool = pool, profile = profile, store = store,
           data_call_folder = input$data_submission_call_folder,
-          data_submission_id = input$data_submission_id
+          data_submission_id = input$data_submission_id,
+          task=input$data_submission_task,
+          username=input$data_submission_submitter,
+          end=input$data_submission_end,
+          comment=input$data_submission_comment
         ))
         if(!is(rejected, "try-error")){
           model$error <- NULL
