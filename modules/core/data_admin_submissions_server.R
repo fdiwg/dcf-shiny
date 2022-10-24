@@ -388,8 +388,14 @@ data_admin_submissions_server <- function(id, parent.session, config, profile, c
         
       }
       
-      #refresh table each minute
-      autoRefresh <- reactiveTimer(60000)
+      output$refresh_wrapper<-renderUI({
+        req(input$datacall)
+        if(!is.null(input$datacall))if(input$datacall!=""){
+        actionButton(ns("refresh"), "Refresh", icon = icon("refresh"))
+        }else{
+          NULL
+        }
+      })
       
       #events
       observeEvent(input$datacall,{
@@ -402,20 +408,13 @@ data_admin_submissions_server <- function(id, parent.session, config, profile, c
         }
       })
       
-      observe({
-        req(input$datacall)
-        if(!is.null(input$datacall))if(input$datacall!=""){
-        autoRefresh()
-        INFO("all submissions table is refresh")
-        }
-      })
-      
       observeEvent(input$refresh,{
         req(input$datacall)
         if(!is.null(input$datacall))if(input$datacall!=""){
         data <- getSubmissions(config = config, store = store, user_only = FALSE,data_calls_id=input$datacall,full_entities=TRUE)
         renderSubmissions(data)
         renderBars(data)
+        INFO("all submissions table is refresh")
         }
       })
       

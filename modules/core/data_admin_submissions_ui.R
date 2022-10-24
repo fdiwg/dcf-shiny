@@ -19,6 +19,7 @@ data_admin_submissions_ui <- function(id){
         uiOutput(ns("indicators"))
       )
     ),
+    uiOutput(ns("refresh_wrapper")),
     uiOutput(ns("table_wrapper"))
   )
 }
