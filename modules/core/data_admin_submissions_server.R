@@ -11,11 +11,9 @@ data_admin_submissions_server <- function(id, parent.session, config, profile, c
       pool <- components$POOL
       
       #reactives
-      selection <- reactiveVal(NULL)
       model <- reactiveValues(
         error = NULL
       )
-      
       
       output$task_wrapper<-renderUI({
         selectizeInput(ns("task"),
@@ -309,6 +307,9 @@ data_admin_submissions_server <- function(id, parent.session, config, profile, c
           data <- do.call("rbind", lapply(1:nrow(data), function(i){
             item <- data[i,]
             out_tib <- tibble::tibble(
+              "Rank" = ifelse(item$status=="ACCEPTED",1,
+                              ifelse(item$status=="SUBMITTED",2,
+                                     ifelse(item$status=="REJECTED",3,4))),
               "Submission ID" = item$id,
               "Data call ID" = item$data_call_id,
               "Data call Folder" = as.factor(item$data_call_folder),
@@ -363,6 +364,7 @@ data_admin_submissions_server <- function(id, parent.session, config, profile, c
           ))
         }else{
           data <- tibble::tibble(
+            "Rank" = character(0),
             "Submission ID" = character(0),
             "Data call ID" = character(0),
             "Data call Folder" = character(0),
@@ -388,22 +390,19 @@ data_admin_submissions_server <- function(id, parent.session, config, profile, c
         accepted_submissions<-length(unique(subset(data,status=="ACCEPTED")$reporting_entity))
         pending_submissions<-length(unique(subset(data,status=="SUBMITTED")$reporting_entity))
         transmitted_submissions<-length(unique(subset(data,status%in%c("ACCEPTED","SUBMITTED"))$reporting_entity))
-        
+        nb_missing<-length(unique(subset(data,status%in%c("MISSING","REJECTED"))$reporting_entity))
         nb_duplicate<-sum(duplicated(subset(data,status%in%c("ACCEPTED","SUBMITTED"),select=c(reporting_entity,data_call_folder))))
         
-      output$percent<-renderUI({
-        box(width = 12,
-            progressGroup("Number of submissions",transmitted_submissions, min = 0, max = nb_entities, color = "aqua"),
-            progressGroup("Percentage of validation", round(transmitted_submissions/nb_entities*100,0), min = 0, max = 100, color = "aqua")
+      output$indicators<-renderUI({
+        div(
+            progressInfoBox(title="Submission", text=sprintf('%s/%s',transmitted_submissions,nb_entities),value=transmitted_submissions,description=paste0(transmitted_submissions/nb_entities*100,"% of completion"), max = nb_entities,icon = icon("share"),fill = TRUE, color = "yellow",width =2),
+            progressInfoBox(title="Accepted submissions", text=sprintf('%s/%s',accepted_submissions,nb_entities),value=accepted_submissions,description=paste0(accepted_submissions/nb_entities*100,"% of completion"), max = nb_entities,icon = icon("check"),fill = TRUE, color = "green",width =2),
+            infoBox("Pending submissions", pending_submissions, icon = icon("tasks"), fill = TRUE,color="orange",width = 2),
+            infoBox("Missing submissions",nb_missing, icon = icon("bell"), fill = TRUE,color="red",width = 2),
+            infoBox("Duplicate submissions",nb_duplicate, icon = icon("exclamation-triangle"), fill = TRUE,color="black",width = 2),
         )
       })
-      
-        output$indicators<-renderUI({
-          div(
-          infoBox("Pending submissions", pending_submissions, icon = icon("envelope"), fill = TRUE,color="orange",width = 6),
-          infoBox("Duplicate submissions",nb_duplicate, icon = icon("exclamation-triangle"), fill = TRUE,color="red",width = 6)
-          )
-        })
+
       
       }
       
@@ -434,8 +433,10 @@ data_admin_submissions_server <- function(id, parent.session, config, profile, c
             autoWidth = FALSE,
             scrollY="600px",
             scrollCollapse=TRUE,
+            order = list(list(0,'asc')),
             columnDefs = list(
-              list(width = '100px', targets = c(0))
+              list(width = '100px', targets = c(1)),
+              list(visible=FALSE, targets=c(0))
             )
           )
           )%>% formatStyle(
