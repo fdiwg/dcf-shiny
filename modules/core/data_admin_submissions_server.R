@@ -311,16 +311,16 @@ data_admin_submissions_server <- function(id, parent.session, config, profile, c
             out_tib <- tibble::tibble(
               "Submission ID" = item$id,
               "Data call ID" = item$data_call_id,
-              "Data call Folder" = item$data_call_folder,
-              "Task ID" = item$task_id,
+              "Data call Folder" = as.factor(item$data_call_folder),
+              "Task ID" = as.factor(item$task_id),
               "Flag" = paste0('<img src="https://countryflagsapi.com/png/', tolower(item$reporting_entity),'" height=16 width=32></img>'),
-              "Reporting entity" = item$reporting_entity,
+              "Reporting entity" = as.factor(item$reporting_entity),
               "Temporal extent" = item$temporal_extent,
-              "Submitter" = item$submitter,
+              "Submitter" = as.factor(item$submitter),
               "Creation time" = item$creationTime,
               "Last modified by" = item$lastModifiedBy,
               "Last modification time" = item$lastModificationTime,
-              "Status" = item$status,
+              "Status" = as.factor(item$status),
               Actions = ifelse(item$status=="MISSING",as(
                           tagList(
                             actionButton(inputId = ns(paste0('button_reminder_', uuids[i])), class="btn btn-warning", style = "margin-right: 2px;",
@@ -419,7 +419,7 @@ data_admin_submissions_server <- function(id, parent.session, config, profile, c
         output$tbl_all_submissions <- DT::renderDT({
           datatable(
           submissionsTableHandler(data, uuids),
-          selection='single', escape=FALSE,rownames=FALSE,
+          selection='single', escape=FALSE,rownames=FALSE,filter = list(position = 'top', clear = FALSE),
           options=list(
             lengthChange = FALSE,
             paging = FALSE,
@@ -432,6 +432,8 @@ data_admin_submissions_server <- function(id, parent.session, config, profile, c
                         Shiny.bindAll(this.api().table().node()); }'
             ),
             autoWidth = FALSE,
+            scrollY="600px",
+            scrollCollapse=TRUE,
             columnDefs = list(
               list(width = '100px', targets = c(0))
             )

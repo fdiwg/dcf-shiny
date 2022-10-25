@@ -166,12 +166,12 @@ data_user_submissions_server <- function(id, parent.session, config, profile, co
               "Data call ID" = item$data_call_id,
               "Task ID" = item$task_id,
               "Flag" = paste0('<img src="https://countryflagsapi.com/png/', tolower(item$reporting_entity),'" height=16 width=32></img>'),
-              "Reporting entity" = item$reporting_entity,
+              "Reporting entity" = as.factor(item$reporting_entity),
               "Owner" = item$owner,
               "Creation time" = item$creationTime,
               "Last modified by" = item$lastModifiedBy,
               "Last modification time" = item$lastModificationTime,
-              "Status" = item$status,
+              "Status" = as.factor(item$status),
               Actions = ifelse(item$status=="MISSING",as(
                           tagList()
                           ,"character"),as(
@@ -216,11 +216,11 @@ data_user_submissions_server <- function(id, parent.session, config, profile, co
         output$tbl_my_submissions <- DT::renderDT({
           datatable(
           submissionsTableHandler(data, uuids),
-          selection='single', escape=FALSE,rownames=FALSE,
+          selection='single', escape=FALSE,rownames=FALSE,filter = list(position = 'top', clear = FALSE),
           options=list(
             lengthChange = FALSE,
             paging = FALSE,
-            searching = FALSE,
+            searching = TRUE,
             preDrawCallback = JS(
               'function() {
                   Shiny.unbindAll(this.api().table().node()); }'
@@ -229,6 +229,8 @@ data_user_submissions_server <- function(id, parent.session, config, profile, co
                         Shiny.bindAll(this.api().table().node()); }'
             ),
             autoWidth = FALSE,
+            scrollY="600px",
+            scrollCollapse=TRUE,
             columnDefs = list(
               list(width = '100px', targets = c(0))
             )
