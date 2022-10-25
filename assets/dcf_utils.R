@@ -1317,31 +1317,55 @@ validateCallRules <- function(file, rules){
 }
 
 #completeWithMissingEntities
-completeWithMissingEntities<-function(config,data){
-  reporting_entities<-config$dcf$reporting_entities$codelist_ref
-  missing_entities<-subset(reporting_entities,!code%in%data$reporting_entity)$code
-  if(length(missing_entities>0)){
-    missing <- data.frame(
-      id = rep("",length(missing_entities)),
-      data_call_id = rep(unique(data$data_call_id),length(missing_entities)),
-      data_call_folder = rep(unique(data$data_call_folder),length(missing_entities)),
-      task_id = rep(unique(data$task_id),length(missing_entities)),
-      reporting_entity = missing_entities,
-      temporal_extent = rep("",length(missing_entities)),
-      submitter = rep("",length(missing_entities)),
-      creationTime = rep(NA,length(missing_entities)),
-      lastModifiedBy = rep("",length(missing_entities)),
-      lastModificationTime = rep(NA,length(missing_entities)),
-      status = rep("MISSING",length(missing_entities)),
+completeWithMissingEntities<-function(config,pool,profile,data,user_only=FALSE){
+  if(user_only){
+    reporting_entities<-data.frame(code=getDBUserReportingEntities(pool,profile))
+  }else{
+    reporting_entities<-config$dcf$reporting_entities$codelist_ref 
+  }
+  
+  if(nrow(data)>0){
+    missing_entities<-subset(reporting_entities,!code%in%data$reporting_entity)$code
+    if(length(missing_entities>0)){
+      
+      print(missing_entities)
+      print(length(missing_entities))
+      missing <- data.frame(
+        id = rep("",length(missing_entities)),
+        data_call_id = rep(data$data_call_id[1],length(missing_entities)),
+        data_call_folder = rep("",length(missing_entities)),
+        task_id = rep(data$task_id[1],length(missing_entities)),
+        reporting_entity = missing_entities,
+        temporal_extent = rep("",length(missing_entities)),
+        submitter = rep("",length(missing_entities)),
+        creationTime = rep(NA,length(missing_entities)),
+        lastModifiedBy = rep("",length(missing_entities)),
+        lastModificationTime = rep(NA,length(missing_entities)),
+        status = rep("MISSING",length(missing_entities)),
+        stringsAsFactors = FALSE)
+      
+      data<-rbind(data,missing)
+    }
+  }else{
+    data <- data.frame(
+      id = rep("",length(reporting_entities)),
+      data_call_id = rep("",length(reporting_entities)),
+      data_call_folder = rep("",length(reporting_entities)),
+      task_id = rep("",length(reporting_entities)),
+      reporting_entity = reporting_entities,
+      temporal_extent = rep("",length(reporting_entities)),
+      submitter = rep("",length(reporting_entities)),
+      creationTime = rep(NA,length(reporting_entities)),
+      lastModifiedBy = rep("",length(reporting_entities)),
+      lastModificationTime = rep(NA,length(reporting_entities)),
+      status = rep("MISSING",length(reporting_entities)),
       stringsAsFactors = FALSE)
-    
-    data<-rbind(data,missing)
   }
   return(data)
 }
 
 #getSubmissions
-getSubmissions <- function(config, store, user_only = FALSE,data_calls_id = NULL,full_entities=FALSE,status=NULL,reporting_entities=NULL){
+getSubmissions <- function(config,pool,profile, store, user_only = FALSE,data_calls_id = NULL,full_entities=FALSE,status=NULL,reporting_entities=NULL){
   items <- store$listWSItems()
   workspace_filter <- paste0(config$dcf$workspace,"-")
   if(user_only) workspace_filter <- config$dcf$user_workspace
@@ -1478,7 +1502,7 @@ getSubmissions <- function(config, store, user_only = FALSE,data_calls_id = NULL
   }))
   
   if(full_entities){
-    all_items<-completeWithMissingEntities(config,all_items)
+    all_items<-completeWithMissingEntities(config,pool,profile,all_items,user_only)
   }
   return(all_items)
 }
@@ -1487,7 +1511,7 @@ getSubmissions <- function(config, store, user_only = FALSE,data_calls_id = NULL
 acceptSubmission <- function(config,pool,profile, store, data_call_folder, data_submission_id,task,data_call_id,reporting_entity,usernames,comment=""){
   
   #unicity of accepted submission
-  accepted_submission<-getSubmissions(config = config, store = store, user_only = FALSE,data_calls_id=data_call_id,status="ACCEPTED",reporting_entities = reporting_entity,full_entities=FALSE)
+  accepted_submission<-getSubmissions(config = config, pool = pool, profile = profile, store = store, user_only = FALSE,data_calls_id=data_call_id,status="ACCEPTED",reporting_entities = reporting_entity,full_entities=FALSE)
   
   if(nrow(accepted_submission)>0){
     accept <- FALSE
