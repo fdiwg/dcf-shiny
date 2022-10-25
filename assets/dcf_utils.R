@@ -1317,31 +1317,55 @@ validateCallRules <- function(file, rules){
 }
 
 #completeWithMissingEntities
-completeWithMissingEntities<-function(config,data){
-  reporting_entities<-config$dcf$reporting_entities$codelist_ref
-  missing_entities<-subset(reporting_entities,!code%in%data$reporting_entity)$code
-  if(length(missing_entities>0)){
-    missing <- data.frame(
-      id = rep("",length(missing_entities)),
-      data_call_id = rep(unique(data$data_call_id),length(missing_entities)),
-      data_call_folder = rep(unique(data$data_call_folder),length(missing_entities)),
-      task_id = rep(unique(data$task_id),length(missing_entities)),
-      reporting_entity = missing_entities,
-      temporal_extent = rep("",length(missing_entities)),
-      submitter = rep("",length(missing_entities)),
-      creationTime = rep(NA,length(missing_entities)),
-      lastModifiedBy = rep("",length(missing_entities)),
-      lastModificationTime = rep(NA,length(missing_entities)),
-      status = rep("MISSING",length(missing_entities)),
+completeWithMissingEntities<-function(config,pool,profile,data,user_only=FALSE){
+  if(user_only){
+    reporting_entities<-data.frame(code=getDBUserReportingEntities(pool,profile))
+  }else{
+    reporting_entities<-config$dcf$reporting_entities$codelist_ref 
+  }
+  
+  if(nrow(data)>0){
+    missing_entities<-subset(reporting_entities,!code%in%data$reporting_entity)$code
+    if(length(missing_entities>0)){
+      
+      print(missing_entities)
+      print(length(missing_entities))
+      missing <- data.frame(
+        id = rep("",length(missing_entities)),
+        data_call_id = rep(data$data_call_id[1],length(missing_entities)),
+        data_call_folder = rep("",length(missing_entities)),
+        task_id = rep(data$task_id[1],length(missing_entities)),
+        reporting_entity = missing_entities,
+        temporal_extent = rep("",length(missing_entities)),
+        submitter = rep("",length(missing_entities)),
+        creationTime = rep(NA,length(missing_entities)),
+        lastModifiedBy = rep("",length(missing_entities)),
+        lastModificationTime = rep(NA,length(missing_entities)),
+        status = rep("MISSING",length(missing_entities)),
+        stringsAsFactors = FALSE)
+      
+      data<-rbind(data,missing)
+    }
+  }else{
+    data <- data.frame(
+      id = rep("",length(reporting_entities)),
+      data_call_id = rep("",length(reporting_entities)),
+      data_call_folder = rep("",length(reporting_entities)),
+      task_id = rep("",length(reporting_entities)),
+      reporting_entity = reporting_entities,
+      temporal_extent = rep("",length(reporting_entities)),
+      submitter = rep("",length(reporting_entities)),
+      creationTime = rep(NA,length(reporting_entities)),
+      lastModifiedBy = rep("",length(reporting_entities)),
+      lastModificationTime = rep(NA,length(reporting_entities)),
+      status = rep("MISSING",length(reporting_entities)),
       stringsAsFactors = FALSE)
-    
-    data<-rbind(data,missing)
   }
   return(data)
 }
 
 #getSubmissions
-getSubmissions <- function(config, store, user_only = FALSE,data_calls_id = NULL,full_entities=FALSE){
+getSubmissions <- function(config,pool,profile, store, user_only = FALSE,data_calls_id = NULL,full_entities=FALSE,status=NULL,reporting_entities=NULL){
   items <- store$listWSItems()
   workspace_filter <- paste0(config$dcf$workspace,"-")
   if(user_only) workspace_filter <- config$dcf$user_workspace
@@ -1380,30 +1404,66 @@ getSubmissions <- function(config, store, user_only = FALSE,data_calls_id = NULL
         return(user_submissions)
         }
         
+        if(!is.null(reporting_entities)) if(!reporting_entity%in%reporting_entities){
+          user_submissions <- data.frame(
+            id = character(0),
+            data_call_id = character(0),
+            data_call_folder = character(0),
+            task_id = character(0),
+            reporting_entity = character(0),
+            temporal_extent = character(0),
+            submitter = character(0),
+            creationTime = character(0),
+            lastModifiedBy = character(0),
+            lastModificationTime = character(0),
+            status = character(0),
+            stringsAsFactors = FALSE
+          )
+          return(user_submissions)
+        }
+        
         #fetch metadata
         dcfile_item <- store$getWSItem(parentFolderID = user_item$id, itemPath = paste0(data_call_folder,".xml"))
         dcfile <- store$downloadItem(item = dcfile_item, wd = tempdir())
         dc_entry <- atom4R::readDCEntry(dcfile)
-        status <- "SUBMITTED"
+        submission_status <- "SUBMITTED"
         if(!is.null(dc_entry$dateAccepted)){
           if(is.list(dc_entry$dateAccepted)){
             if(all(dc_entry$dateAccepted[[1]]$value != "NA")){
-              status <- "ACCEPTED"
+              submission_status <- "ACCEPTED"
             }else{
-              status <- "REJECTED"
+              submission_status <- "REJECTED"
             }
           }else{
             #backward compatibility
             if(dc_entry$dateAccepted != "NA"){
-              status <- "ACCEPTED"
+              submission_status <- "ACCEPTED"
             }else{
-              status <- "REJECTED"
+              submission_status <- "REJECTED"
             }
           }
         }
         temporal_extent <- "-"
         if(!is.null(dc_entry$temporal)){
           temporal_extent <- dc_entry$temporal[[1]]$value
+        }
+        
+        if(!is.null(status)) if(!submission_status%in%status){
+          user_submissions <- data.frame(
+            id = character(0),
+            data_call_id = character(0),
+            data_call_folder = character(0),
+            task_id = character(0),
+            reporting_entity = character(0),
+            temporal_extent = character(0),
+            submitter = character(0),
+            creationTime = character(0),
+            lastModifiedBy = character(0),
+            lastModificationTime = character(0),
+            status = character(0),
+            stringsAsFactors = FALSE
+          )
+          return(user_submissions)
         }
         
         user_submission <- data.frame(
@@ -1417,7 +1477,7 @@ getSubmissions <- function(config, store, user_only = FALSE,data_calls_id = NULL
           creationTime = as.POSIXct(user_item$creationTime/1000, origin = "1970-01-01"),
           lastModifiedBy = user_item$lastModifiedBy,
           lastModificationTime = as.POSIXct(user_item$lastModificationTime/1000, origin = "1970-01-01"),
-          status = status,
+          status = submission_status,
           stringsAsFactors = FALSE
         )
         return(user_submission)
@@ -1442,13 +1502,23 @@ getSubmissions <- function(config, store, user_only = FALSE,data_calls_id = NULL
   }))
   
   if(full_entities){
-    all_items<-completeWithMissingEntities(config,all_items)
+    all_items<-completeWithMissingEntities(config,pool,profile,all_items,user_only)
   }
   return(all_items)
 }
 
 #acceptSubmission
-acceptSubmission <- function(config, store, data_call_folder, data_submission_id){
+acceptSubmission <- function(config,pool,profile, store, data_call_folder, data_submission_id,task,data_call_id,reporting_entity,usernames,comment=""){
+  
+  #unicity of accepted submission
+  accepted_submission<-getSubmissions(config = config, pool = pool, profile = profile, store = store, user_only = FALSE,data_calls_id=data_call_id,status="ACCEPTED",reporting_entities = reporting_entity,full_entities=FALSE)
+  
+  if(nrow(accepted_submission)>0){
+    accept <- FALSE
+    attr(accept, "error") <- "A submission is already accepted for this reporting_entity, please reject this one first"
+    return(accept)
+  }
+  
   dcfile_item <- store$getWSItem(parentFolderID = data_submission_id, itemPath = paste0(data_call_folder,".xml"))
   dcfile <- store$downloadItem(item = dcfile_item, wd = tempdir())
   dc_entry <- atom4R::readDCEntry(dcfile)
@@ -1456,10 +1526,51 @@ acceptSubmission <- function(config, store, data_call_folder, data_submission_id
   dc_entry$addDCDateAccepted(Sys.time())
   dc_entry$save(file = dcfile)
   store$uploadFile(folderID = data_submission_id, file = dcfile)
+  
+  recipients<-getDBUsers(pool=pool,profile=profile,usernames=usernames)
+  print(recipients)
+  #accept Notification
+  if(nrow(recipients)==0){
+    sent <- FALSE
+    return(sent)
+  }
+  
+  INFO("Sending submission acceptation notification to DB users")
+  sent <- all(do.call("c", lapply(1:nrow(recipients), function(i){
+    recipient <- recipients[i,]
+    INFO("Sending data call notification to '%s'", recipient$username)
+    notif_sent <- sendMessage(
+      subject = sprintf("[%s] Your submission for %s task ID '%s' has been accepted", config$dcf$name, config$dcf$context, task),
+      body = sprintf(
+        "Dear %s,
+            
+            Your data submission for task ID '%s' has been accepted by the %s with following comment :
+            
+            %s
+            
+            Best regards,
+            The %s
+                         
+            ",
+        recipient$fullname, 
+        task,config$dcf$roles$manager,
+        
+        comment,
+        
+        config$dcf$roles$manager
+      ),
+      recipients = as.list(recipient$username),
+      profile = profile
+    )
+    return(notif_sent)
+  })))
+  
+  return(sent)
+  
 }
 
 #rejectSubmission
-rejectSubmission <- function(config, store, data_call_folder, data_submission_id){
+rejectSubmission <- function(config,pool,profile, store, data_call_folder, data_submission_id,task,usernames,end,comment=""){
   dcfile_item <- store$getWSItem(parentFolderID = data_submission_id, itemPath = paste0(data_call_folder,".xml"))
   dcfile <- store$downloadItem(item = dcfile_item, wd = tempdir())
   dc_entry <- atom4R::readDCEntry(dcfile)
@@ -1467,6 +1578,50 @@ rejectSubmission <- function(config, store, data_call_folder, data_submission_id
   dc_entry$addDCDateAccepted(NA)
   dc_entry$save(file = dcfile)
   store$uploadFile(folderID = data_submission_id, file = dcfile)
+  
+  recipients<-getDBUsers(pool=pool,profile=profile,usernames=usernames)
+  #accept Notification
+  if(nrow(recipients)==0){
+    sent <- FALSE
+    return(sent)
+  }
+  
+  INFO("Sending submission reject notification to DB users")
+  sent <- all(do.call("c", lapply(1:nrow(recipients), function(i){
+    recipient <- recipients[i,]
+    INFO("Sending data call notification to '%s'", recipient$username)
+    notif_sent <- sendMessage(
+      subject = sprintf("[%s] Your submission for %s task ID '%s' has been rejected", config$dcf$name, config$dcf$context, task),
+      body = sprintf(
+        "Dear %s,
+            
+            Your data submission for task ID '%s' has been rejected by the %s with following comment :
+            
+            %s
+            
+            You are kindly invited to provide modification according to %s comment and submit a new version before %s. 
+            
+            Best regards,
+            The %s
+                         
+            ",
+        recipient$fullname, 
+        task,config$dcf$roles$manager,
+        
+        comment,
+        
+        config$dcf$roles$manager,end,
+        
+        config$dcf$roles$manager
+      ),
+      recipients = as.list(recipient$username),
+      profile = profile
+    )
+    return(notif_sent)
+  })))
+  
+  return(sent)
+  
 }
 
 #listItemsSubmission
@@ -1503,7 +1658,7 @@ copyItemsSubmission <- function(store, data_submission_id, wd=tempdir()){
   return(items_info)
 }
 
-#createDataCall
+#sendReminder
 sendReminder <- function(pool,data_call_id,reporting_entity=NULL,role=NULL,config, profile){
   
   #check existing entities

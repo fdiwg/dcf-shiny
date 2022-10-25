@@ -8,8 +8,9 @@ data_admin_submissions_ui <- function(id){
     fluidRow(
       div(
         class = "col-md-3",
-        uiOutput(ns("datacall_selector"))
-        ),
+        uiOutput(ns("task_wrapper")),
+        uiOutput(ns("datacall_wrapper"))
+      ),
       div(
         class = "col-md-3",
         uiOutput(ns("percent"))
@@ -19,6 +20,7 @@ data_admin_submissions_ui <- function(id){
         uiOutput(ns("indicators"))
       )
     ),
+    uiOutput(ns("refresh_wrapper")),
     uiOutput(ns("table_wrapper"))
   )
 }
