@@ -1624,6 +1624,49 @@ rejectSubmission <- function(config,pool,profile, store, data_call_folder, data_
   
 }
 
+#deleteSubmission
+deleteSubmission <- function(config,pool,profile, store, data_call_folder,data_call_id,task,reporting_entity){
+  
+  deleted <- store$deleteItem(itemPath = file.path(config$dcf$workspace, data_call_folder))
+  
+  recipients<- getDBUsersWithRole(pool = pool, profile = profile, role = config$dcf$roles$manager)
+  #accept Notification
+  if(nrow(recipients)==0){
+    sent <- FALSE
+    return(sent)
+  }
+  
+  INFO("Sending submission delete notification to DB manager")
+  sent <- all(do.call("c", lapply(1:nrow(recipients), function(i){
+    recipient <- recipients[i,]
+    INFO("Sending data call notification to '%s'", recipient$username)
+    notif_sent <- sendMessage(
+      subject = sprintf("[%s] New data submission for '%s' - task ID '%s' - reporting entity '%s' has been deleted",
+                        config$dcf$name, config$dcf$context, task,reporting_entity),
+      body = sprintf(
+        "Dear %s,
+            
+			      You receive this notification because you are assigned as part of the %s (%s) as %s.
+                                           
+            The previous data submitted by %s (as %s) for data call '%s' - task '%s' - reporting entity '%s' ahas been deleted by this user.          
+            
+            Best regards,
+            The system bot
+                         
+            ",
+        recipient$fullname, 
+        config$dcf$name, config$dcf$context, config$dcf$roles$manager, 
+        profile$name, config$dcf$roles$submitter, data_call_id, task, reporting_entity),
+    recipients = as.list(recipient$username),
+    profile = profile
+  )
+  return(notif_sent)
+  })))
+
+return(sent)
+
+}
+
 #listItemsSubmission
 listItemsSubmission <- function(store, submission_id){
   store$listWSItems(parentFolderID = submission_id, showHidden = FALSE)

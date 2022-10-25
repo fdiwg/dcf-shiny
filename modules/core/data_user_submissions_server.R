@@ -11,7 +11,10 @@ data_user_submissions_server <- function(id, parent.session, config, profile, co
       pool <- components$POOL
       
       #reactives
-      selection <- reactiveVal(NULL)
+      
+      model <- reactiveValues(
+        error = NULL
+      )
       
       output$task_wrapper<-renderUI({
         selectizeInput(ns("task"),
@@ -45,6 +48,14 @@ data_user_submissions_server <- function(id, parent.session, config, profile, co
           })
         }
         
+      })
+      
+      output$data_submission_error <- renderUI({
+        if(is.null(model$error)){
+          tags$div(style="display:none;")
+        }else{
+          tags$div(model$error, class="alert alert-danger", role="alert")
+        }
       })
       
       showSubmissionBrowseModal <- function(items){
@@ -116,6 +127,26 @@ data_user_submissions_server <- function(id, parent.session, config, profile, co
         }
       })
       
+      
+      #modals
+      showDeletionActionModal <- function(data_call_folder,data_call_id,task,reporting_entity){
+        showModal(
+          modalDialog(
+            title = "",
+            shinyjs::hidden(textInput(ns("data_submission_call_folder"), value = data_call_folder, label = "")),
+            shinyjs::hidden(textInput(ns("data_submission_data_call_id"), value =data_call_id, label = "")),
+            shinyjs::hidden(textInput(ns("data_submission_task"), value = task, label = "")),
+            shinyjs::hidden(textInput(ns("data_submission_reporting_entity"), value =reporting_entity, label = "")),
+            tags$p(sprintf("Are you sure to delete data submission '%s'?", data_call_folder)),
+            actionButton(ns("submission_deletion_ok"), "Delete"),
+            actionButton(ns("submission_deletion_cancel"), "Cancel", style = "float:right;"),
+            uiOutput(ns("data_submission_error")),
+            easyClose = FALSE, footer = NULL 
+          )
+        )
+      }	  
+      
+      
       #manage button handlers
       
        manageButtonBrowseEvents <- function(data, uuids){
@@ -140,17 +171,12 @@ data_user_submissions_server <- function(id, parent.session, config, profile, co
           button_id <- paste0(prefix,uuids[i])
           observeEvent(input[[button_id]],{
             shinyjs::disable(button_id)
-            folder_name = x$title
-            selection(folder_name)
-            showModal(modalDialog(
-              title = "Danger zone",
-              p(sprintf("Are you sure to delete data submission '%s'?", folder_name)),
-              actionButton(ns("submission_deletion_cancel"), "Cancel"),
-              actionButton(ns("submission_deletion_ok"), "Delete"),
-              easyClose = FALSE,
-              icon = icon("exclamation-triangle"),
-              footer = NULL 
-            ))
+            showDeletionActionModal(
+              data_call_folder = x$data_call_folder,
+              data_call_id=x$data_call_id,
+              task=x$task_id,
+              reporting_entity=x$reporting_entity
+            )
             shinyjs::enable(button_id)
           })
         })
@@ -166,12 +192,12 @@ data_user_submissions_server <- function(id, parent.session, config, profile, co
               "Data call ID" = item$data_call_id,
               "Task ID" = item$task_id,
               "Flag" = paste0('<img src="https://countryflagsapi.com/png/', tolower(item$reporting_entity),'" height=16 width=32></img>'),
-              "Reporting entity" = item$reporting_entity,
+              "Reporting entity" = as.factor(item$reporting_entity),
               "Owner" = item$owner,
               "Creation time" = item$creationTime,
               "Last modified by" = item$lastModifiedBy,
               "Last modification time" = item$lastModificationTime,
-              "Status" = item$status,
+              "Status" = as.factor(item$status),
               Actions = ifelse(item$status=="MISSING",as(
                           tagList()
                           ,"character"),as(
@@ -216,11 +242,11 @@ data_user_submissions_server <- function(id, parent.session, config, profile, co
         output$tbl_my_submissions <- DT::renderDT({
           datatable(
           submissionsTableHandler(data, uuids),
-          selection='single', escape=FALSE,rownames=FALSE,
+          selection='single', escape=FALSE,rownames=FALSE,filter = list(position = 'top', clear = FALSE),
           options=list(
             lengthChange = FALSE,
             paging = FALSE,
-            searching = FALSE,
+            searching = TRUE,
             preDrawCallback = JS(
               'function() {
                   Shiny.unbindAll(this.api().table().node()); }'
@@ -229,6 +255,8 @@ data_user_submissions_server <- function(id, parent.session, config, profile, co
                         Shiny.bindAll(this.api().table().node()); }'
             ),
             autoWidth = FALSE,
+            scrollY="600px",
+            scrollCollapse=TRUE,
             columnDefs = list(
               list(width = '100px', targets = c(0))
             )
@@ -282,28 +310,23 @@ data_user_submissions_server <- function(id, parent.session, config, profile, co
       })
       
       observeEvent(input$submission_deletion_ok,{
-        INFO("Delete '%s'", file.path(config$dcf$workspace, selection()))
-        #unshared <- store$unshareItem(itemPath = file.path(config$dcf$workspace, selection()), users = "emmanuel.blondel")
-        deleted <- FALSE
-        #if(unshared){
-          deleted <- store$deleteItem(itemPath = file.path(config$dcf$workspace, selection()))
-        #}else{
-          #print("Ups 1")
-          #TODO ups something went wrong when trying to unshare
-        #}
-        if(deleted){
+        deleted <- try(deleteSubmission(
+          config = config, pool = pool, profile = profile, store = store,
+          data_call_folder = input$data_submission_call_folder,
+          data_call_id = input$data_submission_data_call_id,
+          task=input$data_submission_task,
+          reporting_entity=input$data_submission_reporting_entity
+        ))
+        
+        if(!is(deleted, "try-error")){
+          model$error <- NULL
           removeModal()
           data <- getSubmissions(config = config, pool = pool , profile = profile, store = store, user_only = TRUE,data_calls_id=input$datacall,full_entities=TRUE)
           renderSubmissions(data)
           renderBars(data)
         }else{
-          print("Ups 2")
-          #TODO ups seomthing went wrong when trying to delete
+          model$error <- "Unexpected error during submission deletion!"
         }
-      })
-      observeEvent(input$submission_deletion_cancel,{
-        selection(NULL)
-        removeModal()
       })
       
       #renderBars
