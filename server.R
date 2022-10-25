@@ -17,5 +17,6 @@ server <- function(input, output, session) {
   
   #load module servers
   loadModuleServers(parent.session = session, config = CONFIG, profile = PROFILE, components = COMPONENTS)
+  loadPluginServers(parent.session = session, config = CONFIG, profile = PROFILE, components = COMPONENTS)
   
 }

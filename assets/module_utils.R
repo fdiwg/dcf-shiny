@@ -5,6 +5,11 @@ listModuleProfiles <- function(config = NULL){
   return(default_module_profiles)
 }
 
+#listPlugins
+listPlugins <- function(config){
+  return(config$plugins)
+}
+
 #loadModuleProfile
 loadModuleProfile <- function(filename){
   profile <- jsonlite::read_json(filename)
@@ -39,6 +44,24 @@ loadModuleScripts <- function(config = NULL){
   }
 }
 
+#check_module_server_formals
+check_module_server_formals <- function(module, server_fun){
+  std_module_args <- c("id", "parent.session", "config", "profile", "components")
+  if(!all(names(formals(server_fun)) == std_module_args )){
+    stop(sprintf("Module '%s', server function arguments do not match module requirements. Mandatory arguments: %s", 
+                 module, paste(std_module_args, collapse=","))) 
+  }
+}
+
+#check_module_ui_formals
+check_module_ui_formals <- function(module, ui_fun){
+  std_module_args <- c("id")
+  if(!all(names(formals(ui_fun)) == std_module_args )){
+    stop(sprintf("Module '%s', UI function arguments do not match module requirements. Mandatory arguments: %s", 
+                 module, paste(std_module_args, collapse=","))) 
+  }
+}
+
 #loadModuleServers
 loadModuleServers <- function(parent.session, config, profile, components){
   default_module_profiles <- listModuleProfiles(config)
@@ -55,13 +78,18 @@ loadModuleServers <- function(parent.session, config, profile, components){
         INFO("Loading shiny module '%s' server functions...", module)
         server_fun_name <- paste0(module, "_server")
         server_fun <- try(eval(expr = parse(text = server_fun_name)))
-        if(!is(server_fun, "try-error")){
-          called <- try(server_fun(module, parent.session = parent.session, config = config, profile = profile, components = components))
-          if(is(called, "try-error")){
-            ERROR("Error while calling shiny module '%s'", module)
+        if(!is.null(server_fun)){
+          if(!is(server_fun, "try-error")){
+            #check formals
+            check_module_server_formals(module, server_fun)
+            #call server function
+            called <- try(server_fun(module, parent.session = parent.session, config = config, profile = profile, components = components))
+            if(is(called, "try-error")){
+              ERROR("Error while calling shiny module '%s'", module)
+            }
+          }else{
+            ERROR("Error while evaluating server function '%s'", server_fun_name)
           }
-        }else{
-          ERROR("Error while evaluating server function '%s'", server_fun_name)
         }
       }
     }
@@ -78,6 +106,7 @@ loadModuleUIs <- function(config = NULL, profile){
     if(outp$type != "internal" && !outp$menu){
       enabled = TRUE
       if(!is.null(outp$restricted)) if(outp$restricted) enabled <- any(sapply(profile$shiny_resource_access$roles, function(x){x %in% outp$roles}))
+      if(module == "data_admin_processing" && is.null(config$dcf$processing_module)) enabled <- FALSE
       module_config = config$modules[[module]]
       has_config = !is.null(module_config)
       if(has_config) if(!is.null(module_config$enabled)) enabled = module_config$enabled
@@ -86,7 +115,14 @@ loadModuleUIs <- function(config = NULL, profile){
         ui_fun_name <- paste0(module, "_ui")
         ui_fun <- try(eval(expr = parse(text = ui_fun_name)))
         if(!is(ui_fun, "try-error")){
+          #check formals
+          check_module_ui_formals(module, ui_fun)
+          #call ui function
           out <- ui_fun(module)
+          if(is(out, "try-error")){
+            ERROR("Error while calling shiny module '%s' UI function", module)
+          }
+          INFO("UI function loaded for module '%s'", module)
         }else{
           ERROR("Error while evaluating UI function '%s'", ui_fun_name)
         }
@@ -97,8 +133,63 @@ loadModuleUIs <- function(config = NULL, profile){
     return(out)
   })
   module_uis <- module_uis[!sapply(module_uis, is.null)]
-  ui <- do.call("tabItems", module_uis)
-  return(ui)
+  return(module_uis)
+}
+
+#loadPluginServers
+loadPluginServers <- function(parent.session, config, profile, components){
+  plugins <- listPlugins(config)
+  if(length(plugins)>0){
+    for(plugin_name in names(plugins)){
+      INFO("Loading shiny plugin '%s' server functions...", plugin_name)
+      plugin <- plugins[[plugin_name]]
+      if(is.null(plugin$server)) stop(sprintf("No server defined for plugin!", plugin_name))
+      eval_fun <- try(source(plugin$server))
+      if(is(eval_fun, "try-error")) stop(sprintf("Something went wrong while sourcing server function for plugin '%s'!", plugin_name))
+      plugin_server_fun <- eval_fun$value
+      if(!is.null(plugin_server_fun)){
+        if(!is(plugin_server_fun, "try-error")){
+          #check formals
+          check_module_server_formals(plugin_name, plugin_server_fun)
+          #call server function
+          called <- try(plugin_server_fun(plugin_name, parent.session = parent.session, config = config, profile = profile, components = components))
+          if(is(called, "try-error")){
+            ERROR("Error while calling shiny plugin '%s' server function", plugin_name)
+          }
+          INFO("Server function loaded for plugin '%s'", plugin_name)
+        }else{
+          ERROR("Error while evaluating server function '%s'", server_fun_name)
+        }
+      }
+    }
+  }else{
+    INFO("No plugins defined in configuration")
+  }
+}
+
+#loadPluginUIs
+loadPluginUIs <- function(config = NULL, profile){
+  plugins <- listPlugins(config)
+  module_uis <- lapply(names(plugins), function(plugin_name){
+    out <- NULL
+    INFO("Loading shiny plugin '%s' UI functions...", plugin_name)
+    plugin <- plugins[[plugin_name]]
+    if(is.null(plugin$ui)) stop(sprintf("No UI defined for plugin!", plugin_name))
+    eval_fun <- try(source(plugin$ui))
+    if(is(eval_fun, "try-error")) stop(sprintf("Something went wrong while sourcing UI function for plugin '%s'!", plugin_name))
+    plugin_ui_fun <- eval_fun$value
+    #check formals
+    check_module_ui_formals(plugin_name, plugin_ui_fun)
+    #call ui function
+    out <- plugin_ui_fun(plugin_name)
+    if(is(out, "try-error")){
+      ERROR("Error while calling shiny plugin '%s' UI function", plugin_name)
+    }
+    INFO("UI function loaded for plugin '%s'", plugin_name)
+    return(out)
+  })
+  module_uis <- module_uis[!sapply(module_uis, is.null)]
+  return(module_uis)
 }
 
 #createSidebarfromModules
@@ -130,7 +221,17 @@ sidebarMenuFromModules <- function(config = NULL, profile){
   #remove internal modules
   module_profiles <- module_profiles[sapply(module_profiles, function(x){x$type != "internal"})]
   
-  #TODO custom modules?
+  #plugins
+  if(length(config$plugins)>0){
+    plugin_profiles <- lapply(names(config$plugins), function(plugin_name){
+      plugin <- config$plugins[[plugin_name]]
+      plugp <- loadModuleProfile(plugin$def)
+      plugp$source <- plugin$def
+      plugp$module <- plugin_name
+      return(plugp)
+    })
+    module_profiles <- c(module_profiles, plugin_profiles)
+  }
   
   #default structure
   default_structure_menu_items <- module_profiles[sapply(module_profiles, function(x){x$type == "item"})]

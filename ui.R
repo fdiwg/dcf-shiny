@@ -4,10 +4,10 @@ ui <- shiny::tagList(
       title = "DCF-SHINY"
     ),
     dashboardSidebar(
-      sidebarMenuFromModules(config = NULL, profile = PROFILE)
+      sidebarMenuFromModules(config = CONFIG, profile = PROFILE)
     ),
     dashboardBody(
-      loadModuleUIs(config = NULL, profile = PROFILE),
+      do.call("tabItems",c(loadModuleUIs(config = CONFIG, profile = PROFILE),loadPluginUIs(config = CONFIG, profile = PROFILE))),
       useShinyjs(),
       tags$head(
         tags$link(rel = "stylesheet", type = "text/css", href = "dcf-shiny.css")

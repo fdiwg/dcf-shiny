@@ -1,7 +1,7 @@
 #read_dcf_config
 read_dcf_config <- function(file){
   
-  cfg <- suppressWarnings(yaml::read_yaml(config_file))
+  cfg <- suppressWarnings(yaml::read_yaml(file))
   
   #language
   if(is.null(cfg$language)) cfg$language <- "en"
