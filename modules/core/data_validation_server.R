@@ -498,6 +498,7 @@ data_validation_server <- function(id, parent.session, config, profile, componen
       observeEvent(input$goSpecValid,{
 
         taskSupplRules<-taskProperties()$data_call_limited_on
+        taskSupplRules$reporting_entity<-input$reporting_entity
         data<-loadedData()
         showModal(modalDialog(
           title = "Check consistency with the ongoing data call",

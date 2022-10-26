@@ -1301,6 +1301,35 @@ validateCallRules <- function(file, rules){
     }
   }
   
+  if("reporting_entity" %in% names(rules)){
+    rule<-rules[["reporting_entity"]]
+    #FIRST CHECK :ONLY ON REPORTING ENTITY IN DATA
+    data_reporting_entities<-unique(data$flagstate)
+    cond<-length(data_reporting_entities)
+    if(length(cond)>1){
+        errors<-rbind(errors,data.frame(type="ERROR",rule="SE03",row="-",column="flagstate",category="unique reporting entity",message=sprintf("%s reporting entities are detected in the dataset (%s) and only '%s' should be include",cond,paste0(data_reporting_entities,collapse=","),rule)))
+      if(tests[tests$code=="SE03",]$status!="FAILED"){
+        tests[tests$code=="SE03",]$status<-"FAILED"
+        tests[tests$code=="SE03",]$icon<-paste0(tags$span(shiny::icon("times-circle"), title = "Fail", style = "color:red;"), collapse="")
+      }
+    }else{
+      #SECOND CHECK :REPORTING ENTITY CORRESPONDING TO CORRECT REPORTING ENTITY
+    cond<-data_reporting_entities==rule
+      if(!cond){
+        errors<-rbind(errors,data.frame(type="ERROR",rule="SE03",row="-",column="flagstate",category="conform reporting entity",message=sprintf("reporting entity '%s' is not corresponding to the selected reporting entity '%s'",data_reporting_entities,rule)))
+        if(tests[tests$code=="SE03",]$status!="FAILED"){
+          tests[tests$code=="SE03",]$status<-"FAILED"
+          tests[tests$code=="SE03",]$icon<-paste0(tags$span(shiny::icon("times-circle"), title = "Fail", style = "color:red;"), collapse="")
+        }
+      }else{
+        if(tests[tests$code=="SE03",]$status!="FAILED"){
+          tests[tests$code=="SE03",]$status<-"PASSED"
+          tests[tests$code=="SE03",]$icon<-paste0(tags$span(shiny::icon("check-circle"), title = "Pass", style = "color:green;"), collapse="")
+        }
+      }
+    }
+  }
+  
   if(nrow(subset(errors,type=="ERROR"))>0){
     valid<-FALSE
   }else{
