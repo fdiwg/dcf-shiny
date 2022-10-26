@@ -65,7 +65,7 @@ data_user_submissions_server <- function(id, parent.session, config, profile, co
             selectizeInput(ns("item"),
                            label="Show submitted item :",
                            multiple = F,
-                           choices = items$name,
+                           choices = setNames(items$name,items$description),
                            selected=NULL,
                            options = list(
                              placeholder = "Please select a item",

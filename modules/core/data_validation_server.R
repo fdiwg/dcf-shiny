@@ -693,14 +693,16 @@ data_validation_server <- function(id, parent.session, config, profile, componen
           value = 25
         )
         #original file
-        uploadedOriginalDataId <- store$uploadFile(folderPath = file.path(config$dcf$user_workspace, dc_folder), file = input$file$datapath)
+        new_filename<-file.path(dirname(input$file$datapath),input$file$name)
+        file.rename(input$file$datapath,new_filename)
+        uploadedOriginalDataId <- store$uploadFile(folderPath = file.path(config$dcf$user_workspace, dc_folder), file = new_filename, description ="Original dataset")
         
         #file for submission
         if(!is.null(uploadedOriginalDataId)){
           INFO("Successful upload for source file '%s'", input$file$datapath)
           data_filename <- file.path(getwd(), paste0(dc_folder, ".csv"))
           readr::write_csv(loadedData(), data_filename)
-          uploadedDataId <- store$uploadFile(folderPath = file.path(config$dcf$user_workspace, dc_folder), file = data_filename)
+          uploadedDataId <- store$uploadFile(folderPath = file.path(config$dcf$user_workspace, dc_folder), file = data_filename, description ="Formated dataset")
           unlink(data_filename)
         }
         
@@ -732,7 +734,7 @@ data_validation_server <- function(id, parent.session, config, profile, componen
           dc_entry$addDCTemporal(paste(start,end,sep="/"))
           
           dc_entry$save(dc_entry_filename)
-          uploadedMetadataId <- store$uploadFile(folderPath = file.path(config$dcf$user_workspace, dc_folder), file = dc_entry_filename)
+          uploadedMetadataId <- store$uploadFile(folderPath = file.path(config$dcf$user_workspace, dc_folder), file = dc_entry_filename, description = "Metadata")
           
           if(!is.null(uploadedMetadataId) ){
             INFO("Successful upload for metadata file '%s'", dc_entry_filename)
@@ -743,7 +745,7 @@ data_validation_server <- function(id, parent.session, config, profile, componen
         if(!is.null(uploadedDataId) && !is.null(uploadedMetadataId)){
           if(!is.null(gbReportPath())){
             report_standard_conformity_filename<-gbReportPath()
-            uploadedReportStandardConformityId <- store$uploadFile(folderPath = file.path(config$dcf$user_workspace, dc_folder), file = report_standard_conformity_filename)
+            uploadedReportStandardConformityId <- store$uploadFile(folderPath = file.path(config$dcf$user_workspace, dc_folder), file = report_standard_conformity_filename, description ="Standard conformity report")
             if(!is.null(uploadedReportStandardConformityId)){
               INFO("Successful upload for standard conformity report file '%s'", report_standard_conformity_filename)
             }
@@ -751,7 +753,7 @@ data_validation_server <- function(id, parent.session, config, profile, componen
           }
           if(!is.null(dcReportPath())){
             report_datacall_consistency_filename<-dcReportPath()
-            uploadedReportDatacallConsistencyId <- store$uploadFile(folderPath = file.path(config$dcf$user_workspace, dc_folder), file = report_datacall_consistency_filename)
+            uploadedReportDatacallConsistencyId <- store$uploadFile(folderPath = file.path(config$dcf$user_workspace, dc_folder), file = report_datacall_consistency_filename, description ="Datacall consistancy report")
             if(!is.null(uploadedReportDatacallConsistencyId)){
               INFO("Successful upload for datacall consistancy report file '%s'", report_datacall_consistency_filename)
             }

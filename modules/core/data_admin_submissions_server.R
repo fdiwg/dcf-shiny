@@ -82,13 +82,14 @@ data_admin_submissions_server <- function(id, parent.session, config, profile, c
       }
       
       showSubmissionBrowseModal <- function(items){
+        print(items)
         showModal(
           modalDialog(
             title = "",
             selectizeInput(ns("item"),
                            label="Show submitted item :",
                            multiple = F,
-                           choices = items$name,
+                           choices = setNames(items$name,items$description),
                            selected=NULL,
                            options = list(
                              placeholder = "Please select a item",
@@ -399,7 +400,7 @@ data_admin_submissions_server <- function(id, parent.session, config, profile, c
             progressInfoBox(title="Accepted submissions", text=sprintf('%s/%s',accepted_submissions,nb_entities),value=accepted_submissions,description=paste0(accepted_submissions/nb_entities*100,"% of completion"), max = nb_entities,icon = icon("check"),fill = TRUE, color = "green",width =2),
             infoBox("Pending submissions", pending_submissions, icon = icon("tasks"), fill = TRUE,color="orange",width = 2),
             infoBox("Missing submissions",nb_missing, icon = icon("bell"), fill = TRUE,color="red",width = 2),
-            infoBox("Duplicate submissions",nb_duplicate, icon = icon("exclamation-triangle"), fill = TRUE,color="black",width = 2),
+            infoBox("Duplicate submissions",nb_duplicate, icon = icon("exclamation-triangle"), fill = TRUE,color="purple",width = 2),
         )
       })
 

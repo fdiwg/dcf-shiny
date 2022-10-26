@@ -1684,6 +1684,7 @@ copyItemsSubmission <- function(store, data_submission_id, wd=tempdir()){
       item_info <- data.frame(
         id = item$id,
         name = item$name,
+        description = item$description,
         path = dcfile,
         stringsAsFactors = FALSE
       )
@@ -1693,6 +1694,7 @@ copyItemsSubmission <- function(store, data_submission_id, wd=tempdir()){
     item_info <- data.frame(
       id = character(0),
       name = character(0),
+      description = character(0),
       path = character(0),
       stringsAsFactors = FALSE
     )
