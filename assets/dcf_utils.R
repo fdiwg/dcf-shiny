@@ -1733,19 +1733,21 @@ copyItemsSubmission <- function(store, data_submission_id, wd=tempdir()){
 }
 
 #sendReminder
-sendReminder <- function(pool,data_call_id,reporting_entity=NULL,role=NULL,config, profile){
-  
+sendReminder <- function(pool,data_call_id,task=NULL,reporting_entity=NULL,date_end=NULL,role=NULL,config, profile){
+
   #check existing entities
   
   #recipients<-getDBUsersWithRole(pool,profile,role,reporting_entity)
   recipients<-getDBUsers(pool,profile,reporting_entity)
   print(recipients)
   #get datacall info
-  data_call <- getDataCalls(pool, id_data_call = data_call_id)
+  if(is.null(task))task <- getDataCalls(pool, id_data_call = data_call_id)$task_id
   
   if(nrow(recipients)==0){
     sent <- FALSE
-    attr(sent, "error") <- sprintf("There is currently no person assign for reporting entity '%s'", reporting_entity)
+    message<-sprintf("There is currently no person assign for reporting entity '%s'", reporting_entity)
+    attr(sent, "error") <- 
+    INFO(message)
     return(sent)
   }
 
@@ -1754,13 +1756,13 @@ sendReminder <- function(pool,data_call_id,reporting_entity=NULL,role=NULL,confi
         recipient <- recipients[i,]
         INFO("Sending data call notification to '%s'", recipient$username)
         notif_sent <- sendMessage(
-          subject = sprintf("[%s] Kind reminder for Data call open for %s task ID '%s'", config$dcf$name, config$dcf$context, data_call$task_id),
+          subject = sprintf("[%s] Kind reminder for Data call open for %s task ID '%s' - reporting_entity '%s'", config$dcf$name, config$dcf$context, task,reporting_entity),
           body = sprintf(
             "Dear %s,
             
             You receive this notification because you are assigned as part of the %s (%s) as %s.
             
-            We haven't yet receipt your data for task ID '%s'.
+            We didn't yet receive your data for task ID '%s' for reporting entity '%s'.
             
             You are kindly invited to validate and submit your data before %s.
             
@@ -1769,8 +1771,8 @@ sendReminder <- function(pool,data_call_id,reporting_entity=NULL,role=NULL,confi
                          
             ",
             recipient$fullname, 
-            config$dcf$name, config$dcf$context, config$dcf$roles$submitter, data_call$task_id,
-            as(data_call$date_end,"character"),
+            config$dcf$name, config$dcf$context, config$dcf$roles$submitter, task,reporting_entity,
+            as(date_end,"character"),
             config$dcf$roles$manager
           ),
           recipients = as.list(recipient$username),
