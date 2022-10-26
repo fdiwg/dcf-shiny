@@ -788,6 +788,10 @@ data_validation_server <- function(id, parent.session, config, profile, componen
                                            
                                            New data has been submitted by %s (as %s) for data call '%s' - task '%s' - reporting entity '%s' and shared for your review.
                                            
+                                           Submitter notes :
+                                           
+                                           %s
+                                           
                                            Best regards,
                                            The system bot"
           }else{
@@ -799,6 +803,10 @@ data_validation_server <- function(id, parent.session, config, profile, componen
                                            
                                            Notice that a submission was already provided by this user for this datacall and the present one replaces and cancels the previous one.
                                            
+                                           Submitter notes :
+                                           
+                                           %s
+                                           
                                            Best regards,
                                            The system bot"
           }
@@ -808,7 +816,8 @@ data_validation_server <- function(id, parent.session, config, profile, componen
                                                 submission$data_call_id, submission$task_id, submission$reporting_entity),
                               body = sprintf(body,
                                              config$dcf$name, config$dcf$context, config$dcf$roles$manager, 
-                                             profile$name, config$dcf$roles$submitter, submission$data_call_id, submission$task_id, submission$reporting_entity),
+                                             profile$name, config$dcf$roles$submitter, submission$data_call_id, submission$task_id, submission$reporting_entity,
+                                             input$message),
                               recipients = as.list(dcf_managers$username),
                               attachment_ids =list(uploadedOriginalDataId,uploadedDataId,uploadedMetadataId ,uploadedReportStandardConformityId,uploadedReportDatacallConsistencyId) ,
                               profile = profile
