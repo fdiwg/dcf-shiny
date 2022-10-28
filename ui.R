@@ -1,7 +1,7 @@
 ui <- shiny::tagList(
   dashboardPage(
     dashboardHeader(
-      title = "DCF-SHINY"
+      title = CONFIG$dcf$name
     ),
     dashboardSidebar(
       sidebarMenuFromModules(config = CONFIG, profile = PROFILE)
