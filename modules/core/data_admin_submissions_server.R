@@ -407,12 +407,19 @@ data_admin_submissions_server <- function(id, parent.session, config, profile, c
         
       output$indicators<-renderUI({
         div(
-            progressInfoBox(title="Submission", text=sprintf('%s/%s',transmitted_submissions,nb_entities),value=transmitted_submissions,description=paste0(transmitted_submissions/nb_entities*100,"% of completion"), max = nb_entities,icon = icon("share"),fill = TRUE, color = "yellow",width =2),
-            progressInfoBox(title="Accepted submissions", text=sprintf('%s/%s',accepted_submissions,nb_entities),value=accepted_submissions,description=paste0(accepted_submissions/nb_entities*100,"% of completion"), max = nb_entities,icon = icon("check"),fill = TRUE, color = "green",width =2),
-            infoBox("Pending submissions", pending_submissions, icon = icon("tasks"), fill = TRUE,color="orange",width = 2),
-            infoBox("Missing submissions",nb_missing,subtitle=HTML(paste0("<button id=\"",ns("remind_all_button"),"\" type=\"button\" class=\"btn btn-danger action-button\" title=\"Send a reminder for all missing entities\" style = \"margin-bottom: 0px;\">Click to send Reminder</button>")), icon = icon("bell"), fill = TRUE,color="red",width = 2),
-            infoBox("Duplicate submissions",nb_duplicate, icon = icon("exclamation-triangle"), fill = TRUE,color="purple",width = 2),
-            infoBox("Days remaining",time_remaining, icon = icon("clock"), fill = TRUE,color="teal",width = 2)
+          column(4,
+                 progressInfoBox(title="Submissions", text=sprintf('%s/%s',transmitted_submissions,nb_entities),value=transmitted_submissions,description=paste0(transmitted_submissions/nb_entities*100,"% of completion"), max = nb_entities,icon = icon("share"),fill = TRUE, color = "yellow",width =12),
+                 progressInfoBox(title="Accepted submissions", text=sprintf('%s/%s',accepted_submissions,nb_entities),value=accepted_submissions,description=paste0(accepted_submissions/nb_entities*100,"% of completion"), max = nb_entities,icon = icon("check"),fill = TRUE, color = "green",width =12)
+          ),
+          column(4,
+                 infoBox("Pending submissions", pending_submissions, icon = icon("tasks"), fill = TRUE,color="orange",width = 12),
+                 infoBox("Duplicate submissions",nb_duplicate, icon = icon("exclamation-triangle"), fill = TRUE,color="purple",width = 12)
+                 
+          ),
+          column(4,
+                 infoBox("Missing submissions",nb_missing,subtitle=HTML(paste0("<button id=\"",ns("remind_all_button"),"\" type=\"button\" class=\"btn btn-danger action-button\" title=\"Send a reminder for all missing entities\" style = \"margin-bottom: 0px;\">Click to send Reminder</button>")), icon = icon("bell"), fill = TRUE,color="red",width = 12),
+                 infoBox("Days remaining",time_remaining, icon = icon("clock"), fill = TRUE,color="teal",width = 12)
+          )
         )
       })
 
