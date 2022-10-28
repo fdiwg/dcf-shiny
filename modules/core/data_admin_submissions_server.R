@@ -14,6 +14,8 @@ data_admin_submissions_server <- function(id, parent.session, config, profile, c
       model <- reactiveValues(
         error = NULL
       )
+      list_datacalls<-reactiveVal(NULL)
+      datacall<-reactiveVal(NULL)
       
       output$task_wrapper<-renderUI({
         selectizeInput(ns("task"),
@@ -33,7 +35,7 @@ data_admin_submissions_server <- function(id, parent.session, config, profile, c
         if(!is.null(input$task))if(input$task!=""){
           datacalls<-getDataCalls(pool,tasks=input$task)
           datacalls<-datacalls[order(datacalls$date_end, datacalls$status,decreasing = T),]
-          
+          list_datacalls<-list_datacalls(datacalls)
           output$datacall_wrapper<-renderUI({
           selectizeInput(ns("datacall"),
                          label="Inspect submissions for data call :",
@@ -82,13 +84,14 @@ data_admin_submissions_server <- function(id, parent.session, config, profile, c
       }
       
       showSubmissionBrowseModal <- function(items){
+        print(items)
         showModal(
           modalDialog(
             title = "",
             selectizeInput(ns("item"),
                            label="Show submitted item :",
                            multiple = F,
-                           choices = items$name,
+                           choices = setNames(items$name,items$description),
                            selected=NULL,
                            options = list(
                              placeholder = "Please select a item",
@@ -143,7 +146,8 @@ data_admin_submissions_server <- function(id, parent.session, config, profile, c
           button_id <- paste0(prefix,uuids[i])
           observeEvent(input[[button_id]],{
             shinyjs::disable(button_id)
-            sended<-sendReminder(pool,data_call_id=x$data_call_id,reporting_entity=x$reporting_entity,role=config$dcf$roles$submitter,config, profile)
+            print(datacall())
+            sended<-sendReminder(pool,data_call_id=x$data_call_id,task=x$task_id,reporting_entity=x$reporting_entity,date_end=datacall()$date_end,role=config$dcf$roles$submitter,config, profile)
             showReminderModal(
                sended = sended
             )
@@ -186,7 +190,7 @@ data_admin_submissions_server <- function(id, parent.session, config, profile, c
               id_data_submission = x$id,
               task=x$task_id,
               submitter=x$submitter,
-              end=x$date_end,
+              end=datacall()$date_end,
               data_call_id=x$data_call_id,
               reporting_entity=x$reporting_entity,
               accept = FALSE
@@ -390,16 +394,25 @@ data_admin_submissions_server <- function(id, parent.session, config, profile, c
         accepted_submissions<-length(unique(subset(data,status=="ACCEPTED")$reporting_entity))
         pending_submissions<-length(unique(subset(data,status=="SUBMITTED")$reporting_entity))
         transmitted_submissions<-length(unique(subset(data,status%in%c("ACCEPTED","SUBMITTED"))$reporting_entity))
-        nb_missing<-length(unique(subset(data,status%in%c("MISSING","REJECTED"))$reporting_entity))
+        
+        nb_missing<-length(unique(subset(data,status%in%c("MISSING","REJECTED")&!reporting_entity%in%subset(data,status%in%c("ACCEPTED","SUBMITTED"))$reporting_entity)$reporting_entity))
         nb_duplicate<-sum(duplicated(subset(data,status%in%c("ACCEPTED","SUBMITTED"),select=c(reporting_entity,data_call_folder))))
+        
+        time_remaining<-as.numeric(datacall()$date_end-Sys.Date(),unit="days")
+        if(time_remaining<0){
+          time_remaining="Expired"
+        }else{
+          time_remaining<-sprintf('%s days',time_remaining)
+        }
         
       output$indicators<-renderUI({
         div(
             progressInfoBox(title="Submission", text=sprintf('%s/%s',transmitted_submissions,nb_entities),value=transmitted_submissions,description=paste0(transmitted_submissions/nb_entities*100,"% of completion"), max = nb_entities,icon = icon("share"),fill = TRUE, color = "yellow",width =2),
             progressInfoBox(title="Accepted submissions", text=sprintf('%s/%s',accepted_submissions,nb_entities),value=accepted_submissions,description=paste0(accepted_submissions/nb_entities*100,"% of completion"), max = nb_entities,icon = icon("check"),fill = TRUE, color = "green",width =2),
             infoBox("Pending submissions", pending_submissions, icon = icon("tasks"), fill = TRUE,color="orange",width = 2),
-            infoBox("Missing submissions",nb_missing, icon = icon("bell"), fill = TRUE,color="red",width = 2),
-            infoBox("Duplicate submissions",nb_duplicate, icon = icon("exclamation-triangle"), fill = TRUE,color="black",width = 2),
+            infoBox("Missing submissions",nb_missing,subtitle=HTML(paste0("<button id=\"",ns("remind_all_button"),"\" type=\"button\" class=\"btn btn-danger action-button\" title=\"Send a reminder for all missing entities\" style = \"margin-bottom: 0px;\">Click to send Reminder</button>")), icon = icon("bell"), fill = TRUE,color="red",width = 2),
+            infoBox("Duplicate submissions",nb_duplicate, icon = icon("exclamation-triangle"), fill = TRUE,color="purple",width = 2),
+            infoBox("Days remaining",time_remaining, icon = icon("clock"), fill = TRUE,color="teal",width = 2)
         )
       })
 
@@ -454,6 +467,29 @@ data_admin_submissions_server <- function(id, parent.session, config, profile, c
         
       }
       
+      observeEvent(input$remind_all_button,{
+        shinyjs::disable("remind_all_button")
+        data <- getSubmissions(config = config, pool = pool , profile = profile, store = store, user_only = FALSE,data_calls_id=input$datacall,full_entities=TRUE)
+         missing_table<-subset(data,status%in%c("MISSING","REJECTED")&!reporting_entity%in%subset(data,status%in%c("ACCEPTED","SUBMITTED"))$reporting_entity)
+         missing_table<-missing_table[order(missing_table$reporting_entity),]
+         if(length(missing_table)>0) if(nrow(missing_table)>0) {
+           nb_entities<-nrow(missing_table)
+           counter<-0
+           progress <- shiny::Progress$new(session, min = 0, max = nb_entities)
+           on.exit(progress$close())
+          # withProgress({
+             lapply(1:nb_entities,function(i){
+             x <- missing_table[i,]
+             counter<<-counter+1
+             progress$set(value = counter, message = sprintf("Sending reminder %s/%s\n",counter,nb_entities), detail = sprintf("sending message to '%s'",x$reporting_entity))
+             sended<-sendReminder(pool,data_call_id=x$data_call_id,task=x$task_id,reporting_entity=x$reporting_entity,date_end=datacall()$date_end,role=config$dcf$roles$submitter,config, profile)
+             })
+             #}, min = 0, max = nb_entities, value = 0,
+            #            message = NULL, detail = NULL,session=session)
+
+         }
+      })
+      
       output$refresh_wrapper<-renderUI({
         req(input$datacall)
         if(!is.null(input$datacall))if(input$datacall!=""){
@@ -467,6 +503,9 @@ data_admin_submissions_server <- function(id, parent.session, config, profile, c
       observeEvent(input$datacall,{
         req(input$datacall)
         if(!is.null(input$datacall))if(input$datacall!=""){
+          datacalls<-list_datacalls()
+          print(subset(datacalls,id_data_call==input$datacall))
+          datacall<-datacall(subset(datacalls,id_data_call==input$datacall))
         data <- getSubmissions(config = config, pool = pool , profile = profile, store = store, user_only = FALSE,data_calls_id=input$datacall,full_entities=TRUE)
         renderSubmissions(data)
         renderBars(data)

@@ -1301,6 +1301,35 @@ validateCallRules <- function(file, rules){
     }
   }
   
+  if("reporting_entity" %in% names(rules)){
+    rule<-rules[["reporting_entity"]]
+    #FIRST CHECK :ONLY ON REPORTING ENTITY IN DATA
+    data_reporting_entities<-unique(data$flagstate)
+    cond<-length(data_reporting_entities)
+    if(length(cond)>1){
+        errors<-rbind(errors,data.frame(type="ERROR",rule="SE03",row="-",column="flagstate",category="unique reporting entity",message=sprintf("%s reporting entities are detected in the dataset (%s) and only '%s' should be include",cond,paste0(data_reporting_entities,collapse=","),rule)))
+      if(tests[tests$code=="SE03",]$status!="FAILED"){
+        tests[tests$code=="SE03",]$status<-"FAILED"
+        tests[tests$code=="SE03",]$icon<-paste0(tags$span(shiny::icon("times-circle"), title = "Fail", style = "color:red;"), collapse="")
+      }
+    }else{
+      #SECOND CHECK :REPORTING ENTITY CORRESPONDING TO CORRECT REPORTING ENTITY
+    cond<-data_reporting_entities==rule
+      if(!cond){
+        errors<-rbind(errors,data.frame(type="ERROR",rule="SE03",row="-",column="flagstate",category="conform reporting entity",message=sprintf("reporting entity '%s' is not corresponding to the selected reporting entity '%s'",data_reporting_entities,rule)))
+        if(tests[tests$code=="SE03",]$status!="FAILED"){
+          tests[tests$code=="SE03",]$status<-"FAILED"
+          tests[tests$code=="SE03",]$icon<-paste0(tags$span(shiny::icon("times-circle"), title = "Fail", style = "color:red;"), collapse="")
+        }
+      }else{
+        if(tests[tests$code=="SE03",]$status!="FAILED"){
+          tests[tests$code=="SE03",]$status<-"PASSED"
+          tests[tests$code=="SE03",]$icon<-paste0(tags$span(shiny::icon("check-circle"), title = "Pass", style = "color:green;"), collapse="")
+        }
+      }
+    }
+  }
+  
   if(nrow(subset(errors,type=="ERROR"))>0){
     valid<-FALSE
   }else{
@@ -1684,6 +1713,7 @@ copyItemsSubmission <- function(store, data_submission_id, wd=tempdir()){
       item_info <- data.frame(
         id = item$id,
         name = item$name,
+        description = item$description,
         path = dcfile,
         stringsAsFactors = FALSE
       )
@@ -1693,6 +1723,7 @@ copyItemsSubmission <- function(store, data_submission_id, wd=tempdir()){
     item_info <- data.frame(
       id = character(0),
       name = character(0),
+      description = character(0),
       path = character(0),
       stringsAsFactors = FALSE
     )
@@ -1702,19 +1733,21 @@ copyItemsSubmission <- function(store, data_submission_id, wd=tempdir()){
 }
 
 #sendReminder
-sendReminder <- function(pool,data_call_id,reporting_entity=NULL,role=NULL,config, profile){
-  
+sendReminder <- function(pool,data_call_id,task=NULL,reporting_entity=NULL,date_end=NULL,role=NULL,config, profile){
+
   #check existing entities
   
   #recipients<-getDBUsersWithRole(pool,profile,role,reporting_entity)
   recipients<-getDBUsers(pool,profile,reporting_entity)
   print(recipients)
   #get datacall info
-  data_call <- getDataCalls(pool, id_data_call = data_call_id)
+  if(is.null(task))task <- getDataCalls(pool, id_data_call = data_call_id)$task_id
   
   if(nrow(recipients)==0){
     sent <- FALSE
-    attr(sent, "error") <- sprintf("There is currently no person assign for reporting entity '%s'", reporting_entity)
+    message<-sprintf("There is currently no person assign for reporting entity '%s'", reporting_entity)
+    attr(sent, "error") <- 
+    INFO(message)
     return(sent)
   }
 
@@ -1723,13 +1756,13 @@ sendReminder <- function(pool,data_call_id,reporting_entity=NULL,role=NULL,confi
         recipient <- recipients[i,]
         INFO("Sending data call notification to '%s'", recipient$username)
         notif_sent <- sendMessage(
-          subject = sprintf("[%s] Kind reminder for Data call open for %s task ID '%s'", config$dcf$name, config$dcf$context, data_call$task_id),
+          subject = sprintf("[%s] Kind reminder for Data call open for %s task ID '%s' - reporting_entity '%s'", config$dcf$name, config$dcf$context, task,reporting_entity),
           body = sprintf(
             "Dear %s,
             
             You receive this notification because you are assigned as part of the %s (%s) as %s.
             
-            We haven't yet receipt your data for task ID '%s'.
+            We didn't yet receive your data for task ID '%s' for reporting entity '%s'.
             
             You are kindly invited to validate and submit your data before %s.
             
@@ -1738,8 +1771,8 @@ sendReminder <- function(pool,data_call_id,reporting_entity=NULL,role=NULL,confi
                          
             ",
             recipient$fullname, 
-            config$dcf$name, config$dcf$context, config$dcf$roles$submitter, data_call$task_id,
-            as(data_call$date_end,"character"),
+            config$dcf$name, config$dcf$context, config$dcf$roles$submitter, task,reporting_entity,
+            as(date_end,"character"),
             config$dcf$roles$manager
           ),
           recipients = as.list(recipient$username),

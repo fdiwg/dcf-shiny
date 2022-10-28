@@ -498,6 +498,7 @@ data_validation_server <- function(id, parent.session, config, profile, componen
       observeEvent(input$goSpecValid,{
 
         taskSupplRules<-taskProperties()$data_call_limited_on
+        taskSupplRules$reporting_entity<-input$reporting_entity
         data<-loadedData()
         showModal(modalDialog(
           title = "Check consistency with the ongoing data call",
@@ -693,14 +694,16 @@ data_validation_server <- function(id, parent.session, config, profile, componen
           value = 25
         )
         #original file
-        uploadedOriginalDataId <- store$uploadFile(folderPath = file.path(config$dcf$user_workspace, dc_folder), file = input$file$datapath)
+        new_filename<-file.path(dirname(input$file$datapath),input$file$name)
+        file.rename(input$file$datapath,new_filename)
+        uploadedOriginalDataId <- store$uploadFile(folderPath = file.path(config$dcf$user_workspace, dc_folder), file = new_filename, description ="Original dataset")
         
         #file for submission
         if(!is.null(uploadedOriginalDataId)){
           INFO("Successful upload for source file '%s'", input$file$datapath)
           data_filename <- file.path(getwd(), paste0(dc_folder, ".csv"))
           readr::write_csv(loadedData(), data_filename)
-          uploadedDataId <- store$uploadFile(folderPath = file.path(config$dcf$user_workspace, dc_folder), file = data_filename)
+          uploadedDataId <- store$uploadFile(folderPath = file.path(config$dcf$user_workspace, dc_folder), file = data_filename, description ="Formated dataset")
           unlink(data_filename)
         }
         
@@ -732,7 +735,7 @@ data_validation_server <- function(id, parent.session, config, profile, componen
           dc_entry$addDCTemporal(paste(start,end,sep="/"))
           
           dc_entry$save(dc_entry_filename)
-          uploadedMetadataId <- store$uploadFile(folderPath = file.path(config$dcf$user_workspace, dc_folder), file = dc_entry_filename)
+          uploadedMetadataId <- store$uploadFile(folderPath = file.path(config$dcf$user_workspace, dc_folder), file = dc_entry_filename, description = "Metadata")
           
           if(!is.null(uploadedMetadataId) ){
             INFO("Successful upload for metadata file '%s'", dc_entry_filename)
@@ -743,7 +746,7 @@ data_validation_server <- function(id, parent.session, config, profile, componen
         if(!is.null(uploadedDataId) && !is.null(uploadedMetadataId)){
           if(!is.null(gbReportPath())){
             report_standard_conformity_filename<-gbReportPath()
-            uploadedReportStandardConformityId <- store$uploadFile(folderPath = file.path(config$dcf$user_workspace, dc_folder), file = report_standard_conformity_filename)
+            uploadedReportStandardConformityId <- store$uploadFile(folderPath = file.path(config$dcf$user_workspace, dc_folder), file = report_standard_conformity_filename, description ="Standard conformity report")
             if(!is.null(uploadedReportStandardConformityId)){
               INFO("Successful upload for standard conformity report file '%s'", report_standard_conformity_filename)
             }
@@ -751,7 +754,7 @@ data_validation_server <- function(id, parent.session, config, profile, componen
           }
           if(!is.null(dcReportPath())){
             report_datacall_consistency_filename<-dcReportPath()
-            uploadedReportDatacallConsistencyId <- store$uploadFile(folderPath = file.path(config$dcf$user_workspace, dc_folder), file = report_datacall_consistency_filename)
+            uploadedReportDatacallConsistencyId <- store$uploadFile(folderPath = file.path(config$dcf$user_workspace, dc_folder), file = report_datacall_consistency_filename, description ="Datacall consistancy report")
             if(!is.null(uploadedReportDatacallConsistencyId)){
               INFO("Successful upload for datacall consistancy report file '%s'", report_datacall_consistency_filename)
             }
@@ -786,6 +789,10 @@ data_validation_server <- function(id, parent.session, config, profile, componen
                                            
                                            New data has been submitted by %s (as %s) for data call '%s' - task '%s' - reporting entity '%s' and shared for your review.
                                            
+                                           Submitter notes :
+                                           
+                                           %s
+                                           
                                            Best regards,
                                            The system bot"
           }else{
@@ -797,6 +804,10 @@ data_validation_server <- function(id, parent.session, config, profile, componen
                                            
                                            Notice that a submission was already provided by this user for this datacall and the present one replaces and cancels the previous one.
                                            
+                                           Submitter notes :
+                                           
+                                           %s
+                                           
                                            Best regards,
                                            The system bot"
           }
@@ -806,7 +817,8 @@ data_validation_server <- function(id, parent.session, config, profile, componen
                                                 submission$data_call_id, submission$task_id, submission$reporting_entity),
                               body = sprintf(body,
                                              config$dcf$name, config$dcf$context, config$dcf$roles$manager, 
-                                             profile$name, config$dcf$roles$submitter, submission$data_call_id, submission$task_id, submission$reporting_entity),
+                                             profile$name, config$dcf$roles$submitter, submission$data_call_id, submission$task_id, submission$reporting_entity,
+                                             input$message),
                               recipients = as.list(dcf_managers$username),
                               attachment_ids =list(uploadedOriginalDataId,uploadedDataId,uploadedMetadataId ,uploadedReportStandardConformityId,uploadedReportDatacallConsistencyId) ,
                               profile = profile
