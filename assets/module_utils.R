@@ -1,6 +1,6 @@
 #listModuleProfiles
 listModuleProfiles <- function(config = NULL){
-  default_module_profiles <- list.files(path = "./modules", pattern = ".json", recursive = TRUE, full.names = TRUE)
+  default_module_profiles <- list.files(path = "./modules/core", pattern = ".json", recursive = TRUE, full.names = TRUE)
   default_module_profiles <- default_module_profiles[regexpr("i18n", default_module_profiles)<0]
   return(default_module_profiles)
 }

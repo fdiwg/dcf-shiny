@@ -1,0 +1,10 @@
+{
+  "parent": "admin",
+  "type": "subitem",
+  "rank": 4,
+  "name": "monitor",
+  "title": "Plugin template",
+  "icon": "gears",
+  "restricted": true,
+  "roles": ["system admin", "r-studio"]
+}
