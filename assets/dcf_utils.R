@@ -1306,7 +1306,7 @@ validateCallRules <- function(file, rules){
     #FIRST CHECK :ONLY ON REPORTING ENTITY IN DATA
     data_reporting_entities<-unique(data$flagstate)
     cond<-length(data_reporting_entities)
-    if(length(cond)>1){
+    if(cond>1){
         errors<-rbind(errors,data.frame(type="ERROR",rule="SE03",row="-",column="flagstate",category="unique reporting entity",message=sprintf("%s reporting entities are detected in the dataset (%s) and only '%s' should be include",cond,paste0(data_reporting_entities,collapse=","),rule)))
       if(tests[tests$code=="SE03",]$status!="FAILED"){
         tests[tests$code=="SE03",]$status<-"FAILED"
