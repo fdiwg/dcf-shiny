@@ -1,0 +1,93 @@
+{ 
+  "profile": {
+  	"id": "wecafc-firms-workflow",
+  	"project": "geoflow - WECAFC-FIRMS",
+  	"organization": "Blue-Cloud",
+  	"logos": [
+  	  "https://i1.wp.com/www.clmeproject.org/wp-content/uploads/2017/05/FAO-copaco-1.png",
+  	  "https://www.blue-cloud.org/sites/all/themes/arcadia/logo.png"
+  	],
+  	"mode": "entity",
+  	"options": {
+  		"line_separator": "_\n"
+  	}
+  },  
+  "metadata": {
+    "entities": [{
+      "script": "wecafc-firms_geoflow_entity_handler.R",
+      "handler": "handle_entities_rdb",
+      "source": "{{TASK_ID}}"
+    }],
+    "contacts" : [{
+      "script": "wecafc-firms_geoflow_contact_handler.R",
+      "handler": "handle_contacts_rdb"
+    }]
+  },
+  "software": [
+    {
+      "id": "rdb-dbi",
+      "type": "output",
+      "software_type": "dbi",
+      "parameters": {
+          "drv": "Postgres",
+          "user": "{{DB_USER}}",
+          "password": "{{DB_PASSWORD}}",
+          "host": "{{DB_HOST}}",
+          "port": "{{DB_PORT}}",
+          "dbname": "{{DB_DBNAME}}"
+      },
+      "properties" : {}
+    },
+		{
+  		"id": "sdilab-geonetwork",
+  		"type": "output",
+  		"software_type": "geonetwork",
+  		"parameters": {
+  			"url": "{{GEONETWORK_URL}}",
+  			"user": "{{GEONETWORK_USER}}",
+  			"pwd": "{{GEONETWORK_PWD}}",
+  			"version": "{{GEONETWORK_VERSION}}",
+  			"logger": "DEBUG"
+  		}
+	  },
+  	{
+  		"id": "rdb-geoserver",
+  		"type": "output",
+  		"software_type": "geoserver",
+  		"parameters": {
+  			"url": "{{GEOSERVER_URL}}",
+  			"user": "{{GEOSERVER_USER}}",
+  			"pwd": "{{GEOSERVER_PASSWORD}}",
+  			"logger": "DEBUG"
+  		},
+  		"properties" : {
+  			"workspace": "rdb_wecafc",
+  			"datastore": "rdb_wecafc_pg"
+  		}
+  	}
+  ],
+  "actions": [
+    {
+      "id": "geometa-create-iso-19115",
+  	  "options": {
+    		"logo": true
+  	  },
+  	  "run":true
+    },
+  	{
+  	  "id": "geometa-create-iso-19110",
+  	  "run":true,
+  	  "options" : {
+		    "extra_attributes"  : ["aggregation_method"]
+       }
+  	},
+  	{
+  	  "id": "geonapi-publish-iso-19139",
+  	  "run":true
+  	},
+  	{
+  	  "id": "geosapi-publish-ogc-services",
+  	  "run":true
+  	}
+  ]
+}

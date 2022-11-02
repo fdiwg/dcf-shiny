@@ -281,12 +281,42 @@ function(id, parent.session, config, profile, components){
                       p("Data has been successfully stored in the database!"),
                       p("This last step will update relevant resources in the WECAFC-FIRMS SDI including metadata (ISO-19115 and ISO-19110) published
                         as ISO-19139 in the GeoNetwork catalogue, and data published in GeoServer; both required for the update of the WECAFC-FIRMS 
-                        data map viewer.")
+                        data map viewer."),
+                      actionButton(ns("go_geoflow"),"Publish")
                     )
                   )
         )
-        
       })
+      
+      observeEvent(input$go_geoflow,{
+        shinyjs::disable("go_geoflow")
+        geoflow::executeWorkflow("")
+        shinyjs::enable("go_geoflow")
+      })
+      
+      sql = "SELECT
+            	CASE '%aggregation_method%' WHEN 'none' THEN NULL WHEN 'avg_by_year' THEN geometry WHEN 'sum' THEN geometry ELSE geometry END as geometry,
+            	query.* FROM (
+            		SELECT 
+            		raw.flagstate,
+            		CASE '%aggregation_method%' WHEN 'none' THEN raw.species WHEN 'avg_by_year' THEN CAST(NULL as text) WHEN 'sum' THEN CAST(NULL as text) ELSE raw.species END as species, 
+            		CASE '%aggregation_method%' WHEN 'none' THEN raw.year WHEN 'avg_by_year' THEN CAST(NULL as integer) WHEN 'sum' THEN CAST(NULL as integer) ELSE raw.year END as year,
+            		CASE '%aggregation_method%' WHEN 'none' THEN sum(raw.catches) WHEN 'avg_by_year' THEN sum(raw.catches)/(max(temporal_extent.time)-min(temporal_extent.time)+1) WHEN 'sum' THEN sum(raw.catches) ELSE sum(raw.catches) END as catches
+            		from 
+            		(SELECT flagstate, species, CAST(EXTRACT(YEAR from time_end) as integer) as year, sum(measurement_value) as catches 
+            		 FROM task_i_2 as raw WHERE measurement_type = 'nominal' GROUP BY flagstate, species, year) as raw, 
+            		(select regexp_split_to_table(regexp_replace('%year%',' ', '+', 'g'),E'\\\\+')::numeric as time) as temporal_extent
+            		WHERE 
+            			raw.flagstate IN( select regexp_split_to_table(regexp_replace('%flagstate%',' ', '+', 'g'),E'\\\\+')) AND 
+            			raw.species IN( select regexp_split_to_table(regexp_replace('%species%',' ', '+', 'g'),E'\\\\+'))AND 
+                  		raw.year IN( select regexp_split_to_table(regexp_replace('%year%',' ', '+', 'g'),E'\\\\+')::numeric) 
+            		GROUP BY 
+            			raw.flagstate, 
+            			CASE '%aggregation_method%' WHEN 'none' THEN raw.species WHEN 'avg_by_year' THEN NULL WHEN 'sum' THEN NULL ELSE raw.species END, 
+            			CASE '%aggregation_method%' WHEN 'none' THEN raw.year WHEN 'avg_by_year' THEN NULL WHEN 'sum' THEN NULL ELSE raw.year END
+            	) as query
+            LEFT JOIN countries ON query.flagstate = countries.iso_3"
+      
       
       #-----------------------------------------------------------------------------------
     }
