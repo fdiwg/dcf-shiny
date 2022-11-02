@@ -18,19 +18,6 @@ function(id, parent.session, config, profile, components){
       store <- components$STORAGEHUB
       pool <- components$POOL
       
-      output$task_wrapper<-renderUI({
-        selectizeInput(ns("task"),
-                       label="Task",
-                       multiple = F,
-                       choices = getTasks(config,withId=TRUE),
-                       selected=NULL,
-                       options = list(
-                         placeholder = "Select a task",
-                         onInitialize = I('function() { this.setValue(""); }')
-                       )
-        )
-      })
-      
       #getDataTaskTablename
       getDataTaskTablename <- function(task_id){
         table_id <- tolower(gsub("-", "_", gsub("\\.", "_", task_id)))
@@ -189,6 +176,20 @@ function(id, parent.session, config, profile, components){
         updateTabsetPanel(inputId = "sdi-wizard-tabs", 
                           session = parent.session,
                           selected = "sdi_merge_data")
+      })
+      
+      #task_wrapper
+      output$task_wrapper<-renderUI({
+        selectizeInput(ns("task"),
+                       label="Task",
+                       multiple = F,
+                       choices = getTasks(config,withId=TRUE),
+                       selected=NULL,
+                       options = list(
+                         placeholder = "Select a task",
+                         onInitialize = I('function() { this.setValue(""); }')
+                       )
+        )
       })
       
       #go_readandmerge_wrapper
