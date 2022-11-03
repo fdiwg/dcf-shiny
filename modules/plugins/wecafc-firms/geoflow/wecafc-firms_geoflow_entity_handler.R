@@ -17,7 +17,7 @@ handle_entities_rdb <- function(config, source = NULL){
     out_entity <- switch(source,
       "task-I.2" = {
         #geoflow entity
-        entity <- geoflow_entity$new()
+        entity <- geoflow::geoflow_entity$new()
         
         #ref_data
         reftable <-getDataTaskTablename(source)
@@ -209,6 +209,8 @@ handle_entities_rdb <- function(config, source = NULL){
         if(!is.null(featureTypeObj)){
           entity$data$setFeatureTypeObj(featureTypeObj)
         }
+        
+        entity
       },
       stop(sprintf("No publisher implemented yet for task '%s'", source))
     )
