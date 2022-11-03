@@ -306,7 +306,7 @@ function(id, parent.session, config, profile, components){
         Sys.setenv(
           GEOSERVER_URL = components$GEOSERVER_CONFIG$url,
           GEOSERVER_USER = components$GEOSERVER_CONFIG$user,
-          GEOSERVER_USER = components$GEOSERVER_CONFIG$pwd
+          GEOSERVER_PASSWORD = components$GEOSERVER_CONFIG$pwd
         )
         shinyjs::disable("go_geoflow")
         download.file("https://raw.githubusercontent.com/eblondel/dcf-shiny/main/modules/plugins/wecafc-firms/geoflow/wecafc-firms_geoflow.json", mode = "wb", 
