@@ -289,7 +289,7 @@ function(id, parent.session, config, profile, components){
       })
       
       observeEvent(input$go_geoflow,{
-        Sys.setenv(TASK_ID = task)
+        Sys.setenv(TASK_ID = data_resources$task)
         Sys.setenv(
           DB_HOST = config$dbi$host, 
           DB_PORT = config$dbi$port, 
