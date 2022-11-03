@@ -64,7 +64,7 @@
   		},
   		"properties" : {
   			"workspace": "rdb_wecafc",
-  			"datastore": "rdb_wecafc_pg"
+  			"store": "rdb_wecafc_pg"
   		}
   	}
   ],
