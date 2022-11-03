@@ -8,6 +8,7 @@ handle_contacts_rdb <- function(config, source){
   
   contact1 <- geoflow_contact$new()
   contact1$setId("nfi")
+  contact$setEmail("NFI-Inquiries@fao.org")
   contact1$setOrganizationName(nfi_name)
   contact1$setPostalAddress("Viale delle Terme di Caracalla")
   contact1$setPostalCode("00153")

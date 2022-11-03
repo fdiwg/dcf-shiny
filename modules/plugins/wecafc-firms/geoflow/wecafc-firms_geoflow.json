@@ -7,10 +7,7 @@
   	  "https://i1.wp.com/www.clmeproject.org/wp-content/uploads/2017/05/FAO-copaco-1.png",
   	  "https://www.blue-cloud.org/sites/all/themes/arcadia/logo.png"
   	],
-  	"mode": "entity",
-  	"options": {
-  		"line_separator": "_\n"
-  	}
+  	"mode": "entity"
   },  
   "metadata": {
     "entities": [{

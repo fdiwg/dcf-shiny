@@ -68,7 +68,7 @@ function(id, parent.session, config, profile, components){
       #storeInDataspace
       storeInDataspace <- function(config, pool, profile, store, task_id, datafile){
         
-        #check existance of task id folder, if not create it
+        #check existence of task id folder, if not create it
         task_folder_id <- store$getWSItemID(parentFolderID = config$dataspace_id, itemPath = task_id)
         if(is.null(task_folder_id)){
           store$createFolder(folderID = config$dataspace_id, name = task_id)
@@ -289,34 +289,29 @@ function(id, parent.session, config, profile, components){
       })
       
       observeEvent(input$go_geoflow,{
+        Sys.setenv(TASK_ID = task)
+        Sys.setenv(
+          DB_HOST = config$dbi$host, 
+          DB_PORT = config$dbi$port, 
+          DB_USER = config$dbi$user, 
+          DB_PASSWORD = config$dbi$password,
+          DB_DBNAME = config$dbi$dbname
+        )
+        Sys.setenv(
+          GEONETWORK_URL = components$GEONETWORK_CONFIG$url,
+          GEONETWORK_VERSION = components$GEONETWORK_CONFIG$version,
+          GEONETWORK_USER = components$GEONETWORK_CONFIG$user, 
+          GEONETWORK_PASSWORD = components$GEONETWORK_CONFIG$pwd
+        )
+        Sys.setenv(
+          GEOSERVER_URL = components$GEOSERVER_CONFIG$url,
+          GEOSERVER_USER = components$GEOSERVER_CONFIG$user,
+          GEOSERVER_USER = components$GEOSERVER_CONFIG$pwd
+        )
         shinyjs::disable("go_geoflow")
-        geoflow::executeWorkflow("")
+        geoflow::executeWorkflow("https://raw.githubusercontent.com/eblondel/dcf-shiny/main/modules/plugins/wecafc-firms/geoflow/wecafc-firms_geoflow.json")
         shinyjs::enable("go_geoflow")
       })
-      
-      sql = "SELECT
-            	CASE '%aggregation_method%' WHEN 'none' THEN NULL WHEN 'avg_by_year' THEN geometry WHEN 'sum' THEN geometry ELSE geometry END as geometry,
-            	query.* FROM (
-            		SELECT 
-            		raw.flagstate,
-            		CASE '%aggregation_method%' WHEN 'none' THEN raw.species WHEN 'avg_by_year' THEN CAST(NULL as text) WHEN 'sum' THEN CAST(NULL as text) ELSE raw.species END as species, 
-            		CASE '%aggregation_method%' WHEN 'none' THEN raw.year WHEN 'avg_by_year' THEN CAST(NULL as integer) WHEN 'sum' THEN CAST(NULL as integer) ELSE raw.year END as year,
-            		CASE '%aggregation_method%' WHEN 'none' THEN sum(raw.catches) WHEN 'avg_by_year' THEN sum(raw.catches)/(max(temporal_extent.time)-min(temporal_extent.time)+1) WHEN 'sum' THEN sum(raw.catches) ELSE sum(raw.catches) END as catches
-            		from 
-            		(SELECT flagstate, species, CAST(EXTRACT(YEAR from time_end) as integer) as year, sum(measurement_value) as catches 
-            		 FROM task_i_2 as raw WHERE measurement_type = 'nominal' GROUP BY flagstate, species, year) as raw, 
-            		(select regexp_split_to_table(regexp_replace('%year%',' ', '+', 'g'),E'\\\\+')::numeric as time) as temporal_extent
-            		WHERE 
-            			raw.flagstate IN( select regexp_split_to_table(regexp_replace('%flagstate%',' ', '+', 'g'),E'\\\\+')) AND 
-            			raw.species IN( select regexp_split_to_table(regexp_replace('%species%',' ', '+', 'g'),E'\\\\+'))AND 
-                  		raw.year IN( select regexp_split_to_table(regexp_replace('%year%',' ', '+', 'g'),E'\\\\+')::numeric) 
-            		GROUP BY 
-            			raw.flagstate, 
-            			CASE '%aggregation_method%' WHEN 'none' THEN raw.species WHEN 'avg_by_year' THEN NULL WHEN 'sum' THEN NULL ELSE raw.species END, 
-            			CASE '%aggregation_method%' WHEN 'none' THEN raw.year WHEN 'avg_by_year' THEN NULL WHEN 'sum' THEN NULL ELSE raw.year END
-            	) as query
-            LEFT JOIN countries ON query.flagstate = countries.iso_3"
-      
       
       #-----------------------------------------------------------------------------------
     }
