@@ -311,7 +311,7 @@ function(id, parent.session, config, profile, components){
         shinyjs::disable("go_geoflow")
         download.file("https://raw.githubusercontent.com/eblondel/dcf-shiny/main/modules/plugins/wecafc-firms/geoflow/wecafc-firms_geoflow.json", mode = "wb", 
                       destfile = file.path(tempdir(), "wecafc-firms_geoflow.json"), quiet = TRUE)
-        geoflow::executeWorkflow(file.path(tempdir(), "wecafc-firms_geoflow.json"))
+        geoflow::executeWorkflow(file.path(tempdir(), "wecafc-firms_geoflow.json"), dir = tempdir())
         shinyjs::enable("go_geoflow")
       })
       
