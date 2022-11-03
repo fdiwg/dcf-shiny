@@ -42,6 +42,7 @@ handle_entities_rdb <- function(config, source = NULL){
         #subjects
         #General
         gen_subj <- geoflow::geoflow_subject$new()
+        gen_subj$setKey("theme")
         gen_subj$setName("General")
         gen_subj$addKeyword("FAO", "http://www.fao.org")
         gen_subj$addKeyword("FAO-NFIS", "http://www.fao.org/fishery")
