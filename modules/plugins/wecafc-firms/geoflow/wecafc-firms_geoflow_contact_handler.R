@@ -1,14 +1,13 @@
 handle_contacts_rdb <- function(config, source){
   
-  require(geoflow)
   
   nfi_url <- "http://www.fao.org/fishery"
   nfi_name <- "FAO Fisheries and Aquaculture Division (NFI)"
   nfis_name <- "FAO Fisheries and Aquaculture Division (NFI). Statistics and Information Branch (NFIS)"
   
-  contact1 <- geoflow_contact$new()
+  contact1 <- geoflow::geoflow_contact$new()
   contact1$setId("nfi")
-  contact$setEmail("NFI-Inquiries@fao.org")
+  contact1$setEmail("NFI-Inquiries@fao.org")
   contact1$setOrganizationName(nfi_name)
   contact1$setPostalAddress("Viale delle Terme di Caracalla")
   contact1$setPostalCode("00153")
@@ -17,7 +16,7 @@ handle_contacts_rdb <- function(config, source){
   contact1$setWebsiteUrl(nfi_url)
   contact1$setWebsiteName(nfi_name)
   
-  contact2 <- geoflow_contact$new()
+  contact2 <- geoflow::geoflow_contact$new()
   contact2$setId("Aureliano.Gentile@fao.org")
   contact2$setEmail("Aureliano.Gentile@fao.org")
   contact2$setFirstName("Aureliano")
@@ -27,7 +26,7 @@ handle_contacts_rdb <- function(config, source){
   contact2$setWebsiteUrl(nfi_url)
   contact2$setWebsiteName(nfi_name)
   
-  contact3 <- geoflow_contact$new()
+  contact3 <- geoflow::geoflow_contact$new()
   contact3$setId("Emmanuel.Blondel@fao.org")
   contact3$setEmail("Emmanuel.Blondel@fao.org")
   contact3$setFirstName("Emmanuel")
@@ -37,9 +36,9 @@ handle_contacts_rdb <- function(config, source){
   contact3$setWebsiteUrl(nfi_url)
   contact3$setWebsiteName(nfi_name)
   
-  contact4 <- geoflow_contact$new()
+  contact4 <- geoflow::geoflow_contact$new()
   contact4$setId("Yann.Laurent@fao.org")
-  contact3$setEmail("Yann.Laurent@fao.org")
+  contact4$setEmail("Yann.Laurent@fao.org")
   contact4$setFirstName("Yann")
   contact4$setLastName("Laurent")
   contact4$setPositionName("Senior Fisheries Information and Statistics System Expert")
@@ -47,7 +46,7 @@ handle_contacts_rdb <- function(config, source){
   contact4$setWebsiteUrl(nfi_url)
   contact4$setWebsiteName(nfi_name)
   
-  contact5 <- geoflow_contact$new()
+  contact5 <- geoflow::geoflow_contact$new()
   contact5$setId("James.Geehan@fao.org")
   contact5$setEmail("James.Geehan@fao.org")
   contact5$setFirstName("James")
