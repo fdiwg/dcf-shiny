@@ -309,7 +309,9 @@ function(id, parent.session, config, profile, components){
           GEOSERVER_USER = components$GEOSERVER_CONFIG$pwd
         )
         shinyjs::disable("go_geoflow")
-        geoflow::executeWorkflow("https://raw.githubusercontent.com/eblondel/dcf-shiny/main/modules/plugins/wecafc-firms/geoflow/wecafc-firms_geoflow.json")
+        download.file("https://raw.githubusercontent.com/eblondel/dcf-shiny/main/modules/plugins/wecafc-firms/geoflow/wecafc-firms_geoflow.json", mode = "wb", 
+                      destfile = file.path(tempdir(), "wecafc-firms_geoflow.json"), quiet = TRUE)
+        geoflow::executeWorkflow(file.path(tempdir(), "wecafc-firms_geoflow.json"))
         shinyjs::enable("go_geoflow")
       })
       
