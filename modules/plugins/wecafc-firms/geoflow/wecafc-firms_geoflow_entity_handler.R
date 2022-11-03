@@ -41,7 +41,7 @@ handle_entities_rdb <- function(config, source = NULL){
         
         #subjects
         #General
-        gen_subj <- geoflow_subject$new()
+        gen_subj <- geoflow::geoflow_subject$new()
         gen_subj$setName("General")
         gen_subj$addKeyword("FAO", "http://www.fao.org")
         gen_subj$addKeyword("FAO-NFIS", "http://www.fao.org/fishery")
@@ -53,12 +53,12 @@ handle_entities_rdb <- function(config, source = NULL){
         entity$addSubject(gen_subj)
         
         #contacts
-        poc = geoflow_contact$new();  poc$setId("nfi"); poc$role = "pointOfContact"; entity$addContact(poc);
-        poc2 = geoflow_contact$new();  poc2$setId("Aureliano.Gentile@fao.org"); poc2$role = "pointOfContact"; entity$addContact(poc2);
-        poc3 = geoflow_contact$new();  poc3$setId("Yann.Laurent@fao.org"); poc3$role = "pointOfContact"; entity$addContact(poc3);
-        poc4 = geoflow_contact$new(); poc4$setId("James.Geehan@fao.org"); poc4$role = "pointOfContact"; entity$addContact(poc4);
-        md = geoflow_contact$new(); md$setId("Emmanuel.Blondel@fao.org"); md$role = "metadata"; entity$addContact(md);
-        proc = geoflow_contact$new(); proc$setId("Emmanuel.Blondel@fao.org"); proc$role = "processor"; entity$addContact(proc);
+        poc = geoflow::geoflow_contact$new();  poc$setId("nfi"); poc$role = "pointOfContact"; entity$addContact(poc);
+        poc2 = geoflow::geoflow_contact$new();  poc2$setId("Aureliano.Gentile@fao.org"); poc2$role = "pointOfContact"; entity$addContact(poc2);
+        poc3 = geoflow::geoflow_contact$new();  poc3$setId("Yann.Laurent@fao.org"); poc3$role = "pointOfContact"; entity$addContact(poc3);
+        poc4 = geoflow::geoflow_contact$new(); poc4$setId("James.Geehan@fao.org"); poc4$role = "pointOfContact"; entity$addContact(poc4);
+        md = geoflow::geoflow_contact$new(); md$setId("Emmanuel.Blondel@fao.org"); md$role = "metadata"; entity$addContact(md);
+        proc = geoflow::geoflow_contact$new(); proc$setId("Emmanuel.Blondel@fao.org"); proc$role = "processor"; entity$addContact(proc);
         
         #relations
         #TODO thumbnail
@@ -77,12 +77,12 @@ handle_entities_rdb <- function(config, source = NULL){
         #dictionnary
         target_columns = colnames(ref_data)
         #create dictionary
-        dict <- geoflow_dictionary$new()
+        dict <- geoflow::geoflow_dictionary$new()
         #create feature type
-        featuretype <- geoflow_featuretype$new(id = pid)
+        featuretype <- geoflow::geoflow_featuretype$new(id = pid)
         for(target_column in target_columns){
           target_column_label <- paste0(toupper(substr(target_column,0,1)), substr(target_column,2,nchar(target_column)))
-          member <- geoflow_featuremember$new(
+          member <- geoflow::geoflow_featuremember$new(
             type = if(target_column == "measurement_value"){"variable"}else{"attribute"},
             code = target_column,
             name = target_column_label,
@@ -94,7 +94,7 @@ handle_entities_rdb <- function(config, source = NULL){
           )
           featuretype$addMember(member)
         }
-        featuretype$addMember(geoflow_featuremember$new(
+        featuretype$addMember(geoflow::geoflow_featuremember$new(
           type = "attribute",
           code = "aggregation_method",
           name = "aggregation_method",
@@ -119,7 +119,7 @@ handle_entities_rdb <- function(config, source = NULL){
           if(class(fun)!="function"){
             stop(errMsg)
           }
-          register_to_fetch <- geoflow_register$new(
+          register_to_fetch <- geoflow::geoflow_register$new(
             id = handler, 
             def = "", 
             fun = fun
@@ -136,7 +136,7 @@ handle_entities_rdb <- function(config, source = NULL){
         assign(name, newconfig, envir = parent.frame())
         
         #data object
-        data_obj <- geoflow_data$new()
+        data_obj <- geoflow::geoflow_data$new()
         data_obj$setFeatureType(pid)
         data_obj$setSourceType("dbtable")
         data_obj$setUploadType("dbquery")
