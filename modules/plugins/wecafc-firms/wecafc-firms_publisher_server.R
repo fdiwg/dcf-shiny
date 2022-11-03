@@ -114,6 +114,7 @@ function(id, parent.session, config, profile, components){
         unlink(dbdatanew_file)
         
         #store new data in the database
+        table_id <- getDataTaskTablename(task_id)
         progress$set(value = 4, message = sprintf("Write data in database table '%s'", table_id))
         DBI::dbWriteTable(conn = pool, name = table_id, value = data_resources$dbdatanew_noduplicates, overwrite = TRUE)
         
