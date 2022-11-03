@@ -18,6 +18,11 @@
     "contacts" : [{
       "script": "https://raw.githubusercontent.com/eblondel/dcf-shiny/main/modules/plugins/wecafc-firms/geoflow/wecafc-firms_geoflow_contact_handler.R",
       "handler": "handle_contacts_rdb"
+    }],
+    "dictionary": [{
+      "script": "https://raw.githubusercontent.com/eblondel/dcf-shiny/main/modules/plugins/wecafc-firms/geoflow/wecafc-firms_geoflow_dictionary_handler.R",
+      "handler": "handle_dictionary_rdb",
+      "source": "{{TASK_ID}}"
     }]
   },
   "software": [
