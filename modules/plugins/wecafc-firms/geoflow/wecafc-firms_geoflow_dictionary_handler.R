@@ -31,7 +31,7 @@ handle_dictionary_rdb <- function(config, source = NULL){
     #create feature type
     featuretype <- geoflow::geoflow_featuretype$new(id = pid)
     for(target_column in target_columns){
-      target_column_label <- paste0(toupper(substr(target_column,0,1)), substr(target_column,2,nchar(target_column)))
+      target_column_label <- gsub("_", " ", paste0(toupper(substr(target_column,0,1)), substr(target_column,2,nchar(target_column))))
       member <- geoflow::geoflow_featuremember$new(
         type = if(target_column == "measurement_value"){"variable"}else{"attribute"},
         code = target_column,
