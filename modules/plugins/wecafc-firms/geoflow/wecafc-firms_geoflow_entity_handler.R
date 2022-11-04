@@ -144,6 +144,13 @@ handle_entities_rdb <- function(config, source = NULL){
         
         entity$setData(data_obj);
         
+        #assign featureTypeObj!
+        dict <- config$metadata$content$dictionary
+        featureTypeObj <- dict$getFeatureTypeById(id = pid)
+        if(!is.null(featureTypeObj)){
+          entity$data$setFeatureTypeObj(featureTypeObj)
+        }
+        
         entity
       },
       stop(sprintf("No publisher implemented yet for task '%s'", source))
