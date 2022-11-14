@@ -7,6 +7,7 @@ monitor_server <- function(id, parent.session, config, profile, components){
       
       #D4science resources
       resources <- names(components)
+      resources <- resources[!endsWith(resources,"_CONFIG")]
       
       output$resources <- renderDataTable(
         do.call("rbind", lapply(resources, function(resource_name){
