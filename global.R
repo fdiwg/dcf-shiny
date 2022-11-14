@@ -17,6 +17,10 @@ source("assets/dcf_utils.R")
 #---------------------------------------------------------------------------------------
 loadAppPackages()
 
+#env
+#---------------------------------------------------------------------------------------
+try(dotenv::load_dot_env(), silent = TRUE)
+
 #global variables / environment
 #---------------------------------------------------------------------------------------
 #fetchProfile
@@ -65,7 +69,7 @@ COMPONENTS <- loadComponents(profile = PROFILE)
 #TODO current config from file, next to get from Workspace URL inherited from ICPROXY
 #---------------------------------------------------------------------------------------
 #default config_file path for DEPLOYMENT (hidden file)
-config_file <- COMPONENTS$STORAGEHUB$downloadItemByPath("dcf-shiny-config/config.yml", wd = tempdir())
+config_file <- COMPONENTS$STORAGEHUB$downloadItemByPath("dcf-shiny-config/config.yml", wd = getwd())
 
 #local configuration
 #If you are an R developer, you need to create a .REnviron file (no file extension) in /dcf-shiny dir
