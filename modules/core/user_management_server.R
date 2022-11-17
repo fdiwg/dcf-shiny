@@ -50,6 +50,25 @@ user_management_server <- function(id, parent.session, config, profile, componen
                     }"
                   ))
                 )
+              }else if(config$dcf$reporting_entities$name == "rfmo"){
+                selectizeInput(ns("user_form_reporting_entities"), label = "Reporting entities", selected = reporting_entities, multiple = TRUE, 
+                               choices = {
+                                 ref_entity <- getReportingEntityCodes(config)
+                                 entity_choices <- ref_entity$code
+                                 setNames(entity_choices, ref_entity$label)
+                               },options = list( 
+                                 render = I("{
+                      item: function(item, escape) {
+                        var icon_href = 'https://www.fao.org/fishery/services/storage/fs/fishery/images/organization/logo/'+item.value.toLowerCase()+'.jpg';
+                        return '<div><img src=\"'+icon_href+'\" height=16 width=32/> ' + item.label + '</div>'; 
+                      },
+                      option: function(item, escape) { 
+                        var icon_href = 'https://www.fao.org/fishery/services/storage/fs/fishery/images/organization/logo/'+item.value.toLowerCase()+'.jpg';
+                        return '<div><img src=\"'+icon_href+'\" height=16 width=32/> ' + item.label + '</div>'; 
+                      }
+                    }"
+                  ))
+                )
               }else{
                 selectInput(ns("user_form_reporting_entities"), label = "Reporting entities", selected = reporting_entities, multiple = TRUE,
                   choices = {
