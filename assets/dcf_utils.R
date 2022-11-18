@@ -1453,6 +1453,7 @@ getSubmissions <- function(config,pool,profile, store, user_only = FALSE,data_ca
         
         #fetch metadata
         dcfile_item <- store$getWSItem(parentFolderID = user_item$id, itemPath = paste0(data_call_folder,".xml"))
+        lastModified <- as.POSIXct(dcfile_item$lastModificationTime/1000, origin = "1970-01-01")
         dcfile <- store$downloadItem(item = dcfile_item, wd = tempdir())
         dc_entry <- atom4R::readDCEntry(dcfile)
         submission_status <- "SUBMITTED"
@@ -1505,7 +1506,7 @@ getSubmissions <- function(config,pool,profile, store, user_only = FALSE,data_ca
           submitter = user_item$owner,
           creationTime = as.POSIXct(user_item$creationTime/1000, origin = "1970-01-01"),
           lastModifiedBy = user_item$lastModifiedBy,
-          lastModificationTime = as.POSIXct(user_item$lastModificationTime/1000, origin = "1970-01-01"),
+          lastModificationTime = lastModified,
           status = submission_status,
           stringsAsFactors = FALSE
         )
