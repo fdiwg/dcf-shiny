@@ -1,3 +1,38 @@
+#fetchProfile
+fetchProfile <- function(jwt){
+  (strings <- strsplit(jwt, ".", fixed = TRUE)[[1]])
+  out_jwt <- jsonlite::parse_json(rawToChar(jose::base64url_decode(strings[2])))
+  out_jwt$expired <- as(Sys.time(), "numeric") > out_jwt$exp
+  out_jwt$jwt <- jwt
+  
+  #TODO how to know the current VRE context?
+  vre_contexts <- names(out_jwt$resource_access)[startsWith(names(out_jwt$resource_access), "%2Fd4science.research-infrastructures.eu")]
+  if(length(vre_contexts)==0) stop("No VRE context available!")
+  out_jwt$vre_context <- vre_contexts[[1]]
+  
+  out_jwt$vre_resource_access <- out_jwt$resource_access[[out_jwt$vre_context]]
+  out_jwt$shiny_resource_access <- out_jwt$resource_access[["dcf-shiny"]]
+  if(out_jwt$expired) stop("JWT token is expired")
+  if(!out_jwt$expired){
+    req <- httr::POST(
+      sprintf("%s/protocol/openid-connect/token",out_jwt$iss),
+      encode = "form",
+      add_headers("Authorization" = paste("Bearer", jwt)),
+      body = list(
+        grant_type = I("urn:ietf:params:oauth:grant-type:uma-ticket"),
+        audience = URLencode(out_jwt$vre_context, reserved = TRUE)
+      )
+    )
+    if(httr::status_code(req)==200){
+      out_jwt$access <- content(req)
+    }else{
+      stop("JWT Token is not authorized!")
+    }
+  }
+  
+  return(out_jwt)
+}
+
 #loadDBI
 loadDBI <- function(config){
   #DB
@@ -35,7 +70,7 @@ loadComponents <- function(profile){
       components$WPS <- try(ows4R::WPSClient$new(
         url = wps_uri, serviceVersion = "1.0.0",
         headers = c("Authorization" = paste("Bearer", profile$access$access_token)),
-        logger = "DEBUG"
+        logger = "INFO"
       ))
     }
   }else{
@@ -60,7 +95,7 @@ loadComponents <- function(profile){
       components$GEOSERVER <- try(geosapi::GSManager$new(
         url = gs_url,
         user = gs_creds$username, pwd = gs_creds$password,
-        logger = "DEBUG"
+        logger = "INFO"
       ))
     }else{
       class(components$GEOSERVER) <- "unavailable"
@@ -75,7 +110,7 @@ loadComponents <- function(profile){
         url = gn_url,
         version = gn_version,
         user = gn_creds$username, pwd = gn_creds$password,
-        logger = "DEBUG"
+        logger = "INFO"
       ))
     }else{
       class(components$GEONETWORK) <- "unavailable"
