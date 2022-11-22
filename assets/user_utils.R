@@ -16,9 +16,12 @@ getDBUsers <- function(pool, profile = NULL,reporting_entities=NULL,usernames=NU
     dcf_users$roles <- sapply(1:nrow(dcf_users), function(i){
       roles <- list()
       dcf_user = dcf_users[i,]
-      app_user <- user_roles[names(user_roles)==dcf_user$username][[1]]
-      if(length(app_user$roles)>0){
-        roles <- sapply(app_user$roles, function(x){x$name})
+      app_user <- user_roles[names(user_roles)==dcf_user$username]
+      if(length(app_user)>0){
+        app_user <- app_user[[1]]
+        if(length(app_user$roles)>0){
+          roles <- sapply(app_user$roles, function(x){x$name})
+        }
       }
       return(roles)
     })
