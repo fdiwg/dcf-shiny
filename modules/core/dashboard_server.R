@@ -22,7 +22,7 @@ dashboard_server <- function(id, parent.session, config, profile, components){
       
       output$token <- renderUI({
         if("system admin" %in% profile$shiny_resource_access$roles){
-          tags$span(profile$jwt)
+          shiny::tagList("Token: ", tags$span(profile$jwt),tags$br(), "VRE context:", tags$span(profile$vre_context))
         }else{
           tags$span("<hidden>")
         }
