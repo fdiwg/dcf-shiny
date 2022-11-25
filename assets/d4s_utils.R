@@ -174,6 +174,8 @@ initAppDataspace <- function(config, profile, components){
         ERROR("Failed to create app dataspace '%s'", config$dcf$workspace)
         stop(sprintf("Failed to create app dataspace '%s'", config$dcf$workspace))
       }
+    }else{
+      INFO("VRE dcf-shiny data space ID: %s", ws)
     }
   }
   return(ws)
