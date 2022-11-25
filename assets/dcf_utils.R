@@ -254,7 +254,7 @@ updateDataCall <- function(pool, id_data_call, task = "", start = Sys.Date(), en
   update_sql <- sprintf("UPDATE dcf_data_call 
                                SET date_start = '%s', date_end = '%s', status = '%s', updater_id = '%s', update_date = '%s' 
                                WHERE id_data_call = %s", 
-                        as(start,"character"), ifelse((prev_call$status=="OPENED"&status=="CLOSED"),as(Sys.Date(),"character"),as(end,"character")), status, profile$preferred_username, 
+                        as(start,"character"), ifelse((prev_call$status=="OPENED"&status=="CLOSED"),as(Sys.Date()-1,"character"),as(end,"character")), status, profile$preferred_username, 
                         as(update_date, "character"), id_data_call)
   out_sql <- try(DBI::dbSendQuery(conn, update_sql))
   updated <- !is(out_sql, "try-error")
