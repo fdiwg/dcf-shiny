@@ -44,11 +44,16 @@ if(out$valid){
 
 # Summary of rules tested
 ```{r,results='asis', message=FALSE, warning=FALSE, comment=FALSE,echo=FALSE}
+          if(nrow(out$errors)!=0){
           x<-unique(subset(out$errors,select="rule"))
           x$status<-"FAILED"
           test<-merge(out$tests,x,by.x="code",by.y="rule",all.x=T,all.y=F)
           test[is.na(test)]<-"PASSED"
           test[startsWith(test$code,"I"),]$status<-"WARNING" 
+          }else{
+            test<-out$test
+            test$status<-"PASSED"
+          }
           test<-subset(test,select=-c(code))
           test$icon<-ifelse(test$status=="PASSED","\\color{green1}\\faCheckCircle \\color{black}",
                             ifelse(test$status=="WARNING","\\color{orange1}\\faExclamationTriangle \\color{black}",
