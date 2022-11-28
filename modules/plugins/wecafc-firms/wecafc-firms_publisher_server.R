@@ -36,7 +36,7 @@ function(id, parent.session, config, profile, components){
             data_submission <- data_submissions[i,]
             item <- store$getWSItem(parentFolderID = data_submission$id, itemPath = paste0(data_submission$data_call_folder, ".csv"))
             filename <- store$downloadItem(item = item, wd = tempdir())
-            readr::read_csv(filename)
+            data <- readr::read_csv(filename, col_types = list(measurement_unit = readr::col_character()))
           }))
         }
         return(newdata)
@@ -55,9 +55,11 @@ function(id, parent.session, config, profile, components){
       
       #combineData
       combineData <- function(newdata, dbdata, show_duplicates = FALSE){
+        if(!is.null(newdata)) newdata <- cbind(source = "new", newdata)
+        if(!is.null(dbdata)) dbdata <- cbind(source = "database", newdata)
         if(is.null(dbdata)) return(newdata)
         out <- rbind(newdata,dbdata)
-        out$duplicated <- duplicated(out[,colnames(out)[!colnames(out) %in% c("measurement_value")]])
+        out$duplicated <- duplicated(out[,colnames(out)[!colnames(out) %in% c("source", "measurement_value")]])
         if(!show_duplicates){
           out <- out[!out$duplicated,]
           out$duplicated <- NULL
@@ -131,16 +133,16 @@ function(id, parent.session, config, profile, components){
                    tags$div(class = "col-md-12",
                             tagList(     
                               tags$div(class = "connecting-line"),
-                              tabsetPanel(id = "sdi-wizard-tabs",
+                              tabsetPanel(id = "rdb-wizard-tabs",
                                           type="pills",
-                                          tabPanel(title="SDI data publisher",
-                                                   value="sdi_home",
-                                                   h2("Welcome to the WECAFC-FIRMS SDI data publisher"),
+                                          tabPanel(title="RDB data publisher",
+                                                   value="rdb_home",
+                                                   h2("Welcome to the WECAFC-FIRMS RDB data publisher"),
                                                    p("Within this module you you will be able to:"),
                                                    tags$ul(
                                                      tags$li("Merge accepted data submissions for defined data dasks"),
                                                      tags$li("Check merged data and store it into the WECAFC-FIRMS RDB"),
-                                                     tags$li("Trigger geoflow for publication of SDI (meta)data services and update of WECAFC-FIRMS data map viewer")
+                                                     tags$li("Trigger geoflow for publication of RDB (meta)data services and update of WECAFC-FIRMS data map viewer")
                                                    ),
                                                    p("If you are ready, click on 'Start'"),
                                                    actionButton(ns("start"),"Start")
@@ -158,12 +160,12 @@ function(id, parent.session, config, profile, components){
       #----------------------
       observeEvent(input$start,{
         restart<-restart(FALSE)
-        appendTab(inputId = "sdi-wizard-tabs",
+        appendTab(inputId = "rdb-wizard-tabs",
                   session = parent.session,
                   select=TRUE,
                   tabPanel(
                     title="1-Merge data", 
-                    value ="sdi_merge_data",
+                    value ="rdb_merge_data",
                     tagList(
                       br(),
                       uiOutput(ns("task_wrapper")),
@@ -171,12 +173,12 @@ function(id, parent.session, config, profile, components){
                     )
                   )
         )
-        removeTab(inputId = "sdi-wizard-tabs", 
+        removeTab(inputId = "rdb-wizard-tabs", 
                   session = parent.session,
-                  target = "sdi_home")
-        updateTabsetPanel(inputId = "sdi-wizard-tabs", 
+                  target = "rdb_home")
+        updateTabsetPanel(inputId = "rdb-wizard-tabs", 
                           session = parent.session,
-                          selected = "sdi_merge_data")
+                          selected = "rdb_merge_data")
       })
       
       #task_wrapper
@@ -207,35 +209,57 @@ function(id, parent.session, config, profile, components){
         shinyjs::disable("go_readandmerge")
         data_resources$task <- input$task
         data_resources$newdata <- readAndMergeAcceptedData(config = config, pool = pool, profile = profile, store = store, task_id = input$task)
-        data_resources$dbdata <- getDataTaskDBData(pool = pool, task_id = input$task)
-        data_resources$dbdatanew_duplicates <- combineData(data_resources$newdata, data_resources$dbdata, show_duplicates = TRUE)
-        data_resources$dbdatanew_noduplicates <- combineData(data_resources$newdata, data_resources$dbdata, show_duplicates = FALSE)
-        shinyjs::enable("go_readandmerge")
         
-        appendTab(inputId = "sdi-wizard-tabs",
-                  session = parent.session,
-                  select=TRUE,
-                  tabPanel(
-                    title="2-Preview & storage", 
-                    value="sdi_previewandpersist",
-                    tagList(
-                      br(),
-                      p("Please verify if data displayed corresponds to the data to be stored."),
-                      p("Data rows highlighted in ",tags$span("red", style = "color:#dd4b39;font-weight:bold;")," are duplicates series",
-                        "and will be overwriten by new data highlighted in ",tags$span("green", style = "color:#008000;font-weight:bold;"),".", 
-                        "If it is ok, please click 'Next' to proceed."),
-                      DTOutput(ns("sdi_data_preview")),
-                      actionButton(ns("goback_readandmerge"),"Previous"),
-                      actionButton(ns("go_persist"),"Next")
+        if(is.null(data_resources$newdata)){
+          WARN("No new data accepted ready to persist for task '%s'", input$task)
+          appendTab(inputId = "rdb-wizard-tabs",
+                    session = parent.session,
+                    select = TRUE,
+                    tabPanel(
+                      title="Completion",
+                      value="rdb_end",
+                      tagList(
+                        br(),
+                        p(sprintf("No new data accepted ready to persist for task '%s'", input$task))
+                      )
                     )
-                  )
-        )
+          )
+          
+        }else{
+          INFO("Reading and merging accepted data for task '%s': %s rows", input$task, nrow(data_resources$newdata))
+          data_resources$dbdata <- getDataTaskDBData(pool = pool, task_id = input$task)
+          INFO("Getting DB data for task '%s': %s rows", input$task, nrow(data_resources$dbdata))
+          data_resources$dbdatanew_duplicates <- combineData(data_resources$newdata, data_resources$dbdata, show_duplicates = TRUE)
+          INFO("Getting combined data (with duplicates) for task '%s': %s rows", input$task, nrow(data_resources$dbdatanew_duplicates))
+          data_resources$dbdatanew_noduplicates <- combineData(data_resources$newdata, data_resources$dbdata, show_duplicates = FALSE)
+          INFO("Getting combined data (with no duplicates) for task '%s': %s rows", input$task, nrow(data_resources$dbdatanew_noduplicates))
+          shinyjs::enable("go_readandmerge")
+          
+          appendTab(inputId = "rdb-wizard-tabs",
+                    session = parent.session,
+                    select = TRUE,
+                    tabPanel(
+                      title="2-Preview & storage", 
+                      value="rdb_previewandpersist",
+                      tagList(
+                        br(),
+                        p("Please verify if data displayed corresponds to the data to be stored."),
+                        p("Data rows highlighted in ",tags$span("red", style = "color:#dd4b39;font-weight:bold;")," are duplicates series",
+                          "and will be overwriten by new data highlighted in ",tags$span("green", style = "color:#008000;font-weight:bold;"),".", 
+                          "If it is ok, please click 'Next' to proceed."),
+                        DTOutput(ns("rdb_data_preview")),
+                        actionButton(ns("goback_readandmerge"),"Previous"),
+                        actionButton(ns("go_persist"),"Next")
+                      )
+                    )
+          )
+        }
       })
       
       #TAB 2 - MERGE DATA
       #TAB 2 MANAGER
       #----------------------
-      output$sdi_data_preview <- DT::renderDT(server = FALSE, {
+      output$rdb_data_preview <- DT::renderDT(server = FALSE, {
         if(nrow(data_resources$dbdatanew_duplicates)>0){
           DT::datatable(
             data_resources$dbdatanew_duplicates,
@@ -257,12 +281,12 @@ function(id, parent.session, config, profile, components){
       
       #GO BACK TAB 1 FROM TAB 2
       observeEvent(input$goback_readandmerge,{
-        removeTab(inputId = "sdi-wizard-tabs", 
+        removeTab(inputId = "rdb-wizard-tabs", 
                   session = parent.session,
-                  target = "sdi_previewandpersist")
-        updateTabsetPanel(inputId = "sdi-wizard-tabs", 
+                  target = "rdb_previewandpersist")
+        updateTabsetPanel(inputId = "rdb-wizard-tabs", 
                           session = parent.session,
-                          selected = "sdi_merge_data")
+                          selected = "rdb_merge_data")
       })
       
       #persist data and go to step 3
@@ -270,23 +294,40 @@ function(id, parent.session, config, profile, components){
         shinyjs::disable("go_persist")
         persistData(session = session, config = config, pool = pool, profile = profile, store = store)
         shinyjs::enable("go_persist")
-        
-        appendTab(inputId = "sdi-wizard-tabs",
-                  session = parent.session,
-                  select=TRUE,
-                  tabPanel(
-                    title="3-Data services", 
-                    value="sdi_services",
-                    tagList(
-                      br(),
-                      p("Data has been successfully stored in the database!"),
-                      p("This last step will update relevant resources in the WECAFC-FIRMS SDI including metadata (ISO-19115 and ISO-19110) published
-                        as ISO-19139 in the GeoNetwork catalogue, and data published in GeoServer; both required for the update of the WECAFC-FIRMS 
-                        data map viewer."),
-                      actionButton(ns("go_geoflow"),"Publish")
+        if(input$task == "task-I.2"){
+          appendTab(inputId = "rdb-wizard-tabs",
+                    session = parent.session,
+                    select=TRUE,
+                    tabPanel(
+                      title="3-Data services", 
+                      value="rdb_services",
+                      tagList(
+                        br(),
+                        p("Data has been successfully stored in the database!"),
+                        p("This last step will update relevant resources in the WECAFC-FIRMS SDI including metadata (ISO-19115 and ISO-19110) published
+                          as ISO-19139 in the GeoNetwork catalogue, and data published in GeoServer; both required for the update of the WECAFC-FIRMS 
+                          data map viewer."),
+                        actionButton(ns("go_geoflow"),"Publish")
+                      )
                     )
-                  )
-        )
+          )
+        }else{
+          WARN("No data service specification available for '%s'", input$task)
+          appendTab(inputId = "rdb-wizard-tabs",
+                    session = parent.session,
+                    select = TRUE,
+                    tabPanel(
+                      title="Completion",
+                      value="rdb_end",
+                      tagList(
+                        br(),
+                        p("Data has been successfully stored in the database!"),
+                      )
+                    )
+          )
+        }
+        
+       
       })
       
       observeEvent(input$go_geoflow,{
