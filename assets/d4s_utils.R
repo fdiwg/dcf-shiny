@@ -33,15 +33,6 @@ fetchProfile <- function(jwt){
   return(out_jwt)
 }
 
-#fetchProfileRoles
-fetchProfileRoles <- function(pool, profile){
-  dbuser <- getDBUsers(pool, usernames = profile$preferred_username)
-  if(nrow(dbuser)>0){
-    profile$shiny_app_roles <- unlist(strsplit(dbuser$roles,","))
-  }
-  return(profile)
-}
-
 #loadDBI
 loadDBI <- function(config){
   #DB

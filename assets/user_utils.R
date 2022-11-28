@@ -18,6 +18,15 @@ getDBUserRoles <- function(pool, profile){
   return(out_roles)
 }
 
+#fetchProfileRoles
+fetchProfileRoles <- function(pool, profile){
+  dbuser <- getDBUsers(pool, usernames = profile$preferred_username)
+  if(nrow(dbuser)>0){
+    profile$shiny_app_roles <- unlist(strsplit(dbuser$roles,","))
+  }
+  return(profile)
+}
+
 #getDBUsers
 getDBUsers <- function(pool, profile = NULL, roles = NULL, reporting_entities = NULL,usernames = NULL){
   dcf_users <- tibble::as.tibble(DBI::dbReadTable(pool, "dcf_users"))
