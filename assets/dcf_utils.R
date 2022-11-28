@@ -121,9 +121,9 @@ openStartedDataCalls <- function(pool,config,profile){
   update_date <- Sys.time()
   in_calls <- getDataCalls(pool, status = "CLOSED",period="IN")
   attr(update_date, "tzone") <- "UTC"
-  update_sql <- sprintf("UPDATE dcf_data_call 
-                               SET status = 'OPENED', updater_id = '%s', update_date = '%s' 
-                               WHERE date_end > '%s' AND date_start < '%s' AND status = 'CLOSED'" , 
+  update_sql <- sprintf("UPDATE dcf_data_call
+                               SET status = 'OPENED', updater_id = '%s', update_date = '%s'
+                               WHERE date_end > '%s' AND date_start < '%s' AND status = 'CLOSED'" ,
                         "system", as(update_date, "character"), as(Sys.time(),"character"), as(Sys.time(),"character"))
   in_sql <- try(DBI::dbSendQuery(conn, update_sql))
   updated <- !is(in_sql, "try-error")
@@ -140,23 +140,23 @@ openStartedDataCalls <- function(pool,config,profile){
           for(i in 1:nrow(recipients)){
             recipient <- recipients[i,]
             INFO("Sending data call notification to '%s'", recipient$username)
-            
+
             sendMessage(
               subject = sprintf("[%s] New Data call open for %s task ID '%s'", config$dcf$name, config$dcf$context, in_call$task_id),
               body = sprintf(
                 "Dear %s,
-            
+
             You receive this notification because you are assigned as part of the %s (%s) as %s.
-            
+
             A new data call has been opened for the data task ID '%s'.
-            
+
             You are kindly invited to validate and submit your data before %s.
-            
+
             Best regards,
             The %s
-                         
+
             ",
-                recipient$fullname, 
+                recipient$fullname,
                 config$dcf$name, config$dcf$context, config$dcf$roles$submitter, in_call$task_id,
                 as(end,"character"),
                 config$dcf$roles$manager
@@ -578,6 +578,7 @@ validateData<-function(file, task_def, config = NULL){
   
   errors<-data.frame(
     type=character(),
+    rule=character(),
     row=character(),
     column=character(),
     category=character(),
@@ -682,17 +683,6 @@ validateData<-function(file, task_def, config = NULL){
         }
       }
       #### ADDITIONALS RULES
-      ##### UNITS VALIDITY
-      if(x$id%in%c("catch_unit","measurement_unit")){
-        valid_unit<-unique(units::valid_udunits()$symbol)   
-        cond<-all(unique(checkedCol[!is.na(checkedCol)])%in%valid_unit)
-        if(!cond){
-          rows<-setdiff(which(!checkedCol%in%valid_unit),which(is.na(checkedCol)))
-          for(rowid in rows){
-            errors<-rbind(errors,data.frame(type="ERROR",rule="E04",row=rowid,column=usedName,category="Invalid value",message=sprintf("value '%s' is not valid value of '%s' referential",checkedCol[rowid],usedName)))
-          }
-        }
-      }
       ##### YEAR VALIDITY
       if(x$id=="year"){
         cond<-nchar(checkedCol)!=4|!any(startsWith(as.character(checkedCol),c("1","2")))|checkedCol>as.integer(substr(Sys.Date(),1,4))
@@ -969,11 +959,9 @@ validateData<-function(file, task_def, config = NULL){
 }
 
 #standardizeNames
-standardizeNames<-function(file,format,rules){
+standardizeNames<-function(file,task_def,exclude_unused=T){
   
-  task<-jsonlite::read_json(rules)
-  
-  rules<-task$formats[[format]]$columns
+  rules<-task_def
   
   if(is.data.frame(file)){
     data<-file
@@ -999,11 +987,21 @@ standardizeNames<-function(file,format,rules){
       }
     }
   }
+  
+  if(exclude_unused){
+    data<-data[rules_cols]
+  }
+  
   return(data)
 }
 
 #simplifiedToGeneric
-simplifiedToGeneric<-function(file,type){
+simplifiedToGeneric<-function(file,rules){
+  
+  rules<-jsonlite::read_json(rules)
+  task_def <- rules$formats[["generic"]]$columns
+  
+  type=rules$measurement
   
   if(is.data.frame(file)){
     data<-file
@@ -1015,103 +1013,27 @@ simplifiedToGeneric<-function(file,type){
     }else{}
   }
   
-  if(type=='catch'){
-    newdata<-data%>%
-      pivot_longer(c(catch_retained,catch_discarded,catch_nominal),names_to="measurement_type",values_to="measurement_value")%>%
-      mutate(measurement_type=gsub("^.*?_","",measurement_type))%>%
-      rename(measurement_unit=catch_unit)
-    names(newdata)[names(newdata) == "catch_obs"] <- "measurement_obs"
-  }
+  names(data)<-gsub("_unit","__measurement_unit",names(data))
+  measurement_type<-paste0(unlist(task_def$measurement$allowed_values),"_",unlist(task_def$measurement_type$allowed_values))
+  names(data)[names(data) %in% measurement_type]<-paste0(names(data)[names(data) %in% measurement_type],"__measurement_value")
+  names(data)[grepl("__measurement",names(data),fixed = T)]<-gsub(paste0(task_def$measurement$allowed_values[[1]],"_"),"",names(data)[grepl("__measurement",names(data),fixed = T)])
   
-  if(type=='effort'){
-    newdata<-data%>%
-      mutate(measurement_type=NA)%>%
-      mutate(measurement_value=effort)%>%
-      rename(measurement_unit=effort_unit)
-    names(newdata)[names(newdata) == "effort_obs"] <- "measurement_obs"
-  }
-  
-  newdata<-newdata%>%
-    mutate(measurement=type)%>%
-    mutate(date=paste0(year,"-",period))%>%
+  newdata<-data%>%
+      pivot_longer(names(data)[grepl("__measurement",names(data),fixed = T)],names_to = c("measurement_type", ".value"), 
+                   names_sep="__" )%>%
+    mutate(measurement=task_def$measurement$allowed_values[[1]])%>%
+    rowwise()%>%
+    mutate(date=ifelse("period"%in%names(data),paste0(year,"-",period),paste0(year,"-NA")))%>%
+    ungroup()%>%
     mutate(time_start=dateFormating(date,"start"),
            time_end=dateFormating(date,"end"),
            time=paste0(time_start,"/",time_end))
-  
-  newdata<-subset(newdata,select = names(newdata) %in% c("fishingfleet",
-                                                         "flagstate",
-                                                         "time",
-                                                         "time_start",
-                                                         "time_end", 
-                                                         "geographic_identifier",
-                                                         "geographic_coordinates",
-                                                         "fleet_segment",
-                                                         "gear_type",
-                                                         "fishing_mode",
-                                                         "species",
-                                                         "school_type",
-                                                         "measurement",
-                                                         "measurement_type",
-                                                         "measurement_value",
-                                                         "measurement_unit",
-                                                         "measurement_obs"))
-  
-  return(newdata)
-}
-
-#simplifiedToGeneric
-simplifiedToGeneric<-function(file,type){
-  
-  if(is.data.frame(file)){
-    data<-file
-  }else{
-    if(any(endsWith(file,c("xls","xlsx")))){
-      data<-read_excel(file,col_types = "text")
-    }else if(any(endsWith(file,"csv"))){
-      data<-readr::read_csv(file,col_types = readr::cols(.default = "c"))
-    }else{}
-  }
-  
-  if(type=='catch'){
-    newdata<-data%>%
-      pivot_longer(c(catch_retained,catch_discarded,catch_nominal),names_to="measurement_type",values_to="measurement_value")%>%
-      mutate(measurement_type=gsub("^.*?_","",measurement_type))%>%
-      rename(measurement_unit=catch_unit)
-    names(newdata)[names(newdata) == "catch_obs"] <- "measurement_obs"
-  }
-  
-  if(type=='effort'){
-    newdata<-data%>%
-      mutate(measurement_type=NA)%>%
-      mutate(measurement_value=effort)%>%
-      rename(measurement_unit=effort_unit)
-    names(newdata)[names(newdata) == "effort_obs"] <- "measurement_obs"
-  }
-  
-  newdata<-newdata%>%
-    mutate(measurement=type)%>%
-    mutate(date=paste0(year,"-",period))%>%
-    mutate(time_start=dateFormating(date,"start"),
-           time_end=dateFormating(date,"end"),
-           time=paste0(time_start,"/",time_end))
-  
-  newdata<-subset(newdata,select = names(newdata) %in% c("fishingfleet",
-                                                         "flagstate",
-                                                         "time",
-                                                         "time_start",
-                                                         "time_end", 
-                                                         "geographic_identifier",
-                                                         "geographic_coordinates",
-                                                         "fleet_segment",
-                                                         "gear_type",
-                                                         "fishing_mode",
-                                                         "species",
-                                                         "school_type",
-                                                         "measurement",
-                                                         "measurement_type",
-                                                         "measurement_value",
-                                                         "measurement_unit",
-                                                         "measurement_obs"))
+    
+    if("measurement_obs"%in%names(task_def)){
+      names(newdata)[endsWith(names(newdata),"_obs",names(newdata))] <- "measurement_obs" 
+    }
+    
+  newdata<-newdata[names(task_def)]
   
   return(newdata)
 }

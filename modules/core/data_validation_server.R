@@ -329,18 +329,14 @@ data_validation_server <- function(id, parent.session, config, profile, componen
         INFO("Successful data validation")
         if(out$valid){
           submission$reporting_entity <- input$reporting_entity
-          data<-standardizeNames(file=data,format=input$format,rules=taskRules)
+          data<-standardizeNames(file=data,task_def = task_def)
           if(!identical(names(data),names(loadedData()))){
             transformation$data_rename<-TRUE
           }
           print(head(as.data.frame(data),2))
           if(input$format=="simplified"){
-            #TODO review with @abennici
-            type<-switch(input$task,
-                         "task-I.2"="catch",
-                         "task-II.1"="catch",
-                         "task-II.2"="effort")
-            data<-simplifiedToGeneric(file=data, type)
+            generic_task_def <- readTaskColumnDefinitions(file = taskRules, format = "generic", config = config, reporting_entity = input$reporting_entity)
+            data<-simplifiedToGeneric(file=data, taskRules)
             transformation$data_reformat<-TRUE
             print(head(as.data.frame(data),2))
           }
@@ -366,16 +362,22 @@ data_validation_server <- function(id, parent.session, config, profile, componen
         report_path<-file.path(tempdir(), sprintf("datacall-%s_task-%s_for_%s_report_standard_conformity.pdf",submission$data_call_id,input$task,input$reporting_entity))
         gbReportPath<-gbReportPath(report_path)
         print(report_path)
+        print(out$errors)
         rmarkdown::render("assets/report_standard_conformity_template.Rmd", output_file = report_path ,output_format = "pdf_document",output_options = list(keep_tex = TRUE), params = list(out,info,config))
         
         #HTML Report
         #Table with summary of rules
         output$gbSummary<-DT::renderDT(server = FALSE, {
+          if(nrow(out$errors)!=0){
           x<-unique(subset(out$errors,select="rule"))
           x$status<-"FAILED"
           test<-merge(out$tests,x,by.x="code",by.y="rule",all.x=T,all.y=F)
           test[is.na(test)]<-"PASSED"
           test[startsWith(test$code,"I"),]$status<-"WARNING" 
+          }else{
+            test<-out$test
+            test$status<-"PASSED"
+          }
           test<-subset(test,select=-c(code))
           test$icon<-ifelse(test$status=="PASSED",paste0(tags$span(shiny::icon("check-circle"), title = "Passed", style = "color:green;"), collapse=""),
                             ifelse(test$status=="WARNING",paste0(tags$span(shiny::icon("exclamation-triangle"), title = "Warning", style = "color:orange;"), collapse=""),
@@ -645,7 +647,7 @@ data_validation_server <- function(id, parent.session, config, profile, componen
       #TAB 6 - THANK YOU
       #TAB 6 MANAGER
       
-      submitData<- function(new=TRUE,session,dc_folder,submission,profile,store,config,input){
+      submitData<- function(new=TRUE,session,dc_folder,submission,pool,profile,store,config,input){
         
         uploadedOriginalDataId<-NULL
         uploadedDataId<-NULL
@@ -685,6 +687,11 @@ data_validation_server <- function(id, parent.session, config, profile, componen
           )
         }else{
           INFO("A submission is already created for data call '%s' (task %s)", submission$data_call_id, submission$task_id)
+          #delete previous original file
+          submit_folder_id<-getSubmissions(config,pool,profile, store, user_only = T,data_calls_id = submission$data_call_id,full_entities=F,status=NULL,reporting_entities=submission$reporting_entity)$id
+          old_file_list<-store$listWSItems(parentFolderID = submit_folder_id)
+          to_delete<-subset(old_file_list,!startsWith(title,dc_folder))$title
+          store$deleteItem(itemPath = file.path(config$dcf$user_workspace, dc_folder,to_delete))
         }
         
         #upload data to data call submission folder
@@ -855,7 +862,7 @@ data_validation_server <- function(id, parent.session, config, profile, componen
         dc_folder <- paste0("datacall-",submission$data_call_id, "_task-", submission$task_id, "_for_", submission$reporting_entity)
         dc_folder_id <- store$getWSItemID(parentFolderID = config$workspace_id, itemPath = dc_folder)
         if(is.null(dc_folder_id)){
-          submitData(new=TRUE,session,dc_folder,submission,profile,store,config,input)
+          submitData(new=TRUE,session,dc_folder,submission,pool,profile,store,config,input)
           submitted<-submitted(TRUE)
         }else{
           showModal(modalDialog(
@@ -876,7 +883,7 @@ data_validation_server <- function(id, parent.session, config, profile, componen
       observeEvent(input$update,{
         removeModal()
         dc_folder <- paste0("datacall-",submission$data_call_id, "_task-", submission$task_id, "_for_", submission$reporting_entity)
-        submitData(new=FALSE,session,dc_folder,submission,profile,store,config,input)
+        submitData(new=FALSE,session,dc_folder,submission,pool,profile,store,config,input)
         submitted<-submitted(TRUE)
       })
       
