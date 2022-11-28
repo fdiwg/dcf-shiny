@@ -363,7 +363,7 @@ data_validation_server <- function(id, parent.session, config, profile, componen
         gbReportPath<-gbReportPath(report_path)
         print(report_path)
         print(out$errors)
-        rmarkdown::render("assets/report_standard_conformity_template.Rmd", output_file = report_path ,output_format = "pdf_document",output_options = list(keep_tex = TRUE), params = list(out,info,config))
+        rmarkdown::render("assets/templates/report_standard_conformity_template.Rmd", output_file = report_path ,output_format = "pdf_document",output_options = list(keep_tex = TRUE), params = list(out,info,config))
         
         #HTML Report
         #Table with summary of rules
@@ -531,7 +531,7 @@ data_validation_server <- function(id, parent.session, config, profile, componen
         report_path<-file.path(tempdir(), sprintf("datacall-%s_task-%s_for_%s_report_datacall_consistency.pdf",submission$data_call_id,input$task,input$reporting_entity))
         dcReportPath<-dcReportPath(report_path)
         print(report_path)
-        rmarkdown::render("assets/report_datacall_consistency_template.Rmd", output_file = report_path ,output_format = "pdf_document",output_options = list(keep_tex = TRUE), params = list(out,submission,config))
+        rmarkdown::render("assets/templates/report_datacall_consistency_template.Rmd", output_file = report_path ,output_format = "pdf_document",output_options = list(keep_tex = TRUE), params = list(out,submission,config))
         
         #HTML Report
         

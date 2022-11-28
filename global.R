@@ -4,14 +4,8 @@ options(stringsAsFactors = FALSE)
 
 #utils
 #---------------------------------------------------------------------------------------
-source("assets/utils.R")
-source("assets/package_utils.R")
-source("assets/module_utils.R")
-source("assets/d4s_utils.R")
-source("assets/ui_utils.R")
-source("assets/message_utils.R")
-source("assets/user_utils.R")
-source("assets/dcf_utils.R")
+scripts <- as.list(list.files("assets/scripts", recursive = T, full.names = TRUE))
+invisible(lapply(scripts, source))
 
 #packages
 #---------------------------------------------------------------------------------------
@@ -27,7 +21,7 @@ jwt <- Sys.getenv("SHINYPROXY_OIDC_ACCESS_TOKEN")
 
 #D4S components
 #---------------------------------------------------------------------------------------
-PROFILE <- fetchProfile(jwt)
+PROFILE <- loadProfile(jwt)
 COMPONENTS <- loadComponents(profile = PROFILE)
 
 

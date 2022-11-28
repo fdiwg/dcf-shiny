@@ -5,7 +5,7 @@ footer <- function(id, version, date){
   )
 }
 
-prgoressBar <- function(value = 0, label = FALSE, color = "aqua", size = NULL,height= NULL,
+progressBar <- function(value = 0, label = FALSE, color = "aqua", size = NULL,height= NULL,
                         striped = FALSE, active = FALSE, vertical = FALSE) {
   stopifnot(is.numeric(value))
   if (value < 0 || value > 100)
