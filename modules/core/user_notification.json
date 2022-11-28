@@ -6,6 +6,6 @@
   "title": "My Notifications",
   "icon": "envelope",
   "restricted": true,
-  "roles": ["submitter", "admin"],
+  "roles": ["submitter", "admin", "r-studio"],
   "enabled": false
 }

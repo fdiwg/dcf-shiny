@@ -5,5 +5,5 @@
   "title": "Data management",
   "rank": 3,
   "restricted": true,
-  "roles": ["submitter", "manager", "admin"]
+  "roles": ["submitter", "manager", "admin", "r-studio"]
 }

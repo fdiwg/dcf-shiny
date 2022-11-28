@@ -5,5 +5,5 @@
   "title": "System Administration",
   "rank": 2,
   "restricted": true,
-  "roles": ["manager", "admin"]
+  "roles": ["manager", "admin", "r-studio"]
 }

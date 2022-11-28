@@ -6,5 +6,5 @@
   "title": "SDI data publisher",
   "icon": "map",
   "restricted": true,
-  "roles": ["regional data manager", "system admin", "r-studio"]
+  "roles": ["manager", "admin", "r-studio"]
 }
