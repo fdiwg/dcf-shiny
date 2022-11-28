@@ -57,7 +57,7 @@ function(id, parent.session, config, profile, components){
       combineData <- function(newdata, dbdata, show_duplicates = FALSE){
         if(!is.null(newdata)) newdata <- cbind(source = "new", newdata)
         if(!is.null(dbdata)) dbdata <- cbind(source = "database", newdata)
-        if(is.null(dbdata)) return(newdata)
+        if(is.null(dbdata)) return(cbind(newdata, duplicated = FALSE))
         out <- rbind(newdata,dbdata)
         out$duplicated <- duplicated(out[,colnames(out)[!colnames(out) %in% c("source", "measurement_value")]])
         if(!show_duplicates){
