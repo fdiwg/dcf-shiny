@@ -8,30 +8,30 @@ getDBUserReportingEntities <- function(pool, profile){
   return(out_entities)
 }
 
+#getDBUserRoles
+getDBUserRoles <- function(pool, profile){
+  conn <- pool::poolCheckout(pool)
+  user_sql <- sprintf("SELECT * FROM dcf_users WHERE username = '%s'", profile$preferred_username)
+  out_sql <- try(DBI::dbGetQuery(conn, user_sql))
+  out_roles <- unlist(strsplit(out_sql$roles,","))
+  if(length(out_roles)==0) out_roles <- ""
+  return(out_roles)
+}
+
 #getDBUsers
-getDBUsers <- function(pool, profile = NULL,reporting_entities=NULL,usernames=NULL){
+getDBUsers <- function(pool, profile = NULL, roles = NULL, reporting_entities = NULL,usernames = NULL){
   dcf_users <- tibble::as.tibble(DBI::dbReadTable(pool, "dcf_users"))
-  if(nrow(dcf_users)>0) if(!is.null(profile)){
-    user_roles <- getAppUserRoles(profile)
-    dcf_users$roles <- sapply(1:nrow(dcf_users), function(i){
-      roles <- list()
-      dcf_user = dcf_users[i,]
-      app_user <- user_roles[names(user_roles)==dcf_user$username]
-      if(length(app_user)>0){
-        app_user <- app_user[[1]]
-        if(length(app_user$roles)>0){
-          roles <- sapply(app_user$roles, function(x){x$name})
-        }
-      }
-      return(roles)
-    })
+  #filters
+  if(!is.null(roles)){
+    pattern<-paste0(roles,collapse = "|")
+    dcf_users<-dcf_users[grepl(pattern,dcf_users$roles),]
   }
   if(!is.null(reporting_entities)){
     pattern<-paste0(reporting_entities,collapse = "|")
     dcf_users<-dcf_users[grepl(pattern,dcf_users$reporting_entities),]
   }
   if(!is.null(usernames)){
-    dcf_users<-dcf_users[dcf_users$username%in%usernames,]
+    dcf_users<-dcf_users[dcf_users$username %in% usernames,]
   }
   return(dcf_users)
 }
@@ -50,7 +50,8 @@ getDBUsersWithRole <- function(pool, profile, role,reporting_entities=NULL){
 }
 
 #createDBUser
-createDBUser <- function(pool, username, fullname, reporting_entities = NULL, profile){
+createDBUser <- function(pool, username, fullname, roles = NULL, reporting_entities = NULL, profile){
+  if(is.null(roles)) roles = ""
   if(is.null(reporting_entities)) reporting_entities = ""
   conn <- pool::poolCheckout(pool)
   idx <- nrow(getDBUsers(pool))+1
@@ -58,9 +59,9 @@ createDBUser <- function(pool, username, fullname, reporting_entities = NULL, pr
   attr(creation_date, "tzone") <- "UTC"
   #db management
   insert_sql <- sprintf(
-    "INSERT INTO dcf_users(id_user, username, fullname, reporting_entities, creator_id, creation_date) 
+    "INSERT INTO dcf_users(id_user, username, fullname, roles, reporting_entities, creator_id, creation_date) 
            VALUES (%s, '%s', '%s', '%s', '%s', '%s');", 
-    idx, username, fullname, paste0(reporting_entities,collapse=","), profile$preferred_username, as(creation_date, "character")
+    idx, username, fullname, paste0(roles,collapse=","), paste0(reporting_entities,collapse=","), profile$preferred_username, as(creation_date, "character")
   )
   out_sql <- try(DBI::dbSendQuery(conn, insert_sql))
   created <- !is(out_sql, "try-error")
@@ -71,17 +72,18 @@ createDBUser <- function(pool, username, fullname, reporting_entities = NULL, pr
 }
 
 #updateDBuser
-updateDBUser <- function(pool, id_user, reporting_entities = NULL, profile){
+updateDBUser <- function(pool, id_user, roles = NULL, reporting_entities = NULL, profile){
+  if(is.null(roles)) roles = ""
   if(is.null(reporting_entities)) reporting_entities = ""
   conn <- pool::poolCheckout(pool)
   update_date <- Sys.time()
   attr(update_date, "tzone") <- "UTC"
   #db management
   update_sql <- sprintf("UPDATE dcf_users 
-                               SET reporting_entities = '%s', updater_id = '%s', update_date = '%s' 
-                               WHERE id_user = %s", 
-                        paste0(reporting_entities, collapse=","), profile$preferred_username, 
-                        as(update_date, "character"), id_user)
+                               SET roles = '%s', reporting_entities = '%s', updater_id = '%s', update_date = '%s' 
+                               WHERE id_user = %s",
+                        paste0(roles, collapse=","), paste0(reporting_entities, collapse=","), profile$preferred_username, as(update_date, "character"), 
+                        id_user)
   out_sql <- try(DBI::dbSendQuery(conn, update_sql))
   updated <- !is(out_sql, "try-error")
   if(!updated){

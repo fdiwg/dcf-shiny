@@ -16,8 +16,8 @@ user_management_server <- function(id, parent.session, config, profile, componen
       
       #user form
       showUserModal <- function(new = TRUE, id_user = NULL, username = NULL, fullname = NULL,
-                                reporting_entities = NULL){
-        print(reporting_entities)
+                                roles = NULL, reporting_entities = NULL){
+        if(!is.null(roles)) if(roles[1]=="") roles <- NULL
         if(!is.null(reporting_entities)) if(reporting_entities[1]=="") reporting_entities <- NULL
         title_prefix <- ifelse(new, "Add", "Modify")
         form_action <- tolower(title_prefix)
@@ -29,6 +29,13 @@ user_management_server <- function(id, parent.session, config, profile, componen
             },
             shinyjs::disabled(textInput(ns("user_form_username"), value = username, label = "User name")),
             shinyjs::disabled(textInput(ns("user_form_fullname"), value = fullname, label = "Full name")),
+            if(!is.null(config$dcf$roles)){
+              selectInput(ns("user_form_roles"), label = "Roles", selected = roles, multiple = TRUE,
+                choices = {
+                  setNames(names(config$dcf$roles), unlist(config$dcf$roles))
+                }
+              )
+            },
             if(!is.null(config$dcf$reporting_entities)){
               #special case for country/flagstate (to display flag)
               if(config$dcf$reporting_entities$name %in% c("country", "flagstate")){
@@ -107,6 +114,7 @@ user_management_server <- function(id, parent.session, config, profile, componen
               "User ID" = data[i,"id_user"],
               "User name" = data[i,"username"],
               "Full name" = data[i,"fullname"],
+              "Roles" = data[i,"roles"],
               "Reporting entities" = data[i,"reporting_entities"],
               Actions = as(actionButton(inputId = ns(paste0('button_edit_', uuids[i])), class="btn btn-info", style = "margin-right: 2px;",
                                         title = "Save user", label = "", icon = icon("tasks")),"character")
@@ -119,6 +127,7 @@ user_management_server <- function(id, parent.session, config, profile, componen
             "User ID" = character(0),
             "User name" = character(0),
             "Full name" = character(0),
+            "Roles" = character(0),
             "Reporting entities" = character(0),
             Actions = character(0)
           )
@@ -131,6 +140,7 @@ user_management_server <- function(id, parent.session, config, profile, componen
         prefix <- paste0("button_edit_")
         if(nrow(data)>0) lapply(1:nrow(data),function(i){
           x <- data[i,]
+          roles <- unlist(strsplit(x$roles, ","))
           rep_entities <- unlist(strsplit(x$reporting_entities,","))
           if(length(rep_entities)==0) rep_entities = ""
           button_id <- paste0(prefix,uuids[i])
@@ -140,6 +150,7 @@ user_management_server <- function(id, parent.session, config, profile, componen
               id_user = x[,"id_user"],
               username = x[,"username"],
               fullname = x[,"fullname"],
+              roles = roles,
               reporting_entities = rep_entities
             )
           })
@@ -316,6 +327,7 @@ user_management_server <- function(id, parent.session, config, profile, componen
           profile = profile,
           username = input$user_form_username,
           fullname = input$user_form_fullname,
+          roles = if(!is.null(config$dcf$roles)){input$user_form_roles}else{NULL},
           reporting_entities = if(!is.null(config$dcf$reporting_entities)){input$user_form_reporting_entities}else{NULL}
         )
         if(created){
@@ -333,6 +345,7 @@ user_management_server <- function(id, parent.session, config, profile, componen
           pool = pool,
           profile = profile,
           id_user = input$user_form_id,
+          roles = if(!is.null(config$dcf$roles)){input$user_form_roles}else{NULL},
           reporting_entities = if(!is.null(config$dcf$reporting_entities)){input$user_form_reporting_entities}else{NULL}
         )
         if(updated){

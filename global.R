@@ -47,6 +47,7 @@ CONFIG <- read_dcf_config(file = config_file)
 #DBI component to add
 #---------------------------------------------------------------------------------------
 COMPONENTS$POOL <- loadDBI(config = CONFIG)
+PROFILE <- fetchProfileRoles(pool = COMPONENTS$POOL, profile = PROFILE)
 
 #Add resource path towards temporary directory for iframe display
 #---------------------------------------------------------------------------------------

@@ -70,7 +70,7 @@ loadModuleServers <- function(parent.session, config, profile, components){
     outp <- loadModuleProfile(module_profile)
     if(outp$type != "internal" && !outp$menu){
       enabled = outp$enabled
-      if(!is.null(outp$restricted)) if(outp$restricted) enabled <- any(sapply(profile$shiny_resource_access$roles, function(x){x %in% outp$roles}))
+      if(!is.null(outp$restricted)) if(outp$restricted) enabled <- any(sapply(profile$shiny_app_roles, function(x){x %in% outp$roles}))
       module_config = config$modules[[module]]
       has_config = !is.null(module_config)
       if(has_config) if(!is.null(module_config$enabled)) enabled = module_config$enabled
@@ -105,7 +105,7 @@ loadModuleUIs <- function(config = NULL, profile){
     outp <- loadModuleProfile(module_profile)
     if(outp$type != "internal" && !outp$menu){
       enabled = TRUE
-      if(!is.null(outp$restricted)) if(outp$restricted) enabled <- any(sapply(profile$shiny_resource_access$roles, function(x){x %in% outp$roles}))
+      if(!is.null(outp$restricted)) if(outp$restricted) enabled <- any(sapply(profile$shiny_app_roles, function(x){x %in% outp$roles}))
       if(module == "data_admin_processing" && is.null(config$dcf$processing_module)) enabled <- FALSE
       module_config = config$modules[[module]]
       has_config = !is.null(module_config)
@@ -205,7 +205,7 @@ sidebarMenuFromModules <- function(config = NULL, profile){
     outp <- loadModuleProfile(module_profile)
     outp$source <- module_profile
     outp$module <- module_profile_name
-    if(!is.null(outp$restricted)) if(outp$restricted) outp$enabled <- any(sapply(profile$shiny_resource_access$roles, function(x){x %in% outp$roles}))
+    if(!is.null(outp$restricted)) if(outp$restricted) outp$enabled <- any(sapply(profile$shiny_app_roles, function(x){x %in% outp$roles}))
     #overwrite with config module definition
     m_config <- config$modules[[outp$module]]
     if(!is.null(m_config)){

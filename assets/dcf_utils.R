@@ -35,6 +35,11 @@ read_dcf_config <- function(file){
   return(cfg)
 }
 
+#getAppRoles
+getAppRoles <- function(config){
+  return(config$dcf$roles)
+}
+
 #getReportingEntityCodes
 getReportingEntityCodes <- function(config){
   return(config$dcf$reporting_entities$codelist_ref)

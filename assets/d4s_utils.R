@@ -8,10 +8,10 @@ fetchProfile <- function(jwt){
   #TODO how to know the current VRE context?
   vre_contexts <- names(out_jwt$resource_access)[startsWith(names(out_jwt$resource_access), "%2Fd4science.research-infrastructures.eu")]
   if(length(vre_contexts)==0) stop("No VRE context available!")
+  print(vre_contexts)
   out_jwt$vre_context <- vre_contexts[[1]]
   
   out_jwt$vre_resource_access <- out_jwt$resource_access[[out_jwt$vre_context]]
-  out_jwt$shiny_resource_access <- out_jwt$resource_access[["dcf-shiny"]]
   if(out_jwt$expired) stop("JWT token is expired")
   if(!out_jwt$expired){
     req <- httr::POST(
@@ -31,6 +31,15 @@ fetchProfile <- function(jwt){
   }
   
   return(out_jwt)
+}
+
+#fetchProfileRoles
+fetchProfileRoles <- function(pool, profile){
+  dbuser <- getDBUsers(pool, usernames = profile$preferred_username)
+  if(nrow(dbuser)>0){
+    profile$shiny_app_roles <- unlist(strsplit(dbuser$roles,","))
+  }
+  return(profile)
 }
 
 #loadDBI
@@ -123,18 +132,6 @@ loadComponents <- function(profile){
   attr(components$GEOSERVER, "description") <- "GeoServer"
   attr(components$GEONETWORK, "description") <- "GeoNetwork"
   return(components)
-}
-
-#getAppUserRoles
-getAppUserRoles <- function(profile){
-  req <- httr::with_verbose(
-    httr::GET("https://cdn.d4science.org/services/d4s-vre-manager/users-with-roles?apps=1c2231ee-1779-4e50-9769-3ac9feb57c88", 
-        httr::add_headers("Authorization" = paste("Bearer", profile$access$access_token))
-    )
-  )
-  json <- httr::content(req)
-  names(json) <- sapply(json, function(x){x$username})
-  return(json)
 }
 
 #initAppWorkspace
