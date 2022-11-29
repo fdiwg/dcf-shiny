@@ -22,7 +22,7 @@ jwt <- Sys.getenv("SHINYPROXY_OIDC_ACCESS_TOKEN")
 #D4S components
 #---------------------------------------------------------------------------------------
 PROFILE <- loadProfile(jwt)
-COMPONENTS <- loadComponents(profile = PROFILE)
+COMPONENTS <- loadComponents(profile = PROFILE, sdi = FALSE)
 
 
 #TODO current config from file, next to get from Workspace URL inherited from ICPROXY
@@ -40,8 +40,13 @@ CONFIG <- read_dcf_config(file = config_file)
 
 #DBI component to add
 #---------------------------------------------------------------------------------------
-COMPONENTS$POOL <- loadDBI(config = CONFIG)
+pool <- loadDBI(config = CONFIG)
+COMPONENTS$POOL <- pool
 PROFILE <- fetchProfileRoles(pool = COMPONENTS$POOL, profile = PROFILE)
+if("admin" %in% PROFILE$shiny_app_roles){
+  COMPONENTS <- loadComponents(profile = PROFILE, sdi = TRUE)
+  COMPONENTS$POOL <- pool
+}
 
 #Add resource path towards temporary directory for iframe display
 #---------------------------------------------------------------------------------------
