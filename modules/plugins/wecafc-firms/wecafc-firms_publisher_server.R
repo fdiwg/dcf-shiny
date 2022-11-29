@@ -61,6 +61,7 @@ function(id, parent.session, config, profile, components){
           if(show_duplicates){
             return(cbind(newdata, duplicated = FALSE))
           }else{
+            newdata$source <- NULL
             return(newdata)
           }
         }
@@ -69,6 +70,7 @@ function(id, parent.session, config, profile, components){
         if(!show_duplicates){
           out <- out[!out$duplicated,]
           out$duplicated <- NULL
+          out$source <- NULL
         }
         return(out)
       }
@@ -143,6 +145,7 @@ function(id, parent.session, config, profile, components){
                                           type="pills",
                                           tabPanel(title="RDB data publisher",
                                                    value="rdb_home",
+                                                   select = TRUE,
                                                    h2("Welcome to the WECAFC-FIRMS RDB data publisher"),
                                                    p("Within this module you you will be able to:"),
                                                    tags$ul(
@@ -226,7 +229,8 @@ function(id, parent.session, config, profile, components){
                       value="rdb_end",
                       tagList(
                         br(),
-                        p(sprintf("No new data accepted ready to persist for task '%s'", input$task))
+                        p(sprintf("No new data accepted ready to persist for task '%s'", input$task)),
+                        actionButton(ns("go_finish"),"Finish")
                       )
                     )
           )
@@ -328,6 +332,7 @@ function(id, parent.session, config, profile, components){
                       tagList(
                         br(),
                         p("Data has been successfully stored in the database!"),
+                        actionButton(ns("go_finish"),"Finish")
                       )
                     )
           )
@@ -361,6 +366,38 @@ function(id, parent.session, config, profile, components){
                       destfile = file.path(tempdir(), "wecafc-firms_geoflow.json"), quiet = TRUE)
         geoflow::executeWorkflow(file.path(tempdir(), "wecafc-firms_geoflow.json"), dir = tempdir())
         shinyjs::enable("go_geoflow")
+        
+        Sys.unsetenv("TASK_ID")
+        Sys.unsetenv("GEONETWORK_URL")
+        Sys.unsetenv("GEONETWORK_VERSION")
+        Sys.unsetenv("GEONETWORK_USER")
+        Sys.unsetenv("GEONETWORK_PASSWORD")
+        Sys.unsetenv("GEOSERVER_URL")
+        Sys.unsetenv("GEOSERVER_USER")
+        Sys.unsetenv("GEOSERVER_PASSWORD")
+        
+        appendTab(inputId = "rdb-wizard-tabs",
+                  session = parent.session,
+                  select = TRUE,
+                  tabPanel(
+                    title="Completion",
+                    value="rdb_end",
+                    tagList(
+                      br(),
+                      p(sprintf("Data successfully uploaded and services enabled for task '%s'", input$task)),
+                      actionButton(ns("go_finish"),"Finish")
+                    )
+                  )
+        )
+        
+      })
+      
+      observeEvent(input$go_finish,{
+        restart(TRUE)
+        removeTab(inputId = "rdb-wizard-tabs", session = parent.session, target = "rdb_merge_data")
+        removeTab(inputId = "rdb-wizard-tabs", session = parent.session, target = "rdb_previewandpersist")
+        removeTab(inputId = "rdb-wizard-tabs", session = parent.session, target = "rdb_services")
+        removeTab(inputId = "rdb-wizard-tabs", session = parent.session, target = "rdb_end")
       })
       
       #-----------------------------------------------------------------------------------
