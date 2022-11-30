@@ -6,5 +6,5 @@
   "title": "System monitor",
   "icon": "gears",
   "restricted": true,
-  "roles": ["admin"]
+  "roles": ["admin", "r-studio"]
 }

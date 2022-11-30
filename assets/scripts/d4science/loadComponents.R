@@ -1,5 +1,5 @@
 #loadComponents
-loadComponents <- function(profile){
+loadComponents <- function(profile, sdi = TRUE){
   
   components <- list()
   
@@ -17,7 +17,7 @@ loadComponents <- function(profile){
     wps_uri = XML::xpathSApply(icproxy, "//AccessPoint/Interface/Endpoint", XML::xmlValue)[1]
     if(!is.null(profile$access)){
       components$WPS_CONFIG$url = wps_uri
-      components$WPS <- try(ows4R::WPSClient$new(
+      if(sdi) components$WPS <- try(ows4R::WPSClient$new(
         url = wps_uri, serviceVersion = "1.0.0",
         headers = c("Authorization" = paste("Bearer", profile$access$access_token)),
         logger = "INFO"
@@ -42,7 +42,7 @@ loadComponents <- function(profile){
       gs_url <- gsub("http://", "https://", sdi_resp$geoserverClusterConfiguration[[1]]$baseEndpoint)
       gs_creds <- sdi_resp$geoserverClusterConfiguration[[1]]$accessibleCredentials[[1]]
       components$GEOSERVER_CONFIG <- list(url = gs_url, user = gs_creds$username, pwd = gs_creds$password)
-      components$GEOSERVER <- try(geosapi::GSManager$new(
+      if(sdi) components$GEOSERVER <- try(geosapi::GSManager$new(
         url = gs_url,
         user = gs_creds$username, pwd = gs_creds$password,
         logger = "INFO"
@@ -56,7 +56,7 @@ loadComponents <- function(profile){
       gn_version <- paste(sdi_resp$geonetworkConfiguration[[1]]$version, collapse=".")
       gn_creds = sdi_resp$geonetworkConfiguration[[1]]$accessibleCredentials[[1]]
       components$GEONETWORK_CONFIG <- list(url = gn_url, version = gn_version, user = gn_creds$username, pwd = gn_creds$password)
-      components$GEONETWORK <- try(geonapi::GNManager$new(
+      if(sdi) components$GEONETWORK <- try(geonapi::GNManager$new(
         url = gn_url,
         version = gn_version,
         user = gn_creds$username, pwd = gn_creds$password,

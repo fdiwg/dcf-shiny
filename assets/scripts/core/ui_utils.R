@@ -48,7 +48,7 @@ progressGroup <- function(text, value, min = 0, max = value, color = "aqua") {
     class = "progress-group",
     tags$span(class = "progress-text", text),
     tags$span(class = "progress-number", sprintf("%d / %d", value, max)),
-    prgoressBar(round(value / max * 100), color = color, size = "sm")
+    progressBar(round(value / max * 100), color = color, size = "sm")
   )
 }
 
@@ -61,7 +61,7 @@ boxContent <- div(class = "info-box", class = if (fill)
     colorClass, icon), div(class = "info-box-content", 
                            span(class = "info-box-text", title), if (!is.null(text)) 
                              span(class = "info-box-number", text),
-                           prgoressBar(round(value / max * 100), color = color, size = "sm",height=height),
+                           progressBar(round(value / max * 100), color = color, size = "sm",height=height),
                            if(!is.null(description)){tags$span(class = "progress-description", description)}else{NULL}
     ))
 

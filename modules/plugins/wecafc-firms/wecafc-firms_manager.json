@@ -1,0 +1,10 @@
+{
+  "parent": "plugins",
+  "type": "subitem",
+  "rank": 1,
+  "name": "wecafc-firms_manager",
+  "title": "RDB manager",
+  "icon": "map",
+  "restricted": true,
+  "roles": ["manager", "supervisor", "admin", "r-studio"]
+}

@@ -6,5 +6,5 @@
   "title": "Data calls management",
   "icon": "database",
   "restricted": true,
-  "roles": ["manager", "admin"]
+  "roles": ["manager", "admin", "r-studio"]
 }

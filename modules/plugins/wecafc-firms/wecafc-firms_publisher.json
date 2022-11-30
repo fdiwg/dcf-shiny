@@ -1,10 +1,10 @@
 {
-  "parent": "data",
+  "parent": "plugins",
   "type": "subitem",
-  "rank": 4,
+  "rank": 2,
   "name": "wecafc-firms_publisher",
-  "title": "SDI data publisher",
+  "title": "RDB data publisher",
   "icon": "map",
   "restricted": true,
-  "roles": ["regional data manager", "system admin", "r-studio"]
+  "roles": ["manager", "admin", "r-studio"]
 }

@@ -89,13 +89,13 @@ footer{
 
 /** SDI wizard tabs **/
 
-#sdi-wizard-tabs.nav-pills>li>a {
+#rdb-wizard-tabs.nav-pills>li>a {
     background: #ccc;
     cursor: not-allowed;
     pointer-events: none;
 }
 
-#sdi-wizard-tabs.nav-pills>li {
+#rdb-wizard-tabs.nav-pills>li {
   height: 50px;
   background: #ccc;
   cursor: not-allowed;
@@ -104,12 +104,12 @@ footer{
   margin: 0px 75px 0px 0px;
 }
 
-#sdi-wizard-tabs.nav-pills>li.active {
+#rdb-wizard-tabs.nav-pills>li.active {
   background: #337ab7;
   cursor: not-allowed;
 }
 
-#sdi-wizard-tabs.nav-pills>li:after {
+#rdb-wizard-tabs.nav-pills>li:after {
   content: '';
   position: absolute;
   cursor: not-allowed;
@@ -120,7 +120,7 @@ footer{
   border-bottom: 25px solid transparent;
 }
 
-#sdi-wizard-tabs.nav-pills>li:before {
+#rdb-wizard-tabs.nav-pills>li:before {
   content: '';
   position: absolute;
   cursor: not-allowed;
@@ -134,19 +134,19 @@ footer{
   border-bottom: 25px solid transparent;
 }
 
-#sdi-wizard-tabs.nav-pills>li.active:before {
+#rdb-wizard-tabs.nav-pills>li.active:before {
   border-left: 25px solid #337ab7;
   pointer-events: none;
   cursor: not-allowed;
 }
 
-#sdi-wizard-tabs.nav-pills>li>a, #sdi-wizard-tabs.nav-pills>li>a:focus, #sdi-wizard-tabs.nav-pills>li>a:hover {
+#rdb-wizard-tabs.nav-pills>li>a, #rdb-wizard-tabs.nav-pills>li>a:focus, #rdb-wizard-tabs.nav-pills>li>a:hover {
   border-top-color: transparent;
   cursor: not-allowed;
   pointer-events: none;
 }
 
-#sdi-wizard-tabs.nav-pills>li>a, #sdi-wizard-tabs.nav-pills>li>a:focus, #sdi-wizard-tabs.nav-pills>li>a:hover {
+#rdb-wizard-tabs.nav-pills>li>a, #rdb-wizard-tabs.nav-pills>li>a:focus, #rdb-wizard-tabs.nav-pills>li>a:hover {
   background-color: transparent;
   cursor: not-allowed;
   pointer-events: none;

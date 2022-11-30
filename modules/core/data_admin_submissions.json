@@ -5,5 +5,5 @@
   "name": "data_admin_submissions",
   "title": "All submissions",
   "restricted": true,
-  "roles": ["manager", "admin"]
+  "roles": ["manager", "admin", "r-studio"]
 }

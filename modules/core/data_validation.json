@@ -5,5 +5,5 @@
   "name": "data_validation",
   "title": "Validate and Submit data",
   "restricted": true,
-  "roles": ["submitter", "manager", "admin"]
+  "roles": ["submitter", "manager", "admin", "r-studio"]
 }
