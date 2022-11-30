@@ -8,7 +8,22 @@ server <- function(input, output, session) {
   
   #D4S components
   #---------------------------------------------------------------------------------------
-  PROFILE <- loadProfile(jwt)
+  PROFILE <- try(loadProfile(jwt))
+  if(is(PROFILE, "try-error")){
+    shiny::showModal(
+      shiny::modalDialog(
+        title = "Error with JWT token!",
+        shiny::tagList(
+          PROFILE,
+          br(),
+          sprintf("Token: %s", jwt)
+        )
+      )
+    )
+    stop("Application has stopped!")
+  }
+  
+  
   COMPONENTS <- loadComponents(profile = PROFILE, sdi = FALSE)
   
   
