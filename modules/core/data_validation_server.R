@@ -8,32 +8,46 @@ data_validation_server <- function(id, parent.session, config, profile, componen
       store <- components$STORAGEHUB
       
       ns <- session$ns
+      
+      restart<-reactiveVal(TRUE)
+      
+      #RESTART FUNCTION
+      restartProcess<-function(initialize=F){
+        dataCall<<-reactiveVal(FALSE)
+        gbOut<<-reactiveVal(NULL)
+        gbReportPath<<-reactiveVal(NULL)
+        dcOut<<-reactiveVal(NULL)
+        dcReportPath<<-reactiveVal(NULL)
+        taskProperties<<-reactiveVal(NULL)
+        loadedData<<-reactiveVal(NULL)
+        transformation<<-reactiveValues(
+          data_reformat = FALSE,
+          data_rename = FALSE
+        )
+        submission <<- reactiveValues(
+          data_call_id = NULL,
+          task_id = NULL,
+          task_name =NULL,
+          reporting_entity = NULL,
+          notes = "-"
+        )
+        submitted<<-reactiveVal(NULL)
+        if(!initialize){
+          Sys.unsetenv("DATA_CALL_YEAR")
+         # output$globalValidReport<<-renderUI({NULL})
+          #output$callValidReport<<-renderUI({NULL})
+          output$dataCallMessage<<-renderUI({NULL})
+        }
+      }
       #Initialize reactive values
       #-----------------------------------------------------------------------------------
-      restart<-reactiveVal(TRUE)
-      dataCall<-reactiveVal(FALSE)
-      gbOut<-reactiveVal(NULL)
-      gbReportPath<-reactiveVal(NULL)
-      dcOut<-reactiveVal(NULL)
-      dcReportPath<-reactiveVal(NULL)
-      taskProperties<-reactiveVal(NULL)
-      loadedData<-reactiveVal(NULL)
-      transformation<-reactiveValues(
-        data_reformat = FALSE,
-        data_rename = FALSE
-      )
-      submission <- reactiveValues(
-        data_call_id = NULL,
-        task_id = NULL,
-        task_name =NULL,
-        reporting_entity = NULL,
-        notes = "-"
-      )
-      submitted<-reactiveVal(NULL)
+      restartProcess(initialize=T)
+      
       #Initialize module content (Home page)
       #-----------------------------------------------------------------------------------
       #HOME
       observeEvent(restart(),{
+        print("CLICKED ON FINISH")
         req(isTRUE(restart()))
         output$wizard<-renderUI({
           
@@ -64,12 +78,7 @@ data_validation_server <- function(id, parent.session, config, profile, componen
       
       #Restart module content (Home page) if 'Finish' button is clicked
       #-----------------------------------------------------------------------------------
-      #RESTART FUNCTION
-      restartProcess<-function(){
-        restart<-restart(TRUE)
-        Sys.unsetenv("DATA_CALL_YEAR")
-        output$dataCallMessage<-renderUI({NULL})
-      }
+
       
       #GO BACK TAB 1 FROM TAB 2
       observeEvent(input$goData,{
@@ -83,21 +92,24 @@ data_validation_server <- function(id, parent.session, config, profile, componen
       #GO BACK HOME FROM TAB 3
       observeEvent(input$close1,{
         restartProcess()
+        restart<-restart(TRUE)
       })
       #GO BACK HOME FROM TAB 4
       observeEvent(input$close2,{
         restartProcess()
+        restart<-restart(TRUE)
       })
       #GO BACK HOME FROM TAB 6
       observeEvent(input$close3,{
         restartProcess()
+        restart<-restart(TRUE)
       })
       #GO BACK HOME FROM TAB 6 MODAL
       observeEvent(input$close4,{
         restartProcess()
+        restart<-restart(TRUE)
         removeModal()
       })
-      
       
       #Wizard panels routine
       #-----------------------------------------------------------------------------------
@@ -315,12 +327,13 @@ data_validation_server <- function(id, parent.session, config, profile, componen
                   )
         )
         
-        showModal(modalDialog(
-          title = "Validation in progress",
-          "Please wait, validity of your dataset is currently being checked ...",
-          easyClose = TRUE,
-          footer = NULL
-        ))
+        waiting_screen<-tagList(
+          h3("Validation in progress"),
+          spin_flower(),
+          h4("Please wait, validity of your dataset is currently being checked ...")
+        )
+        
+        waiter_show(html = waiting_screen, color = "#14141480")
         data<-loadedData()
         INFO("Read Task '%s' column definitions", taskProperties()$name)
         task_def <- readTaskColumnDefinitions(file = taskRules, format = input$format, config = config, reporting_entity = input$reporting_entity)
@@ -480,7 +493,7 @@ data_validation_server <- function(id, parent.session, config, profile, componen
             actionButton(ns("close1"),"Finish")
           }
         )
-        removeModal()
+        waiter_hide()
         return(content)      
       })
       
@@ -498,16 +511,19 @@ data_validation_server <- function(id, parent.session, config, profile, componen
       #TODO call validateCallRules once we added the tab
       
       observeEvent(input$goSpecValid,{
+        
+        waiting_screen<-tagList(
+          h3("Check consistency with the ongoing data call"),
+          spin_flower(),
+          h4("Please wait, your dataset is currently checked vs. the ongoing data call ...")
+        )
+        
+        waiter_show(html = waiting_screen, color = "#14141480")
 
         taskSupplRules<-taskProperties()$data_call_limited_on
         taskSupplRules$reporting_entity<-input$reporting_entity
         data<-loadedData()
-        showModal(modalDialog(
-          title = "Check consistency with the ongoing data call",
-          "Please wait, your dataset is currently checked vs. the ongoing data call ...",
-          easyClose = TRUE,
-          footer = NULL
-        ))
+
         out<-validateCallRules(file = data,rules = taskSupplRules)
         dcOut<-dcOut(out)
         
@@ -612,7 +628,7 @@ data_validation_server <- function(id, parent.session, config, profile, componen
             actionButton(ns("close2"),"Finish")
           }
         )
-        removeModal()
+        waiter_hide()
         return(content)
       })
       
@@ -649,20 +665,41 @@ data_validation_server <- function(id, parent.session, config, profile, componen
       
       submitData<- function(new=TRUE,session,dc_folder,submission,pool,profile,store,config,input){
         
+        hostess <- Hostess$new()
+        hostess$set_loader(
+          hostess_loader(
+            preset = "circle", 
+            text_color = "white",
+            class = "label-center",
+            style="margin:0 auto;",
+            center_page = TRUE
+          ))
+        
+        # to not have the screen flash bright white
+        Sys.sleep(1)
+        
+        waiting_screen<-tagList(
+            h3(id="wait_title","Data submission"),
+            hostess$get_loader(),
+            div(id="wait_detail","Please wait, your dataset are currently being submitted...")
+          )
+        
+        waiter_show(html = waiting_screen, color = "#14141480")
+        
         uploadedOriginalDataId<-NULL
         uploadedDataId<-NULL
         uploadedMetadataId<-NULL
         uploadedReportStandardConformityId<-NULL
         uploadedReportDatacallConsistencyId<-NULL
         
-        progress <- shiny::Progress$new(session, min = 0, max = 100)
-        on.exit(progress$close())
+        #progress <- shiny::Progress$new(session, min = 0, max = 100)
+        #on.exit(progress$close())
         
-        progress$set(
-          message = "Start data submission", 
-          detail = sprintf("Data call: %s; Task: %s; Reporting entity: %s", submission$data_call_id, submission$task_id, submission$reporting_entity),
-          value = 0
-        )
+        # progress$set(
+        #   message = "Start data submission", 
+        #   detail = sprintf("Data call: %s; Task: %s; Reporting entity: %s", submission$data_call_id, submission$task_id, submission$reporting_entity),
+        #   value = 0
+        # )
         
         shared <- FALSE
         
@@ -675,11 +712,15 @@ data_validation_server <- function(id, parent.session, config, profile, componen
           INFO("No submission yet for data call '%s' (task %s)", submission$data_call_id, submission$task_id)
           
           #create data call submission folder
-          progress$set(
-            message = "Create data submission folder", 
-            detail = sprintf("Data call: %s; Task: %s; Reporting entity: %s", submission$data_call_id, submission$task_id, submission$reporting_entity),
-            value = 10
-          )
+          # progress$set(
+          #   message = "Create data submission folder", 
+          #   detail = sprintf("Data call: %s; Task: %s; Reporting entity: %s", submission$data_call_id, submission$task_id, submission$reporting_entity),
+          #   value = 10
+          # )
+          
+          shinyjs::html(id="wait_detail",html=sprintf("Data call: %s; Task: %s; Reporting entity: %s", submission$data_call_id, submission$task_id, submission$reporting_entity))
+          hostess$set(10)
+          
           dc_folder_id <- store$createFolder(
             folderPath = config$dcf$user_workspace, 
             name = dc_folder,
@@ -695,11 +736,14 @@ data_validation_server <- function(id, parent.session, config, profile, componen
         }
         
         #upload data to data call submission folder
-        progress$set(
-          message = "Upload data files", 
-          detail = sprintf("Data call: %s; Task: %s; Reporting entity: %s", submission$data_call_id, submission$task_id, submission$reporting_entity),
-          value = 25
-        )
+        # progress$set(
+        #   message = "Upload data files", 
+        #   detail = sprintf("Data call: %s; Task: %s; Reporting entity: %s", submission$data_call_id, submission$task_id, submission$reporting_entity),
+        #   value = 25
+        # )
+        shinyjs::html(id="wait_detail",html=sprintf("Data call: %s; Task: %s; Reporting entity: %s", submission$data_call_id, submission$task_id, submission$reporting_entity))
+        hostess$set(25)
+        
         #original file
         new_filename<-file.path(dirname(input$file$datapath),input$file$name)
         file.rename(input$file$datapath,new_filename)
@@ -717,11 +761,13 @@ data_validation_server <- function(id, parent.session, config, profile, componen
         if(!is.null(uploadedDataId)){
           INFO("Successful upload for data submission file '%s'", data_filename)
           
-          progress$set(
-            message = "Upload metadata file", 
-            detail = sprintf("Data call: %s; Task: %s; Reporting entity: %s", submission$data_call_id, submission$task_id, submission$reporting_entity),
-            value = 50
-          )
+          # progress$set(
+          #   message = "Upload metadata file", 
+          #   detail = sprintf("Data call: %s; Task: %s; Reporting entity: %s", submission$data_call_id, submission$task_id, submission$reporting_entity),
+          #   value = 50
+          # )
+          shinyjs::html(id="wait_detail",html=sprintf("Data call: %s; Task: %s; Reporting entity: %s", submission$data_call_id, submission$task_id, submission$reporting_entity))
+          hostess$set(50)
           
           #metadata
           dc_entry_filename <- file.path(getwd(), paste0(dc_folder, ".xml"))
@@ -771,11 +817,15 @@ data_validation_server <- function(id, parent.session, config, profile, componen
         
         #sharing
         if(!is.null(uploadedDataId) && !is.null(uploadedMetadataId) && !is.null(uploadedReportStandardConformityId) && !is.null(uploadedReportDatacallConsistencyId)){
-          progress$set(
-            message = sprintf("Share data submission folder with %s", config$dcf$roles$manager), 
-            detail = sprintf("Data call: %s; Task: %s; Reporting entity: %s", submission$data_call_id, submission$task_id, submission$reporting_entity),
-            value = 80
-          )
+          # progress$set(
+          #   message = sprintf("Share data submission folder with %s", config$dcf$roles$manager), 
+          #   detail = sprintf("Data call: %s; Task: %s; Reporting entity: %s", submission$data_call_id, submission$task_id, submission$reporting_entity),
+          #   value = 80
+          # )
+          
+          shinyjs::html(id="wait_detail",html=sprintf("Data call: %s; Task: %s; Reporting entity: %s", submission$data_call_id, submission$task_id, submission$reporting_entity))
+          hostess$set(80)
+          
           #shared <- store$shareItem(itemPath = file.path(config$dcf$user_workspace, dc_folder), defaultAccessType = "WRITE_ALL", users = "emmanuel.blondel")
           shared=TRUE
         }
@@ -783,11 +833,14 @@ data_validation_server <- function(id, parent.session, config, profile, componen
         #notification
         if(shared){
           #send notification
-          progress$set(
-            message = sprintf("Notify %s", config$dcf$roles$manager), 
-            detail = sprintf("Data call: %s; Task: %s; Reporting entity: %s", submission$data_call_id, submission$task_id, submission$reporting_entity),
-            value = 90
-          )
+          # progress$set(
+          #   message = sprintf("Notify %s", config$dcf$roles$manager), 
+          #   detail = sprintf("Data call: %s; Task: %s; Reporting entity: %s", submission$data_call_id, submission$task_id, submission$reporting_entity),
+          #   value = 90
+          # )
+          
+          shinyjs::html(id="wait_detail",html=sprintf("Data call: %s; Task: %s; Reporting entity: %s", submission$data_call_id, submission$task_id, submission$reporting_entity))
+          hostess$set(90)
           
           if(new){
             body<-"Dear manager,
@@ -848,13 +901,16 @@ data_validation_server <- function(id, parent.session, config, profile, componen
                       profile = profile
           )
           
-          progress$set(
-            message = "Successful data submission", 
-            detail = sprintf("Data call: %s; Task: %s; Reporting entity: %s", submission$data_call_id, submission$task_id, submission$reporting_entity),
-            value = 100
-          )
+          # progress$set(
+          #   message = "Successful data submission", 
+          #   detail = sprintf("Data call: %s; Task: %s; Reporting entity: %s", submission$data_call_id, submission$task_id, submission$reporting_entity),
+          #   value = 100
+          # )
+          
+          hostess$set(99)
+          shinyjs::html(id="wait_detail",html="new label")
         }
-        
+        waiter_hide()
       }
       
       observeEvent(input$send,{

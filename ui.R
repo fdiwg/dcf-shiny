@@ -9,6 +9,8 @@ ui <- shiny::tagList(
     dashboardBody(
       do.call("tabItems",c(loadModuleUIs(config = CONFIG, profile = PROFILE),loadPluginUIs(config = CONFIG, profile = PROFILE))),
       useShinyjs(),
+      useWaiter(),
+      useHostess(),
       tags$head(
         tags$link(rel = "stylesheet", type = "text/css", href = "dcf-shiny.css")
       )
