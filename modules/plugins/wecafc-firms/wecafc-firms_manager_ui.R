@@ -5,9 +5,7 @@ function(id){
   shinydashboard::tabItem(
     tabName = id,
     h3("RDB datasets"),hr(),
-    fluidRow(
-      DT::DTOutput(ns("tbl_rdb_datasets"))
-    )
+    DT::DTOutput(ns("tbl_rdb_datasets"))
   )
   
 }
