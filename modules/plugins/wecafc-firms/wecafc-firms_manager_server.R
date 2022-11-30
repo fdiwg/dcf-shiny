@@ -8,7 +8,7 @@ function(id, parent.session, config, profile, components){
       SH <- components$STORAGEHUB
       
       getRDBDatasets <- function(){
-        task_folders <- SH$listWSItems( config$dataspace_id)
+        task_folders <- SH$listWSItems(config$dataspace_id)
         tasks <- data.frame(
           "id" = task_folders$name,
           "name" = sapply(task_folders$name, function(x){config$dcf$tasks[[x]]$name}),

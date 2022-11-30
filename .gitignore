@@ -42,3 +42,4 @@ vignettes/*.pdf
 .Renviron
 .env
 configs/prod
+configs/dev/rdb_wecafc-firms
