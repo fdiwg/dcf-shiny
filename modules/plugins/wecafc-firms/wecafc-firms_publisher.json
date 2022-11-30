@@ -3,7 +3,7 @@
   "type": "subitem",
   "rank": 4,
   "name": "wecafc-firms_publisher",
-  "title": "SDI data publisher",
+  "title": "RDB data publisher",
   "icon": "map",
   "restricted": true,
   "roles": ["manager", "admin", "r-studio"]
