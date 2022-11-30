@@ -1,13 +1,13 @@
 ui <- shiny::tagList(
   dashboardPage(
     dashboardHeader(
-      title = CONFIG$dcf$name
+      title = shinycssloaders::withSpinner(uiOutput("header"))
     ),
     dashboardSidebar(
-      sidebarMenuFromModules(config = CONFIG, profile = PROFILE)
+      shinycssloaders::withSpinner(uiOutput("sidebar"))
     ),
     dashboardBody(
-      do.call("tabItems",c(loadModuleUIs(config = CONFIG, profile = PROFILE),loadPluginUIs(config = CONFIG, profile = PROFILE))),
+      shinycssloaders::withSpinner(uiOutput("body")),
       useShinyjs(),
       tags$head(
         tags$link(rel = "stylesheet", type = "text/css", href = "dcf-shiny.css")

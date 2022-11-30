@@ -20,39 +20,6 @@ try(dotenv::load_dot_env(file = ".REnviron"), silent = TRUE)
 addResourcePath(prefix = "tmp", directoryPath = tempdir())
 print(tempdir())
 
-#global variables / environment
-#---------------------------------------------------------------------------------------
-jwt <- Sys.getenv("SHINYPROXY_OIDC_ACCESS_TOKEN")
-
-#D4S components
-#---------------------------------------------------------------------------------------
-PROFILE <- loadProfile(jwt)
-COMPONENTS <- loadComponents(profile = PROFILE, sdi = FALSE)
-
-
-#TODO current config from file, next to get from Workspace URL inherited from ICPROXY
-#---------------------------------------------------------------------------------------
-#default config_file path for DEPLOYMENT (hidden file)
-config_file <- COMPONENTS$STORAGEHUB$downloadItemByPath("dcf-shiny-config/config.yml", wd = tempdir())
-
-#local configuration
-#If you are an R developer, you need to create a .REnviron file (no file extension) in /dcf-shiny dir
-#The file should include the local path for your shiny config file in that way:
-#DCF_SHINY_CONFIG=<your config path>
-local_config_file <- Sys.getenv("DCF_SHINY_CONFIG")
-if(nzchar(local_config_file)) config_file <- local_config_file
-CONFIG <- read_dcf_config(file = config_file)
-
-#DBI component to add
-#---------------------------------------------------------------------------------------
-pool <- loadDBI(config = CONFIG)
-COMPONENTS$POOL <- pool
-PROFILE <- fetchProfileRoles(pool = COMPONENTS$POOL, profile = PROFILE)
-if("admin" %in% PROFILE$shiny_app_roles){
-  COMPONENTS <- loadComponents(profile = PROFILE, sdi = TRUE)
-  COMPONENTS$POOL <- pool
-}
-
 #modules
 #---------------------------------------------------------------------------------------
 loadModuleScripts()
