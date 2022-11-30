@@ -1,7 +1,7 @@
 {
-  "parent": "data",
+  "parent": "plugins",
   "type": "subitem",
-  "rank": 5,
+  "rank": 1,
   "name": "wecafc-firms_manager",
   "title": "RDB manager",
   "icon": "map",

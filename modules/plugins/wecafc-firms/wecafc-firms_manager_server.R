@@ -10,13 +10,13 @@ function(id, parent.session, config, profile, components){
       getRDBDatasets <- function(){
         task_folders <- SH$listWSItems( config$dataspace_id)
         tasks <- data.frame(
-          "Identifier" = task_folders$name,
-          "Name" = sapply(task_folders$name, function(x){config$dcf$tasks[[x]]$name}),
-          "Creation time" = as.POSIXct(task_folders$creationTime/1000, origin = "1970-01-01"),
-          "Last modification time" = sapply(task_folders$id, function(x){
-            as.POSIXct(max(SH$listWSItems(parentFolderID = x)$lastModificationTime)/1000, origin = "1970-01-01")
+          "id" = task_folders$name,
+          "name" = sapply(task_folders$name, function(x){config$dcf$tasks[[x]]$name}),
+          "creationTime" = as.POSIXct(task_folders$creationTime/1000, origin = "1970-01-01"),
+          "lastModificationTime" = sapply(task_folders$id, function(x){
+            max(SH$listWSItems(parentFolderID = x)$lastModificationTime)
           }),
-          "Actions" = sapply(task_folders$id, function(x){
+          "actions" = sapply(task_folders$id, function(x){
             items <- SH$listWSItems(parentFolderID = x)
             last_modification_time <- max(items$lastModificationTime)
             items <- items[items$lastModificationTime == last_modification_time,]
@@ -24,6 +24,7 @@ function(id, parent.session, config, profile, components){
             SH$getPublicFileLinkByID(items$id)
           })
         )
+        tasks$lastModificationTime <- as.POSIXct(tasks$lastModificationTime/1000, origin = "1970-01-01")
         return(tasks)
       }
       
