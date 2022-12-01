@@ -56,7 +56,7 @@ function(id, parent.session, config, profile, components){
       #combineData
       combineData <- function(newdata, dbdata, show_duplicates = FALSE){
         if(!is.null(newdata)) newdata <- cbind(source = "new", newdata)
-        if(!is.null(dbdata)) dbdata <- cbind(source = "database", newdata)
+        if(!is.null(dbdata)) dbdata <- cbind(source = "database", dbdata)
         if(is.null(dbdata)){
           if(show_duplicates){
             return(cbind(newdata, duplicated = FALSE))
