@@ -12,6 +12,18 @@ server <- function(input, output, session) {
   #global variables / environment
   #---------------------------------------------------------------------------------------
   jwt <- Sys.getenv("SHINYPROXY_OIDC_ACCESS_TOKEN")
+  if(jwt == ""){
+    waiter_hide()
+    shiny::showModal(
+      shiny::modalDialog(
+        title = "Error",
+        shiny::tagList(
+          tags$span("No JWT token available from Shiny Proxy!")
+        )
+      )
+    )
+    stop("Application has stopped!")
+  }
   
   #D4S components
   #---------------------------------------------------------------------------------------
@@ -19,7 +31,7 @@ server <- function(input, output, session) {
   if(is(PROFILE, "try-error")){
     shiny::showModal(
       shiny::modalDialog(
-        title = "Error with JWT token!",
+        title = "Error",
         shiny::tagList(
           PROFILE,
           br(),
