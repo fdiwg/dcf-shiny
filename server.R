@@ -2,6 +2,13 @@
 #==========================================================================================
 server <- function(input, output, session) {
   
+  waiting_screen<-tagList(
+    h3("Initialisation of Application"),
+    spin_flower()
+  )
+  
+  waiter_show(html = waiting_screen)
+  
   #global variables / environment
   #---------------------------------------------------------------------------------------
   jwt <- Sys.getenv("SHINYPROXY_OIDC_ACCESS_TOKEN")
@@ -23,7 +30,6 @@ server <- function(input, output, session) {
     stop("Application has stopped!")
   }
   
-  
   COMPONENTS <- loadComponents(profile = PROFILE, sdi = FALSE)
   
   
@@ -39,20 +45,38 @@ server <- function(input, output, session) {
   local_config_file <- Sys.getenv("DCF_SHINY_CONFIG")
   if(nzchar(local_config_file)) config_file <- local_config_file
   CONFIG <- read_dcf_config(file = config_file)
+  print("STEP CONFIG")
+  waiter_update(html = tagList(
+    h3(paste0("Welcome to ",CONFIG$dcf$name," Application")),
+    spin_flower()
+  ))
   
   #DBI component to add
   #---------------------------------------------------------------------------------------
   pool <- loadDBI(config = CONFIG)
   COMPONENTS$POOL <- pool
+  print("STEP POOL")
+  waiter_update(html = tagList(
+    h3(paste0("Welcome to ",CONFIG$dcf$name," application")),
+    spin_flower(),
+    div("Identification of user ...")
+  ))
+  print("STEP PROFILE")
   PROFILE <- fetchProfileRoles(pool = COMPONENTS$POOL, profile = PROFILE)
   if("admin" %in% PROFILE$shiny_app_roles){
     COMPONENTS <- loadComponents(profile = PROFILE, sdi = TRUE)
     COMPONENTS$POOL <- pool
   }
   
+  waiter_update(html = tagList(
+    h3(paste0("Welcome to ",CONFIG$dcf$name," application")),
+    spin_flower(),
+    h4(paste0("Welcome ",PROFILE$name," !")),
+  ))
+  
   #INITIALIZATION
   #---------------------------------------------------------------------------------------
-  
+  print("STEP INITIALIZATION")
   #initAppWorkspace
   CONFIG$dcf$user_workspace <- sprintf("%s-%s", CONFIG$dcf$workspace, PROFILE$preferred_username)
   CONFIG$workspace_id <- initAppWorkspace(config = CONFIG, profile = PROFILE, components = COMPONENTS)
@@ -69,10 +93,6 @@ server <- function(input, output, session) {
   #in case of started data calls we automatically open them
   openStartedDataCalls(pool=COMPONENTS$POOL,config=CONFIG,profile = PROFILE) 
   
-  #load module servers
-  loadModuleServers(parent.session = session, config = CONFIG, profile = PROFILE, components = COMPONENTS)
-  loadPluginServers(parent.session = session, config = CONFIG, profile = PROFILE, components = COMPONENTS)
-  
   #render UI
   output$header <- renderUI({
     tags$span(CONFIG$dcf$name)
@@ -87,5 +107,10 @@ server <- function(input, output, session) {
     ))
   })
   
+  #load module servers
+  loadModuleServers(parent.session = session, config = CONFIG, profile = PROFILE, components = COMPONENTS)
+  loadPluginServers(parent.session = session, config = CONFIG, profile = PROFILE, components = COMPONENTS)
+  
+  waiter_hide()
   
 }

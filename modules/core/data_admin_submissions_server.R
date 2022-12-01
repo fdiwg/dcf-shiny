@@ -121,7 +121,7 @@ data_admin_submissions_server <- function(id, parent.session, config, profile, c
       }
       
       #manage button handlers
-      #Browse TODO
+      #Browse
       manageButtonBrowseEvents <- function(data, uuids){
         prefix <- paste0("button_browse_")
         if(length(data)>0) if(nrow(data)>0) lapply(1:nrow(data),function(i){
@@ -138,7 +138,7 @@ data_admin_submissions_server <- function(id, parent.session, config, profile, c
         })
       }
       
-      #Browse
+      #Remind
       manageButtonReminderEvents <- function(data, uuids){
         prefix <- paste0("button_reminder_")
         if(length(data)>0) if(nrow(data)>0) lapply(1:nrow(data),function(i){
@@ -253,6 +253,14 @@ data_admin_submissions_server <- function(id, parent.session, config, profile, c
       #observers on modals actions
       #data submission accept/cancel
       observeEvent(input$data_submission_accept_go, {
+        waiting_screen<-tagList(
+          h3("Modification of Submission Status"),
+          spin_flower(),
+          h4(sprintf("Acceptation of '%s' Submission for task '%s'", input$data_submission_reporting_entity,input$data_submission_task)),
+          h4(sprintf("Submitter '%s' will be notified", input$data_submission_submitter))
+        )
+        removeModal()
+        waiter_show(html = waiting_screen, color = "#14141480")
         accepted <- try(acceptSubmission(
           config = config,pool=pool,profile =profile, store = store,
           data_call_folder = input$data_submission_call_folder,
@@ -268,18 +276,27 @@ data_admin_submissions_server <- function(id, parent.session, config, profile, c
             model$error <- attr(accepted,"error")
           }else{
             model$error <- NULL
-            removeModal()
           }
           
           data <- getSubmissions(config = config, pool = pool , profile = profile, store = store, user_only = FALSE,data_calls_id=input$datacall,full_entities=TRUE)
           renderSubmissions(data)
           renderBars(data)
+          waiter_hide()
         }else{
           model$error <- "Unexpected error during submission acceptance!"
         }
       })
+      
       #data submission reject/cancel
       observeEvent(input$data_submission_reject_go, {
+        waiting_screen<-tagList(
+          h3("Modification of Submission Status"),
+          spin_flower(),
+          h4(sprintf("Rejection of '%s' Submission for task '%s'", input$data_submission_reporting_entity,input$data_submission_task)),
+          h4(sprintf("Submitter '%s' will be notified", input$data_submission_submitter))
+        )
+        removeModal()
+        waiter_show(html = waiting_screen, color = "#14141480")
         rejected <- try(rejectSubmission(
           config = config, pool = pool, profile = profile, store = store,
           data_call_folder = input$data_submission_call_folder,
@@ -291,10 +308,10 @@ data_admin_submissions_server <- function(id, parent.session, config, profile, c
         ))
         if(!is(rejected, "try-error")){
           model$error <- NULL
-          removeModal()
           data <- getSubmissions(config = config, pool = pool , profile = profile, store = store, user_only = FALSE,data_calls_id=input$datacall,full_entities=TRUE)
           renderSubmissions(data)
           renderBars(data)
+          waiter_hide()
         }else{
           model$error <- "Unexpected error during submission rejection!"
         }
