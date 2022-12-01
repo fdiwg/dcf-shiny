@@ -69,7 +69,7 @@ createDBUser <- function(pool, username, fullname, roles = NULL, reporting_entit
   #db management
   insert_sql <- sprintf(
     "INSERT INTO dcf_users(id_user, username, fullname, roles, reporting_entities, creator_id, creation_date) 
-           VALUES (%s, '%s', '%s', '%s', '%s', '%s');", 
+           VALUES (%s, '%s', '%s', '%s', '%s', '%s', '%s');", 
     idx, username, fullname, paste0(roles,collapse=","), paste0(reporting_entities,collapse=","), profile$preferred_username, as(creation_date, "character")
   )
   out_sql <- try(DBI::dbSendQuery(conn, insert_sql))
