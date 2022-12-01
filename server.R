@@ -59,7 +59,7 @@ server <- function(input, output, session) {
   waiter_update(html = tagList(
     h3(paste0("Welcome to ",CONFIG$dcf$name," application")),
     spin_flower(),
-    div("Identification of user ...")
+    div("User identification ...")
   ))
   print("STEP PROFILE")
   PROFILE <- fetchProfileRoles(pool = COMPONENTS$POOL, profile = PROFILE)
