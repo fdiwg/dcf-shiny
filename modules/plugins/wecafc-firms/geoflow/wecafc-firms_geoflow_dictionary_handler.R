@@ -26,7 +26,7 @@ handle_dictionary_rdb <- function(config, source = NULL){
     #dictionnary
     target_columns = colnames(ref_data)
     #create dictionary
-    pid <- sprintf("rdb_wecafc_%s", source)
+    pid <- sprintf("rdb_wecafc_%s", reftable)
     dict <- geoflow::geoflow_dictionary$new()
     #create feature type
     featuretype <- geoflow::geoflow_featuretype$new(id = pid)

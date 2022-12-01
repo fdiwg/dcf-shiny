@@ -29,7 +29,7 @@ handle_entities_rdb <- function(config, source = NULL){
         )
         
         #pid
-        pid <- sprintf("rdb_wecafc_%s", source)
+        pid <- sprintf("rdb_wecafc_%s", reftable)
         entity$identifiers[["id"]] = pid
         
         #language
