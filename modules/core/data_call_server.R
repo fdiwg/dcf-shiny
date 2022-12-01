@@ -14,6 +14,8 @@ data_call_server <- function(id, parent.session, config, profile, components){
         error = NULL
       )
       
+      onlyOpened<-reactiveVal(TRUE)
+      
       #dcTableHandler
       dcTableHandler <- function(data, uuids){
         
@@ -35,7 +37,7 @@ data_call_server <- function(id, parent.session, config, profile, components){
                                title = "Edit data call", label = "", icon = icon("tasks")),
                   actionButton(inputId = ns(paste0('button_delete_', uuids[i])), class="btn btn-danger", style = "margin-right: 2px;",
                                title = "Delete data call", label = "", icon = icon("trash"))
-                ),  
+                  ),  
               "character")
             )
             return(out_tib)
@@ -64,7 +66,7 @@ data_call_server <- function(id, parent.session, config, profile, components){
         form_action <- tolower(title_prefix)
         showModal(modalDialog(title = sprintf("%s data call", title_prefix),
                               if(new){
-                                selectInput(ns("data_call_form_task"), "Task:",choices = getTasks(config), selected = task)
+                                selectInput(ns("data_call_form_task"), "Task:",choices = getTasks(config,withId = T), selected = task)
                               }else{
                                 shiny::tagList(
                                   shinyjs::disabled(textInput(ns("data_call_form_id"), value = id_data_call, label = "Data call ID")),
@@ -105,6 +107,7 @@ data_call_server <- function(id, parent.session, config, profile, components){
           })
         })
       }
+      
       manageButtonDeleteEvents <- function(data, uuids){
         prefix <- paste0("button_delete_")
         if(nrow(data)>0) lapply(1:nrow(data),function(i){
@@ -140,7 +143,7 @@ data_call_server <- function(id, parent.session, config, profile, components){
           }
           
           output$tbl_data_calls <- DT::renderDT(
-            dcTableHandler(data, uuids),
+            datatable(dcTableHandler(data, uuids),
             selection='single', escape=FALSE,rownames=FALSE,
             options=list(
               lengthChange = FALSE,
@@ -166,6 +169,11 @@ data_call_server <- function(id, parent.session, config, profile, components){
                         }"))
               )
             )
+            )%>% formatStyle(
+            'Status',
+            target = 'row',
+            backgroundColor = styleEqual(c("OPENED","CLOSED"), c('#CEF3D6','#ffd6d6'))
+          )
           )
           
           #manage action buttons
@@ -176,8 +184,36 @@ data_call_server <- function(id, parent.session, config, profile, components){
       
       #render tables
       observe({
-        renderDataCalls(getDataCalls(pool))
+        renderDataCalls(getDataCalls(pool,tasks=input$task,status=onlyOpened()))
       })
+      
+      #status selector
+      output$status_selector <- renderUI({
+        checkboxInput(ns("limit_status"), "Only Opened", TRUE)
+      })
+      
+      #Task selector
+      output$task_selector<-renderUI({
+        selectizeInput(ns("task"),
+                       label=NULL,
+                       multiple = T,
+                       choices = getTasks(config,withId=TRUE),
+                       selected=NULL,
+                       options = list(
+                         placeholder = "Display tasks :"
+                       )
+        )
+      })
+      
+      observeEvent(input$limit_status,{
+        req(!is.null(input$limit_status))
+        if(input$limit_status){
+          onlyOpened<-onlyOpened("OPENED")
+        }else{
+          onlyOpened<-onlyOpened(NULL)
+        }
+      }
+      )
       
       
       #data call/add
@@ -197,7 +233,7 @@ data_call_server <- function(id, parent.session, config, profile, components){
         if(created){
           model$error <- NULL
           removeModal()
-          renderDataCalls(getDataCalls(pool))
+          renderDataCalls(getDataCalls(pool,tasks=input$task,status=onlyOpened()))
         }else{
           model$error <- attr(created, "error")
         }
@@ -219,7 +255,7 @@ data_call_server <- function(id, parent.session, config, profile, components){
         if(updated){
           model$error <- NULL
           removeModal()
-          renderDataCalls(getDataCalls(pool))
+          renderDataCalls(getDataCalls(pool,tasks=input$task,status=onlyOpened()))
         }else{
           model$error <- attr(updated, "error")
         }
@@ -243,7 +279,7 @@ data_call_server <- function(id, parent.session, config, profile, components){
         if(deleted){
           model$error <- NULL
           removeModal()
-          renderDataCalls(getDataCalls(pool))
+          renderDataCalls(getDataCalls(pool,tasks=input$task,status=onlyOpened()))
         }else{
           model$error <- attr(deleted, "error")
         }

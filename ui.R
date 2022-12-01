@@ -9,6 +9,8 @@ ui <- shiny::tagList(
     dashboardBody(
       shinycssloaders::withSpinner(uiOutput("body")),
       useShinyjs(),
+      useWaiter(),
+      useHostess(),
       tags$head(
         tags$link(rel = "stylesheet", type = "text/css", href = "dcf-shiny.css")
       )
