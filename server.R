@@ -29,6 +29,7 @@ server <- function(input, output, session) {
   #---------------------------------------------------------------------------------------
   PROFILE <- try(loadProfile(jwt))
   if(is(PROFILE, "try-error")){
+    waiter_hide()
     shiny::showModal(
       shiny::modalDialog(
         title = "Error",
@@ -40,6 +41,19 @@ server <- function(input, output, session) {
       )
     )
     stop("Application has stopped!")
+  }
+  
+  if(PROFILE$vre_context != "%2Fd4science.research-infrastructures.eu%2FFARM%2FWECAFC-FIRMS"){
+    shiny::showModal(
+      shiny::modalDialog(
+        title = "Token information",
+        shiny::tagList(
+          sprintf("Token: %s", PROFILE$vre_context),
+          br(),
+          sprintf("Token: %s", jwt)
+        )
+      )
+    )
   }
   
   COMPONENTS <- loadComponents(profile = PROFILE, sdi = FALSE)
