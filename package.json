@@ -1,7 +1,7 @@
 {
   "id": "dcf-shiny",
-  "version": "0.0.20221128",
-  "date": "2022-11-28",
+  "version": "0.0.20221202",
+  "date": "2022-12-02",
   "dependencies": [
     {"package": "dotenv", "version": "1.0.3", "repos": "https://cran.r-project.org"},
     {"package": "stringi", "version": "1.7.6", "repos": "https://cran.r-project.org"},

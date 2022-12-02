@@ -4,6 +4,6 @@ user_management_ui <- function(id){
   
   shinydashboard::tabItem(
     tabName = "user_management",
-    shiny::uiOutput(ns("user_tables"))
+    shiny::uiOutput(ns("user_table"))
   )
 }

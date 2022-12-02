@@ -10,7 +10,6 @@ user_management_server <- function(id, parent.session, config, profile, componen
       
       #User management (CRUD)
       model <- reactiveValues(
-        users_to_add = 0,
         error = NULL
       )
       
@@ -102,114 +101,13 @@ user_management_server <- function(id, parent.session, config, profile, componen
       })
       
       
-      #list of users in DB
-      #list of users that have been already administrated in the DCF database
-      
-      #dbuserTableHandler
-      dbuserTableHandler <- function(data, uuids){
-        
-        if(nrow(data)>0){
-          data <- do.call("rbind", lapply(1:nrow(data), function(i){
-            out_tib <- tibble::tibble(
-              "User ID" = data[i,"id_user"],
-              "User name" = data[i,"username"],
-              "Full name" = data[i,"fullname"],
-              "Roles" = data[i,"roles"],
-              "Reporting entities" = data[i,"reporting_entities"],
-              Actions = as(actionButton(inputId = ns(paste0('button_edit_', uuids[i])), class="btn btn-info", style = "margin-right: 2px;",
-                                        title = "Save user", label = "", icon = icon("tasks")),"character")
-            )
-            return(out_tib)
-          }
-          ))
-        }else{
-          data <- tibble::tibble( 
-            "User ID" = character(0),
-            "User name" = character(0),
-            "Full name" = character(0),
-            "Roles" = character(0),
-            "Reporting entities" = character(0),
-            Actions = character(0)
-          )
-        }
-        return(data)
-      }
-      
-      #manage button handlers
-      manageButtonEditEvents <- function(data, uuids){
-        prefix <- paste0("button_edit_")
-        if(nrow(data)>0) lapply(1:nrow(data),function(i){
-          x <- data[i,]
-          roles <- unlist(strsplit(x$roles, ","))
-          rep_entities <- unlist(strsplit(x$reporting_entities,","))
-          if(length(rep_entities)==0) rep_entities = ""
-          button_id <- paste0(prefix,uuids[i])
-          observeEvent(input[[button_id]],{
-            showUserModal(
-              new = FALSE, 
-              id_user = x[,"id_user"],
-              username = x[,"username"],
-              fullname = x[,"fullname"],
-              roles = roles,
-              reporting_entities = rep_entities
-            )
-          })
-        })
-      }
-      
-      #renderDBUsers
-      renderDBUsers <- function(data){
-        
-        uuids <- NULL
-        if(!is.null(data)) if(nrow(data)>0) for(i in 1:nrow(data)){
-          one_uuid = uuid::UUIDgenerate() 
-          uuids <- c(uuids, one_uuid)
-        }
-        
-        output$tbl_db_users <- DT::renderDT(
-          dbuserTableHandler(data, uuids),
-          selection='single', escape=FALSE,rownames=FALSE,
-          options=list(
-            lengthChange = FALSE,
-            paging = FALSE,
-            searching = FALSE,
-            preDrawCallback = JS(
-              'function() {
-                  Shiny.unbindAll(this.api().table().node()); }'
-            ),
-            drawCallback = JS('function() {
-                        Shiny.bindAll(this.api().table().node()); }'
-            ),
-            autoWidth = FALSE,
-            columnDefs = list(
-              list(width = '100px', targets = c(0)),
-              list(width = '400px', targets = c(1),
-                   render = JS("function(data, type, full, meta) {
-                           var html = data;
-                           if(data.startsWith(\"http://\") | data.startsWith(\"https://\")){
-                              html = '<a href=\"' + data + '\" target=\"_blank\">'+data+'</a>';
-                           }
-                           return html;
-                        }"))
-            )
-          )
-        )
-        
-        #manage action buttons
-        manageButtonEditEvents(data, uuids)
-        
-      }
-      
-      
-      #delta (list of users in VRE - list of users in DB)
-      #list all users that need to be administrated in the DCF database
-      
-      #getVREUsers
-      #add filter on roles (when supported by API)
-      getVREUsers <- function(db_users = NULL){
+      #getUsers
+      getUsers <- function(pool){
         out_users <- data.frame(
           username = character(0),
           fullname = character(0),
+          db = character(0),
+          id_user = character(0),
           stringsAsFactors = FALSE
         )
         out_vre <- httr::GET("https://api.d4science.org/rest/2/users/get-all-fullnames-and-usernames",
@@ -219,25 +117,40 @@ user_management_server <- function(id, parent.session, config, profile, componen
           out_users <- data.frame(
             username = names(out_c),
             fullname = as.character(out_c),
+            db = rep(FALSE,length(out_c)),
+            id_user = rep("",length(out_c)),
             stringsAsFactors = FALSE
           ) 
-          if(!is.null(db_users)){
-            out_users <- out_users[sapply(out_users$username, function(x){!x %in% db_users$username}),]
+          db_users <- getDBUsers(pool)
+          if(!is.null(db_users)) if(nrow(db_users)>0){
+            out_users$db <- sapply(out_users$username, function(x){x %in% db_users$username})
+            out_users$id_user <- sapply(out_users$username, function(x){if(x %in% db_users$username){db_users[db_users$username == x, "id_user"]}else{""}})
+            out_users$roles <- sapply(out_users$username, function(x){if(x %in% db_users$username){db_users[db_users$username == x, "roles"]}else{""}})
+            out_users$reporting_entities <- sapply(out_users$username, function(x){if(x %in% db_users$username){db_users[db_users$username == x, "reporting_entities"]}else{""}})
           }
         }
         return(out_users)
       }
-      
-      #vreuserTableHandler
-      vreuserTableHandler <- function(data, uuids){
+  
+      #userTableHandler
+      userTableHandler <- function(data, uuids){
         
         if(nrow(data)>0){
           data <- do.call("rbind", lapply(1:nrow(data), function(i){
             out_tib <- tibble::tibble(
               "User name" = data[i,"username"],
               "Full name" = data[i,"fullname"],
-              Actions = as(actionButton(inputId = ns(paste0('button_save_', uuids[i])), class="btn btn-info", style = "margin-right: 2px;",
-                                        title = "Save user to DB", label = "", icon = icon("tasks")),"character")
+              "Registered in DB" = if(data[i,"db"]){as(icon("check"),"character")}else{""},
+              "User ID" = data[i,"id_user"],
+              "User roles" = data[i,"roles"],
+              "Reporting entities" = data[i,"reporting_entities"],
+              Actions = if(data[i,"id_user"]==""){
+                as(actionButton(inputId = ns(paste0('button_save_', uuids[i])), class="btn btn-primary", style = "margin-right: 2px;",
+                                title = "Save user to DB", label = "", icon = icon("tasks")),"character")
+              }else{
+                as(actionButton(inputId = ns(paste0('button_edit_', uuids[i])), class="btn btn-info", style = "margin-right: 2px;",
+                                title = "Edit DB user", label = "", icon = icon("pen")),"character")
+              }
             )
             return(out_tib)
           }
@@ -246,12 +159,18 @@ user_management_server <- function(id, parent.session, config, profile, componen
           data <- tibble::tibble( 
             "User name" = character(0),
             "Full name" = character(0),
+            "Registered in DB" = character(0),
+            "User ID" = character(0),
+            "User roles" = character(0),
+            "Reporting entities" = character(0),
             Actions = character(0)
           )
         }
         return(data)
       }
       
+      
+      #button handlers
       #manage button handlers
       manageButtonSaveEvents <- function(data, uuids){
         prefix <- paste0("button_save_")
@@ -267,25 +186,47 @@ user_management_server <- function(id, parent.session, config, profile, componen
           })
         })
       }
+      #manage button handlers
+      manageButtonEditEvents <- function(data, uuids){
+        prefix <- paste0("button_edit_")
+        if(nrow(data)>0) lapply(1:nrow(data),function(i){
+          x <- data[i,]
+          print(x)
+          roles <- unlist(strsplit(as(x$roles,"character"), ","))
+          rep_entities <- unlist(strsplit(as(x$reporting_entities,"character"),","))
+          if(length(rep_entities)==0) rep_entities = ""
+          button_id <- paste0(prefix,uuids[i])
+          observeEvent(input[[button_id]],{
+            showUserModal(
+              new = FALSE, 
+              id_user = x[,"id_user"],
+              username = x[,"username"],
+              fullname = x[,"fullname"],
+              roles = roles,
+              reporting_entities = rep_entities
+            )
+          })
+        })
+      }
       
-      #renderVREUsers
-      renderVREUsers <- function(data){
+      #renderUsers
+      renderUsers <- function(pool){
         
-        model$users_to_add <- nrow(data)
+        data <- getUsers(pool)
+        print(data)
         
         uuids <- NULL
         if(!is.null(data)) if(nrow(data)>0) for(i in 1:nrow(data)){
           one_uuid = uuid::UUIDgenerate() 
           uuids <- c(uuids, one_uuid)
         }
-        
-        output$tbl_vre_users <- DT::renderDT(
-          vreuserTableHandler(data, uuids),
+        output$tbl_users <- DT::renderDT(
+          userTableHandler(data, uuids),
           selection='single', escape=FALSE,rownames=FALSE,
           options=list(
-            lengthChange = FALSE,
-            paging = FALSE,
-            searching = FALSE,
+            lengthChange = TRUE,
+            paging = TRUE,
+            searching = TRUE,
             preDrawCallback = JS(
               'function() {
                   Shiny.unbindAll(this.api().table().node()); }'
@@ -310,14 +251,7 @@ user_management_server <- function(id, parent.session, config, profile, componen
         
         #manage action buttons
         manageButtonSaveEvents(data, uuids)
-        
-      }
-      
-      #renderAll
-      renderAll <-function(pool){
-        db_users <- as.data.frame(getDBUsers(pool))
-        renderDBUsers(db_users)
-        renderVREUsers(getVREUsers(db_users))
+        manageButtonEditEvents(data, uuids)
       }
       
       #user management observers
@@ -333,7 +267,7 @@ user_management_server <- function(id, parent.session, config, profile, componen
         if(created){
           model$error <- NULL
           removeModal()
-          renderAll(pool)
+          renderUsers(pool)
         }else{
           model$error <- attr(created, "error")
         }
@@ -351,7 +285,7 @@ user_management_server <- function(id, parent.session, config, profile, componen
         if(updated){
           model$error <- NULL
           removeModal()
-          renderAll(pool)
+          renderUsers(pool)
         }else{
           model$error <- attr(updated, "error")
         }
@@ -359,23 +293,13 @@ user_management_server <- function(id, parent.session, config, profile, componen
       
       #render tables
       observe({
-        renderAll(pool)
+        renderUsers(pool)
       })
       
-      output$user_tables <- renderUI({
-        tabsetPanel(
-          type = "pills",
-          tabPanel("VRE New users", br(),
-                   if(model$users_to_add==0){
-                     tags$p("No new VRE user to manage in the database!", style = "color:green;font-weight:bold;")
-                   }else if(model$users_to_add==1){
-                     tags$p("There is 1 new VRE user to manage in the database!", style = "color:red;font-weight:bold;")
-                   }else{
-                     tags$p(sprintf("They are %s new VRE users to manage in the database!", model$users_to_add), style = "color:red;font-weight:bold;")
-                   },
-                   DT::dataTableOutput(ns("tbl_vre_users")) %>% withSpinner(type = 4)),
-          tabPanel("DB Users", br(),
-                   DT::dataTableOutput(ns("tbl_db_users")) %>% withSpinner(type = 4))
+      output$user_table <- renderUI({
+        shiny::tagList(
+          h3("Users"),hr(),
+          DT::dataTableOutput(ns("tbl_users")) %>% withSpinner(type = 4)
         )
       })
       

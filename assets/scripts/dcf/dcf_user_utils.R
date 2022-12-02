@@ -63,7 +63,7 @@ createDBUser <- function(pool, username, fullname, roles = NULL, reporting_entit
   if(is.null(roles)) roles = ""
   if(is.null(reporting_entities)) reporting_entities = ""
   conn <- pool::poolCheckout(pool)
-  idx <- nrow(getDBUsers(pool))+1
+  idx <- max(getDBUsers(pool)$id_user)+1
   creation_date <- Sys.time()
   attr(creation_date, "tzone") <- "UTC"
   #db management
