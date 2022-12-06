@@ -1,0 +1,10 @@
+{
+  "parent": "plugins",
+  "type": "subitem",
+  "rank": 3,
+  "name": "wecafc-firms_summary",
+  "title": "RDB summary",
+  "icon": "search",
+  "restricted": true,
+  "roles": ["manager", "supervisor", "admin", "r-studio"]
+}
