@@ -409,7 +409,6 @@ data_admin_submissions_server <- function(id, parent.session, config, profile, c
       #renderBars
       renderBars<- function(data){
         
-        output$indicators<-renderUI({
         nb_entities<-length(unique(data$reporting_entity))
         accepted_submissions<-length(unique(subset(data,status=="ACCEPTED")$reporting_entity))
         pending_submissions<-length(unique(subset(data,status=="SUBMITTED")$reporting_entity))
@@ -425,7 +424,7 @@ data_admin_submissions_server <- function(id, parent.session, config, profile, c
           time_remaining<-sprintf('%s days',time_remaining)
         }
         
-
+        output$indicators<-renderUI({
         div(
           column(4,
                  progressInfoBox(title="Submissions", text=sprintf('%s/%s',transmitted_submissions,nb_entities),value=transmitted_submissions,description=paste0(transmitted_submissions/nb_entities*100,"% of completion"), max = nb_entities,icon = icon("share"),fill = TRUE, color = "yellow",width =12),
