@@ -281,7 +281,7 @@ data_admin_submissions_server <- function(id, parent.session, config, profile, c
           }
           
           data <- getSubmissions(config = config, pool = pool , profile = profile, store = store, user_only = FALSE,data_calls_id=input$datacall,full_entities=TRUE)
-          renderSubmissions(data)
+          renderSubmissions(data,config)
           renderBars(data)
           waiter_hide()
         }else{
@@ -311,7 +311,7 @@ data_admin_submissions_server <- function(id, parent.session, config, profile, c
         if(!is(rejected, "try-error")){
           model$error <- NULL
           data <- getSubmissions(config = config, pool = pool , profile = profile, store = store, user_only = FALSE,data_calls_id=input$datacall,full_entities=TRUE)
-          renderSubmissions(data)
+          renderSubmissions(data,config)
           renderBars(data)
           waiter_hide()
         }else{
@@ -325,7 +325,7 @@ data_admin_submissions_server <- function(id, parent.session, config, profile, c
       })
       
       #submissionsTableHandler
-      submissionsTableHandler <- function(data, uuids){
+      submissionsTableHandler <- function(data, uuids,config){
         if(length(data)>0) if(nrow(data)>0){
           data <- do.call("rbind", lapply(1:nrow(data), function(i){
             item <- data[i,]
@@ -338,8 +338,12 @@ data_admin_submissions_server <- function(id, parent.session, config, profile, c
               "Data call Folder" = as.factor(item$data_call_folder),
               "Task ID" = as.factor(item$task_id),
               #"Flag" = paste0('<img src="https://www.fao.org/fileadmin/assets/countries/flags/', tolower(item$reporting_entity),'.gif" height=16 width=32></img>'),
-              "Flag" = paste0('<img src="https://raw.githubusercontent.com/fdiwg/flags/main/', tolower(item$reporting_entity),'.gif" height=16 width=32></img>'),
               #"Flag" = paste0('<img src="https://countryflagsapi.com/png/', tolower(item$reporting_entity),'" height=16 width=32></img>'),
+              "Flag" = if(config$dcf$reporting_entities$name %in% c("country", "flagstate")){
+                         paste0('<img src="https://raw.githubusercontent.com/fdiwg/flags/main/', tolower(item$reporting_entity),'.gif" height=16 width=32></img>')
+                       }else if(config$dcf$reporting_entities$name == "rfmo"){
+                         paste0('<img src="https://www.fao.org/fishery/services/storage/fs/fishery/images/organization/logo/', tolower(item$reporting_entity),'.jpg" height=16 width=32></img>')
+                       }else{""},
               "Reporting entity" = as.factor(item$reporting_entity),
               "Temporal extent" = item$temporal_extent,
               "Submitter" = as.factor(item$submitter),
@@ -405,6 +409,17 @@ data_admin_submissions_server <- function(id, parent.session, config, profile, c
             Actions = character(0)
           )
         }
+        
+        if(config$dcf$reporting_entities$name %in% c("country", "flagstate")){
+          
+        }else if(config$dcf$reporting_entities$name == "rfmo"){
+         data<-data%>%
+           rename(Logo=Flag)
+        }else{
+          data<-data%>%
+            select(-Flag)
+        }
+        
         return(data)
       }
       
@@ -449,7 +464,7 @@ data_admin_submissions_server <- function(id, parent.session, config, profile, c
       }
       
       #renderSubmissions
-      renderSubmissions <- function(data){
+      renderSubmissions <- function(data,config){
         
         uuids <- NULL
         if(length(data)>0) if(nrow(data)>0) for(i in 1:nrow(data)){
@@ -459,7 +474,7 @@ data_admin_submissions_server <- function(id, parent.session, config, profile, c
         
         output$tbl_all_submissions <- DT::renderDT({
           datatable(
-          submissionsTableHandler(data, uuids),
+          submissionsTableHandler(data, uuids,config),
           selection='single', escape=FALSE,rownames=FALSE,filter = list(position = 'top', clear = FALSE),
           options=list(
             lengthChange = FALSE,
@@ -540,7 +555,7 @@ data_admin_submissions_server <- function(id, parent.session, config, profile, c
           print(subset(datacalls,id_data_call==input$datacall))
           datacall<-datacall(subset(datacalls,id_data_call==input$datacall))
         data <- getSubmissions(config = config, pool = pool , profile = profile, store = store, user_only = FALSE,data_calls_id=input$datacall,full_entities=TRUE)
-        renderSubmissions(data)
+        renderSubmissions(data,config)
         renderBars(data)
         ready<-ready(TRUE)
         }
@@ -550,7 +565,7 @@ data_admin_submissions_server <- function(id, parent.session, config, profile, c
         req(input$datacall)
         if(!is.null(input$datacall))if(input$datacall!=""){
         data <- getSubmissions(config = config, pool = pool , profile = profile, store = store, user_only = FALSE,data_calls_id=input$datacall,full_entities=TRUE)
-        renderSubmissions(data)
+        renderSubmissions(data,config)
         renderBars(data)
         INFO("all submissions table is refresh")
         }

@@ -183,7 +183,7 @@ data_user_submissions_server <- function(id, parent.session, config, profile, co
       }
       
       #submissionsTableHandler
-      submissionsTableHandler <- function(data, uuids){
+      submissionsTableHandler <- function(data, uuids,config){
         if(length(data)>0){
           data <- do.call("rbind", lapply(1:nrow(data), function(i){
             item <- data[i,]
@@ -191,9 +191,11 @@ data_user_submissions_server <- function(id, parent.session, config, profile, co
               "Submission ID" = item$id,
               "Data call ID" = item$data_call_id,
               "Task ID" = item$task_id,
-              "Flag" = paste0('<img src="https://raw.githubusercontent.com/fdiwg/flags/main/', tolower(item$reporting_entity),'.gif" height=16 width=32></img>'),
-              #"Flag" = paste0('<img src="https://countryflagsapi.com/png/', tolower(item$reporting_entity),'" height=16 width=32></img>'),
-              "Reporting entity" = as.factor(item$reporting_entity),
+              "Flag" = if(config$dcf$reporting_entities$name %in% c("country", "flagstate")){
+                paste0('<img src="https://raw.githubusercontent.com/fdiwg/flags/main/', tolower(item$reporting_entity),'.gif" height=16 width=32></img>')
+              }else if(config$dcf$reporting_entities$name == "rfmo"){
+                paste0('<img src="https://www.fao.org/fishery/services/storage/fs/fishery/images/organization/logo/', tolower(item$reporting_entity),'.jpg" height=16 width=32></img>')
+              }else{""},          "Reporting entity" = as.factor(item$reporting_entity),
               "Owner" = item$owner,
               "Creation time" = item$creationTime,
               "Last modified by" = item$lastModifiedBy,
@@ -228,11 +230,22 @@ data_user_submissions_server <- function(id, parent.session, config, profile, co
             Actions = character(0)
           )
         }
+        
+        if(config$dcf$reporting_entities$name %in% c("country", "flagstate")){
+          
+        }else if(config$dcf$reporting_entities$name == "rfmo"){
+          data<-data%>%
+            rename(Logo=Flag)
+        }else{
+          data<-data%>%
+            select(-Flag)
+        }
+        
         return(data)
       }
       
       #renderSubmissions
-      renderSubmissions <- function(data){
+      renderSubmissions <- function(data,config){
 
         uuids <- NULL
         if(length(data)>0) if(nrow(data)>0) for(i in 1:nrow(data)){
@@ -242,7 +255,7 @@ data_user_submissions_server <- function(id, parent.session, config, profile, co
         
         output$tbl_my_submissions <- DT::renderDT({
           datatable(
-          submissionsTableHandler(data, uuids),
+          submissionsTableHandler(data, uuids,config),
           selection='single', escape=FALSE,rownames=FALSE,filter = list(position = 'top', clear = FALSE),
           options=list(
             lengthChange = FALSE,
@@ -289,7 +302,7 @@ data_user_submissions_server <- function(id, parent.session, config, profile, co
         req(input$datacall)
         if(!is.null(input$datacall))if(input$datacall!=""){
           data <- getSubmissions(config = config, pool = pool , profile = profile, store = store, user_only = TRUE,data_calls_id=input$datacall,full_entities=TRUE)
-          renderSubmissions(data)
+          renderSubmissions(data,config)
           renderBars(data)
         }
       })
@@ -299,7 +312,7 @@ data_user_submissions_server <- function(id, parent.session, config, profile, co
         if(!is.null(input$datacall))if(input$datacall!=""){
           INFO("submission table is refresh")
           data <- getSubmissions(config = config, pool = pool , profile = profile, store = store, user_only = TRUE,data_calls_id=input$datacall,full_entities=TRUE)
-          renderSubmissions(data)
+          renderSubmissions(data,config)
           renderBars(data)
         }
       })
@@ -323,7 +336,7 @@ data_user_submissions_server <- function(id, parent.session, config, profile, co
           model$error <- NULL
           removeModal()
           data <- getSubmissions(config = config, pool = pool , profile = profile, store = store, user_only = TRUE,data_calls_id=input$datacall,full_entities=TRUE)
-          renderSubmissions(data)
+          renderSubmissions(data,config)
           renderBars(data)
         }else{
           model$error <- "Unexpected error during submission deletion!"
