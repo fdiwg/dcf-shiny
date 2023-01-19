@@ -167,19 +167,42 @@ data_validation_server <- function(id, parent.session, config, profile, componen
                  setNames(entity_choices, ref_entity$label)
                },options = list( 
                  render = I("{
-                            item: function(item, escape) {
-                              var icon_href = 'https://countryflagsapi.com/png/'+item.value.toLowerCase();
-                              return '<div><img src=\"'+icon_href+'\" height=16 width=32/> ' + item.label + '</div>'; 
-                            },
-                            option: function(item, escape) { 
-                              var icon_href = 'https://countryflagsapi.com/png/'+item.value.toLowerCase();
-                              return '<div><img src=\"'+icon_href+'\" height=16 width=32/> ' + item.label + '</div>'; 
-                            }
-                          }"
+                      item: function(item, escape) {
+                        var icon_href = 'https://raw.githubusercontent.com/fdiwg/flags/main/'+item.value.toLowerCase()+'.gif';
+                        return '<div><img src=\"'+icon_href+'\" height=16 width=32/> ' + item.label + '</div>'; 
+                      },
+                      option: function(item, escape) { 
+                        var icon_href = 'https://raw.githubusercontent.com/fdiwg/flags/main/'+item.value.toLowerCase()+'.gif';
+                        return '<div><img src=\"'+icon_href+'\" height=16 width=32/> ' + item.label + '</div>'; 
+                      }
+                    }"
                  ),
                  placeholder = "Please select a reporting entity",
                  onInitialize = I('function() { this.setValue(""); }')
                 )
+              )
+            }else if(config$dcf$reporting_entities$name == "rfmo"){
+              selectizeInput(ns("reporting_entity"), label = "Reporting entity", selected = NULL, multiple = FALSE, 
+                             choices = {
+                               ref_entity <- getReportingEntityCodes(config)
+                               ref_entity <- ref_entity[ref_entity$code %in% profile$reporting_entities,]
+                               entity_choices <- ref_entity$code
+                               setNames(entity_choices, ref_entity$label)
+                             },options = list( 
+                               render = I("{
+                      item: function(item, escape) {
+                        var icon_href = 'https://www.fao.org/fishery/services/storage/fs/fishery/images/organization/logo/'+item.value.toLowerCase()+'.jpg';
+                        return '<div><img src=\"'+icon_href+'\" height=16 width=32/> ' + item.label + '</div>'; 
+                      },
+                      option: function(item, escape) { 
+                        var icon_href = 'https://www.fao.org/fishery/services/storage/fs/fishery/images/organization/logo/'+item.value.toLowerCase()+'.jpg';
+                        return '<div><img src=\"'+icon_href+'\" height=16 width=32/> ' + item.label + '</div>'; 
+                      }
+                    }"
+                               ),
+                               placeholder = "Please select a reporting entity",
+                               onInitialize = I('function() { this.setValue(""); }')
+                             )
               )
             }else{
               selectizeInput(ns("reporting_entity"), label = "Reporting entity", selected = NULL, multiple = FALSE,

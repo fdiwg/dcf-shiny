@@ -16,6 +16,11 @@ data_user_submissions_server <- function(id, parent.session, config, profile, co
         error = NULL
       )
       
+      list_datacalls<-reactiveVal(NULL)
+      datacall<-reactiveVal(NULL)
+      first_datacall<-reactiveVal(TRUE)
+      ready<-reactiveVal(TRUE)
+      
       output$task_wrapper<-renderUI({
         selectizeInput(ns("task"),
                        label="Task",
@@ -34,6 +39,7 @@ data_user_submissions_server <- function(id, parent.session, config, profile, co
         if(!is.null(input$task))if(input$task!=""){
           datacalls<-getDataCalls(pool,tasks=input$task,status="OPENED")
           datacalls<-datacalls[order(datacalls$date_end, datacalls$status,decreasing = T),]
+          list_datacalls<-list_datacalls(datacalls)
           output$datacall_wrapper<-renderUI({
             selectizeInput(ns("datacall"),
                            label="Inspect your submissions for data call :",
@@ -183,7 +189,7 @@ data_user_submissions_server <- function(id, parent.session, config, profile, co
       }
       
       #submissionsTableHandler
-      submissionsTableHandler <- function(data, uuids){
+      submissionsTableHandler <- function(data, uuids,config){
         if(length(data)>0){
           data <- do.call("rbind", lapply(1:nrow(data), function(i){
             item <- data[i,]
@@ -191,8 +197,11 @@ data_user_submissions_server <- function(id, parent.session, config, profile, co
               "Submission ID" = item$id,
               "Data call ID" = item$data_call_id,
               "Task ID" = item$task_id,
-              "Flag" = paste0('<img src="https://countryflagsapi.com/png/', tolower(item$reporting_entity),'" height=16 width=32></img>'),
-              "Reporting entity" = as.factor(item$reporting_entity),
+              "Flag" = if(config$dcf$reporting_entities$name %in% c("country", "flagstate")){
+                paste0('<img src="https://raw.githubusercontent.com/fdiwg/flags/main/', tolower(item$reporting_entity),'.gif" height=16 width=32></img>')
+              }else if(config$dcf$reporting_entities$name == "rfmo"){
+                paste0('<img src="https://www.fao.org/fishery/services/storage/fs/fishery/images/organization/logo/', tolower(item$reporting_entity),'.jpg" height=16 width=32></img>')
+              }else{""},          "Reporting entity" = as.factor(item$reporting_entity),
               "Owner" = item$owner,
               "Creation time" = item$creationTime,
               "Last modified by" = item$lastModifiedBy,
@@ -227,11 +236,63 @@ data_user_submissions_server <- function(id, parent.session, config, profile, co
             Actions = character(0)
           )
         }
+        
+        if(config$dcf$reporting_entities$name %in% c("country", "flagstate")){
+          
+        }else if(config$dcf$reporting_entities$name == "rfmo"){
+          data<-data%>%
+            rename(Logo=Flag)
+        }else{
+          data<-data%>%
+            select(-Flag)
+        }
+        
         return(data)
       }
       
+      #renderBars
+      renderBars<- function(data){
+        
+        nb_entities<-length(unique(data$reporting_entity))
+        accepted_submissions<-length(unique(subset(data,status=="ACCEPTED")$reporting_entity))
+        rejected_submissions<-length(unique(subset(data,status=="REJECTED")$reporting_entity))
+        pending_submissions<-length(unique(subset(data,status=="SUBMITTED")$reporting_entity))
+        transmitted_submissions<-length(unique(subset(data,status%in%c("ACCEPTED","SUBMITTED"))$reporting_entity))
+        
+        nb_missing<-length(unique(subset(data,status%in%c("MISSING","REJECTED")&!reporting_entity%in%subset(data,status%in%c("ACCEPTED","SUBMITTED"))$reporting_entity)$reporting_entity))
+        nb_duplicate<-sum(duplicated(subset(data,status%in%c("ACCEPTED","SUBMITTED"),select=c(reporting_entity,data_call_folder))))
+        
+        time_remaining<-as.numeric(datacall()$date_end-Sys.Date(),unit="days")
+        if(time_remaining<0){
+          time_remaining="Expired"
+        }else{
+          time_remaining<-sprintf('%s days',time_remaining)
+        }
+        
+        output$indicators<-renderUI({
+          div(
+            column(4,
+                   progressInfoBox(title="Submissions", text=sprintf('%s/%s',transmitted_submissions,nb_entities),value=transmitted_submissions,description=paste0(round(transmitted_submissions/nb_entities*100,0),"% of completion"), max = nb_entities,icon = icon("share"),fill = TRUE, color = "yellow",width =12),
+                   progressInfoBox(title="Accepted submissions", text=sprintf('%s/%s',accepted_submissions,nb_entities),value=accepted_submissions,description=paste0(round(accepted_submissions/nb_entities*100,0),"% of completion"), max = nb_entities,icon = icon("check"),fill = TRUE, color = "green",width =12)
+            ),
+            column(4,
+                   infoBox("Pending submissions", pending_submissions, icon = icon("tasks"), fill = TRUE,color="orange",width = 12),
+                   infoBox("Rejected submissions",rejected_submissions, icon = icon("exclamation-triangle"), fill = TRUE,color="purple",width = 12)
+                   
+            ),
+            column(4,
+                   infoBox("Missing submissions",nb_missing, icon = icon("bell"), fill = TRUE,color="red",width = 12),
+                   infoBox("Days remaining",time_remaining, icon = icon("clock"), fill = TRUE,color="teal",width = 12)
+            )
+          )
+          
+        })
+        
+        
+      }
+      
       #renderSubmissions
-      renderSubmissions <- function(data){
+      renderSubmissions <- function(data,config){
 
         uuids <- NULL
         if(length(data)>0) if(nrow(data)>0) for(i in 1:nrow(data)){
@@ -241,7 +302,7 @@ data_user_submissions_server <- function(id, parent.session, config, profile, co
         
         output$tbl_my_submissions <- DT::renderDT({
           datatable(
-          submissionsTableHandler(data, uuids),
+          submissionsTableHandler(data, uuids,config),
           selection='single', escape=FALSE,rownames=FALSE,filter = list(position = 'top', clear = FALSE),
           options=list(
             lengthChange = FALSE,
@@ -273,8 +334,6 @@ data_user_submissions_server <- function(id, parent.session, config, profile, co
         
       }
       
-      #events
-      
       output$refresh_wrapper<-renderUI({
         req(input$datacall)
         if(!is.null(input$datacall))if(input$datacall!=""){
@@ -284,12 +343,22 @@ data_user_submissions_server <- function(id, parent.session, config, profile, co
         }
       })
       
+      #events
+      
       observeEvent(input$datacall,{
         req(input$datacall)
         if(!is.null(input$datacall))if(input$datacall!=""){
+          if(!first_datacall()){
+            first_datacall<-first_datacall(FALSE)
+            ready<-ready(FALSE)
+          }
+          datacalls<-list_datacalls()
+          
+          datacall<-datacall(subset(datacalls,id_data_call==input$datacall))
           data <- getSubmissions(config = config, pool = pool , profile = profile, store = store, user_only = TRUE,data_calls_id=input$datacall,full_entities=TRUE)
-          renderSubmissions(data)
+          renderSubmissions(data,config)
           renderBars(data)
+          ready<-ready(TRUE)
         }
       })
       
@@ -298,18 +367,19 @@ data_user_submissions_server <- function(id, parent.session, config, profile, co
         if(!is.null(input$datacall))if(input$datacall!=""){
           INFO("submission table is refresh")
           data <- getSubmissions(config = config, pool = pool , profile = profile, store = store, user_only = TRUE,data_calls_id=input$datacall,full_entities=TRUE)
-          renderSubmissions(data)
+          renderSubmissions(data,config)
           renderBars(data)
         }
       })
       
-      output$table_wrapper<-renderUI({
-        if(!is.null(input$datacall))if(input$datacall!=""){
-          withSpinner(DT::dataTableOutput(ns("tbl_my_submissions")), type = 4)
-        }else{tags$span(shiny::icon(c('exclamation-triangle')), "No data call is currently selected", style="color:orange;")}
-      })
-      
       observeEvent(input$submission_deletion_ok,{
+        waiting_screen<-tagList(
+          h3("Deletion of Submission"),
+          spin_flower(),
+          h4(sprintf("Deletion of '%s' Submission for task '%s'", input$data_submission_reporting_entity,input$data_submission_task))
+        )
+        removeModal()
+        waiter_show(html = waiting_screen, color = "#14141480")
         deleted <- try(deleteSubmission(
           config = config, pool = pool, profile = profile, store = store,
           data_call_folder = input$data_submission_call_folder,
@@ -322,36 +392,27 @@ data_user_submissions_server <- function(id, parent.session, config, profile, co
           model$error <- NULL
           removeModal()
           data <- getSubmissions(config = config, pool = pool , profile = profile, store = store, user_only = TRUE,data_calls_id=input$datacall,full_entities=TRUE)
-          renderSubmissions(data)
+          renderSubmissions(data,config)
           renderBars(data)
+          waiter_hide()
         }else{
           model$error <- "Unexpected error during submission deletion!"
         }
       })
       
-      #renderBars
-      renderBars<- function(data){
-        
-        nb_entities<-length(unique(data$reporting_entity))
-        accepted_submissions<-length(unique(subset(data,status=="ACCEPTED")$reporting_entity))
-        remaining_submissions<-length(unique(subset(data,status%in%c("REJECTED","MISSING"))$reporting_entity))
-        rejected_submissions<-length(unique(subset(data,status=="REJECTED")$reporting_entity))
-        transmitted_submissions<-length(unique(subset(data,status%in%c("ACCEPTED","SUBMITTED"))$reporting_entity))
-        
-        output$percent<-renderUI({
-          box(width = 12,
-              progressGroup("Submission of entities",transmitted_submissions, min = 0, max = nb_entities, color = "aqua")
-          )
-        })
-        
-        output$indicators<-renderUI({
-          div(
-            infoBox("Remaining entities", remaining_submissions, icon = icon("tasks"), fill = TRUE,color="orange",width = 6),
-            infoBox("Rejected submissions",rejected_submissions, icon = icon("exclamation-triangle"), fill = TRUE,color="red",width = 6)
-          )
-        })
-        
-      }
+      output$table_wrapper<-renderUI({
+        if(!is.null(input$datacall))if(input$datacall!=""){
+          withSpinner(DT::dataTableOutput(ns("tbl_my_submissions")), type = 4)
+        }else{tags$span(shiny::icon(c('exclamation-triangle')), "No data call is currently selected", style="color:orange;")}
+      })
+      
+      output$indicators_wrapper<-renderUI({
+        if(!is.null(input$datacall))if(input$datacall!=""){
+          if(ready()){
+            withSpinner(uiOutput(ns("indicators")), type = 4)
+          }else{tags$span("Reload")}
+        }
+      })
       
       #-----------------------------------------------------------------------------------
     }

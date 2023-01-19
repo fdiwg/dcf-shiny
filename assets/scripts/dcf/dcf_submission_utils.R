@@ -262,7 +262,7 @@ rejectSubmission <- function(config,pool,profile, store, data_call_folder, data_
 #deleteSubmission
 deleteSubmission <- function(config,pool,profile, store, data_call_folder,data_call_id,task,reporting_entity){
   
-  deleted <- store$deleteItem(itemPath = file.path(config$dcf$workspace, data_call_folder))
+  deleted <- store$deleteItem(itemPath = file.path(config$dcf$user_workspace, data_call_folder))
   
   recipients<- getDBUsersWithRole(pool = pool, profile = profile, role = config$dcf$roles$manager)
   #accept Notification

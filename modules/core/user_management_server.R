@@ -46,11 +46,11 @@ user_management_server <- function(id, parent.session, config, profile, componen
                   },options = list( 
                     render = I("{
                       item: function(item, escape) {
-                        var icon_href = 'https://countryflagsapi.com/png/'+item.value.toLowerCase();
+                        var icon_href = 'https://raw.githubusercontent.com/fdiwg/flags/main/'+item.value.toLowerCase()+'.gif';
                         return '<div><img src=\"'+icon_href+'\" height=16 width=32/> ' + item.label + '</div>'; 
                       },
                       option: function(item, escape) { 
-                        var icon_href = 'https://countryflagsapi.com/png/'+item.value.toLowerCase();
+                        var icon_href = 'https://raw.githubusercontent.com/fdiwg/flags/main/'+item.value.toLowerCase()+'.gif';
                         return '<div><img src=\"'+icon_href+'\" height=16 width=32/> ' + item.label + '</div>'; 
                       }
                     }"

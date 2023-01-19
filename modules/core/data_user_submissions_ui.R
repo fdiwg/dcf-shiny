@@ -7,17 +7,13 @@ data_user_submissions_ui <- function(id){
     h3("My submissions"),hr(),
     fluidRow(
       div(
-        class = "col-md-3",
+        class = "col-md-2",
         uiOutput(ns("task_wrapper")),
         uiOutput(ns("datacall_wrapper"))
       ),
       div(
-        class = "col-md-3",
-        uiOutput(ns("percent"))
-      ),
-      div(
-        class = "col-md-4",
-        uiOutput(ns("indicators"))
+        class = "col-md-10",
+        uiOutput(ns("indicators_wrapper"))
       )
     ),
     uiOutput(ns("refresh_wrapper")),
