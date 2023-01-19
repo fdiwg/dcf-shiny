@@ -131,7 +131,9 @@ openStartedDataCalls <- function(pool,config,profile){
 createDataCall <- function(pool, task = "", start = Sys.Date(), end = Sys.Date(), status = "OPENED",
                            config, profile){
   conn <- pool::poolCheckout(pool)
-  idx <- max(getDataCalls(pool)$id_data_call)+1
+  idx <- 0
+  data_calls <- getDataCalls(pool)
+  if(nrow(data_calls)>0) idx <- max(data_calls$id_data_call)+1
   creation_date <- Sys.time()
   attr(creation_date, "tzone") <- "UTC"
   
