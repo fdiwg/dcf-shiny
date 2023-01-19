@@ -13,7 +13,7 @@ data_admin_submissions_ui <- function(id){
       ),
       div(
         class = "col-md-10",
-        uiOutput(ns("indicators"))
+        uiOutput(ns("indicators_wrapper"))
       )
     ),
     uiOutput(ns("refresh_wrapper")),
