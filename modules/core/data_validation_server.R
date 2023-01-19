@@ -167,15 +167,15 @@ data_validation_server <- function(id, parent.session, config, profile, componen
                  setNames(entity_choices, ref_entity$label)
                },options = list( 
                  render = I("{
-                            item: function(item, escape) {
-                              var icon_href = 'https://countryflagsapi.com/png/'+item.value.toLowerCase();
-                              return '<div><img src=\"'+icon_href+'\" height=16 width=32/> ' + item.label + '</div>'; 
-                            },
-                            option: function(item, escape) { 
-                              var icon_href = 'https://countryflagsapi.com/png/'+item.value.toLowerCase();
-                              return '<div><img src=\"'+icon_href+'\" height=16 width=32/> ' + item.label + '</div>'; 
-                            }
-                          }"
+                      item: function(item, escape) {
+                        var icon_href = 'https://raw.githubusercontent.com/fdiwg/flags/main/'+item.value.toLowerCase()+'.gif';
+                        return '<div><img src=\"'+icon_href+'\" height=16 width=32/> ' + item.label + '</div>'; 
+                      },
+                      option: function(item, escape) { 
+                        var icon_href = 'https://raw.githubusercontent.com/fdiwg/flags/main/'+item.value.toLowerCase()+'.gif';
+                        return '<div><img src=\"'+icon_href+'\" height=16 width=32/> ' + item.label + '</div>'; 
+                      }
+                    }"
                  ),
                  placeholder = "Please select a reporting entity",
                  onInitialize = I('function() { this.setValue(""); }')
