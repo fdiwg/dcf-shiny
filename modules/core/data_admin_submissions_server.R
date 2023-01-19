@@ -16,6 +16,8 @@ data_admin_submissions_server <- function(id, parent.session, config, profile, c
       )
       list_datacalls<-reactiveVal(NULL)
       datacall<-reactiveVal(NULL)
+      first_datacall<-reactiveVal(TRUE)
+      ready<-reactiveVal(TRUE)
       
       output$task_wrapper<-renderUI({
         selectizeInput(ns("task"),
@@ -407,6 +409,7 @@ data_admin_submissions_server <- function(id, parent.session, config, profile, c
       #renderBars
       renderBars<- function(data){
         
+        output$indicators<-renderUI({
         nb_entities<-length(unique(data$reporting_entity))
         accepted_submissions<-length(unique(subset(data,status=="ACCEPTED")$reporting_entity))
         pending_submissions<-length(unique(subset(data,status=="SUBMITTED")$reporting_entity))
@@ -422,7 +425,7 @@ data_admin_submissions_server <- function(id, parent.session, config, profile, c
           time_remaining<-sprintf('%s days',time_remaining)
         }
         
-      output$indicators<-renderUI({
+
         div(
           column(4,
                  progressInfoBox(title="Submissions", text=sprintf('%s/%s',transmitted_submissions,nb_entities),value=transmitted_submissions,description=paste0(transmitted_submissions/nb_entities*100,"% of completion"), max = nb_entities,icon = icon("share"),fill = TRUE, color = "yellow",width =12),
@@ -438,7 +441,8 @@ data_admin_submissions_server <- function(id, parent.session, config, profile, c
                  infoBox("Days remaining",time_remaining, icon = icon("clock"), fill = TRUE,color="teal",width = 12)
           )
         )
-      })
+    
+        })
 
       
       }
@@ -527,12 +531,17 @@ data_admin_submissions_server <- function(id, parent.session, config, profile, c
       observeEvent(input$datacall,{
         req(input$datacall)
         if(!is.null(input$datacall))if(input$datacall!=""){
+          if(!first_datacall()){
+            first_datacall<-first_datacall(FALSE)
+            ready<-ready(FALSE)
+          }
           datacalls<-list_datacalls()
           print(subset(datacalls,id_data_call==input$datacall))
           datacall<-datacall(subset(datacalls,id_data_call==input$datacall))
         data <- getSubmissions(config = config, pool = pool , profile = profile, store = store, user_only = FALSE,data_calls_id=input$datacall,full_entities=TRUE)
         renderSubmissions(data)
         renderBars(data)
+        ready<-ready(TRUE)
         }
       })
       
@@ -550,6 +559,14 @@ data_admin_submissions_server <- function(id, parent.session, config, profile, c
         if(!is.null(input$datacall))if(input$datacall!=""){
           withSpinner(DT::dataTableOutput(ns("tbl_all_submissions")), type = 4)
         }else{tags$span(shiny::icon(c('exclamation-triangle')), "No data call is currently selected", style="color:orange;")}
+      })
+      
+      output$indicators_wrapper<-renderUI({
+        if(!is.null(input$datacall))if(input$datacall!=""){
+          if(ready()){
+            withSpinner(uiOutput(ns("indicators")), type = 4)
+          }else{tags$span("Reload")}
+        }
       })
       
       #-----------------------------------------------------------------------------------
