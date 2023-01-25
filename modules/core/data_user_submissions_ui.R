@@ -9,7 +9,8 @@ data_user_submissions_ui <- function(id){
       div(
         class = "col-md-2",
         uiOutput(ns("task_wrapper")),
-        uiOutput(ns("datacall_wrapper"))
+        uiOutput(ns("datacall_wrapper")),
+        uiOutput(ns("run_wrapper"))
       ),
       div(
         class = "col-md-10",

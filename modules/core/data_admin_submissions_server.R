@@ -53,6 +53,17 @@ data_admin_submissions_server <- function(id, parent.session, config, profile, c
         }
       })
       
+      output$run_wrapper<-renderUI({
+        req(input$datacall)
+        if(!is.null(input$datacall))if(input$datacall!=""){
+          withBusyIndicatorUI(
+          actionButton(ns("run"), "Display submissions")
+          )
+        }else{
+          NULL
+        }
+      })
+      
       output$data_submission_error <- renderUI({
         if(is.null(model$error)){
           tags$div(style="display:none;")
@@ -250,7 +261,6 @@ data_admin_submissions_server <- function(id, parent.session, config, profile, c
         })
       }
     })
-      
       
       #observers on modals actions
       #data submission accept/cancel
@@ -535,7 +545,7 @@ data_admin_submissions_server <- function(id, parent.session, config, profile, c
       })
       
       output$refresh_wrapper<-renderUI({
-        req(input$datacall)
+        req(input$run)
         if(!is.null(input$datacall))if(input$datacall!=""){
         actionButton(ns("refresh"), "Refresh", icon = icon("refresh"))
         }else{
@@ -544,13 +554,14 @@ data_admin_submissions_server <- function(id, parent.session, config, profile, c
       })
       
       #events
-      observeEvent(input$datacall,{
+      observeEvent(input$run,{
         req(input$datacall)
         if(!is.null(input$datacall))if(input$datacall!=""){
           if(!first_datacall()){
             first_datacall<-first_datacall(FALSE)
             ready<-ready(FALSE)
           }
+          withBusyIndicatorServer(ns("run"), {
           datacalls<-list_datacalls()
           print(subset(datacalls,id_data_call==input$datacall))
           datacall<-datacall(subset(datacalls,id_data_call==input$datacall))
@@ -558,6 +569,7 @@ data_admin_submissions_server <- function(id, parent.session, config, profile, c
         renderSubmissions(data,config)
         renderBars(data)
         ready<-ready(TRUE)
+          })
         }
       })
       
@@ -572,16 +584,18 @@ data_admin_submissions_server <- function(id, parent.session, config, profile, c
       })
       
       output$table_wrapper<-renderUI({
+        req(input$run)
         if(!is.null(input$datacall))if(input$datacall!=""){
           withSpinner(DT::dataTableOutput(ns("tbl_all_submissions")), type = 4)
         }else{tags$span(shiny::icon(c('exclamation-triangle')), "No data call is currently selected", style="color:orange;")}
       })
       
       output$indicators_wrapper<-renderUI({
+        req(input$run)
         if(!is.null(input$datacall))if(input$datacall!=""){
           if(ready()){
             withSpinner(uiOutput(ns("indicators")), type = 4)
-          }else{tags$span("Reload")}
+          }else{""}
         }
       })
       
