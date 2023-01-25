@@ -264,7 +264,8 @@ deleteSubmission <- function(config,pool,profile, store, data_call_folder,data_c
   
   deleted <- store$deleteItem(itemPath = file.path(config$dcf$user_workspace, data_call_folder))
   
-  recipients<- getDBUsersWithRole(pool = pool, profile = profile, role = config$dcf$roles$manager)
+  recipients<- getDBUsers(pool = pool, profile = profile, roles = "manager")
+  print(recipients)
   #accept Notification
   if(nrow(recipients)==0){
     sent <- FALSE
