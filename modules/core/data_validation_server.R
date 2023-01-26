@@ -895,7 +895,7 @@ data_validation_server <- function(id, parent.session, config, profile, componen
                                            The system bot"
           }
           
-          dcf_managers <- getDBUsersWithRole(pool = pool, profile = profile, role = config$dcf$roles$manager)
+          dcf_managers <- getDBUsers(pool = pool, profile = profile, roles = "manager")
           sent <- sendMessage(subject = sprintf("New data submission for data call '%s' - task '%s' - reporting entity '%s'",
                                                 submission$data_call_id, submission$task_id, submission$reporting_entity),
                               body = sprintf(body,

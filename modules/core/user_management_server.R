@@ -256,6 +256,13 @@ user_management_server <- function(id, parent.session, config, profile, componen
       
       #user management observers
       observeEvent(input$user_add_go, {
+        waiting_screen<-tagList(
+          h3("Creation in progress ..."),
+          spin_flower(),
+          h4(sprintf("Creation of user %s [%s]", input$user_form_fullname,input$user_form_username))
+        )
+        removeModal()
+        waiter_show(html = waiting_screen, color = "#14141480")
         created <- createDBUser(
           pool = pool,
           profile = profile,
@@ -268,12 +275,20 @@ user_management_server <- function(id, parent.session, config, profile, componen
           model$error <- NULL
           removeModal()
           renderUsers(pool)
+          waiter_hide()
         }else{
           model$error <- attr(created, "error")
         }
       })
       #data call/modify
       observeEvent(input$user_modify_go, {
+        waiting_screen<-tagList(
+          h3("Update in progress ..."),
+          spin_flower(),
+          h4(sprintf("Update of roles and reporting entities for user : %s [%s]", input$user_form_fullname,input$user_form_username))
+        )
+        removeModal()
+        waiter_show(html = waiting_screen, color = "#14141480")
         id_user <- ""
         updated <- updateDBUser(
           pool = pool,
@@ -286,6 +301,7 @@ user_management_server <- function(id, parent.session, config, profile, componen
           model$error <- NULL
           removeModal()
           renderUsers(pool)
+          waiter_hide()
         }else{
           model$error <- attr(updated, "error")
         }

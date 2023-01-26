@@ -16,6 +16,6 @@ data_call_ui <- function(id){
         uiOutput(ns("status_selector"))
       )
     ),
-    DT::DTOutput(ns("tbl_data_calls"))
+    withSpinner(DT::DTOutput(ns("tbl_data_calls")), type = 4)
   )
 }

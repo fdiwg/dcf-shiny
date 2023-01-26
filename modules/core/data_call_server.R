@@ -221,6 +221,13 @@ data_call_server <- function(id, parent.session, config, profile, components){
         showDataCallModal(new = TRUE)
       })
       observeEvent(input$data_call_add_go, {
+        waiting_screen<-tagList(
+          h3("Creation in progress ..."),
+          spin_flower(),
+          h4(sprintf("Creation of new data call for task '%s' [%s/%s]", input$data_call_form_task,as.character(input$data_call_form_start),as.character(input$data_call_form_end)))
+        )
+        removeModal()
+        waiter_show(html = waiting_screen, color = "#14141480")
         created <- createDataCall(
           pool = pool,
           config = config,
@@ -234,6 +241,7 @@ data_call_server <- function(id, parent.session, config, profile, components){
           model$error <- NULL
           removeModal()
           renderDataCalls(getDataCalls(pool,tasks=input$task,status=onlyOpened()))
+          waiter_hide()
         }else{
           model$error <- attr(created, "error")
         }
@@ -241,6 +249,13 @@ data_call_server <- function(id, parent.session, config, profile, components){
       })
       #data call/modify
       observeEvent(input$data_call_modify_go, {
+        waiting_screen<-tagList(
+          h3("Modification in progress ..."),
+          spin_flower(),
+          h4(sprintf("Modification of data call '%s' for task '%s'", input$data_call_form_id,input$data_call_form_task))
+        )
+        removeModal()
+        waiter_show(html = waiting_screen, color = "#14141480")
         id_call <- ""
         updated <- updateDataCall(
           pool = pool,
@@ -256,6 +271,7 @@ data_call_server <- function(id, parent.session, config, profile, components){
           model$error <- NULL
           removeModal()
           renderDataCalls(getDataCalls(pool,tasks=input$task,status=onlyOpened()))
+          waiter_hide()
         }else{
           model$error <- attr(updated, "error")
         }
@@ -269,6 +285,13 @@ data_call_server <- function(id, parent.session, config, profile, components){
       #data deletion
       #data call/modify
       observeEvent(input$data_call_delete_go, {
+        waiting_screen<-tagList(
+          h3("Deletion in progress ..."),
+          spin_flower(),
+          h4(sprintf("Deletion of data call '%s'", model$data_call_to_delete))
+        )
+        removeModal()
+        waiter_show(html = waiting_screen, color = "#14141480")
         deleted <- deleteDataCall(
           pool = pool,
           config=config,
@@ -280,6 +303,7 @@ data_call_server <- function(id, parent.session, config, profile, components){
           model$error <- NULL
           removeModal()
           renderDataCalls(getDataCalls(pool,tasks=input$task,status=onlyOpened()))
+          waiter_hide()
         }else{
           model$error <- attr(deleted, "error")
         }
