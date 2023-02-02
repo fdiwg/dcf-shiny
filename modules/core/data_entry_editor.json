@@ -1,0 +1,9 @@
+{
+  "parent": "data_entry",
+  "type": "subitem",
+  "rank": 1,
+  "name": "data_entry_editor",
+  "title": "Edit Data",
+  "restricted": true,
+  "roles": ["submitter", "manager", "admin", "r-studio"]
+}

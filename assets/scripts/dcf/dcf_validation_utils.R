@@ -96,10 +96,10 @@ dateFormating<- function(date,period="start"){
 }
 
 #readTaskColumnDefinitions
-readTaskColumnDefinitions<- function(file, format, config = NULL, reporting_entity = NULL){
+readTaskColumnDefinitions<- function(file, format, config = NULL, reporting_entity = NULL,force=F){
   task_def<-jsonlite::read_json(file)
   task_def <- task_def$formats[[format]]$columns
-  if(!is.null(config$dcf$reporting_entities)) if(config$dcf$reporting_entities$validation){
+  if(!is.null(config$dcf$reporting_entities)) if(config$dcf$reporting_entities$validation|force){
     if(!is.null(task_def[[config$dcf$reporting_entities$name]]$ref)) task_def[[config$dcf$reporting_entities$name]]$ref <- NULL
     task_def[[config$dcf$reporting_entities$name]]$allowed_values <- reporting_entity
     task_def[[config$dcf$reporting_entities$name]]$rule_type <- "reporting_entity"
