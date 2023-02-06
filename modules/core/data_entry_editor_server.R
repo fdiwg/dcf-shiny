@@ -406,12 +406,59 @@ data_entry_editor_server <- function(id, parent.session, config, profile, compon
       output$table_wrapper<-renderUI({
         req(!is.null(current_data()))
         req(ready())
+        info<-template_info()
         tagList(
-        rHandsontableOutput(ns("table")),
-        br(),
-        actionButton(ns("add_row"),"Add row",icon=icon("plus"),class = "btn-info")
+          div(
+            rHandsontableOutput(ns("table"))
+          ),
+          br(),
+          div(
+          actionButton(ns("add_row"),"Add row",icon=icon("plus"),class = "btn-info"),
+          if(any(!is.na(info$ref))){actionButton(ns("show_ref"),"Show referential details",icon=icon("search"),class = "btn-warning")}else{NULL}
+          )
         )
         })
+      
+      observeEvent(input$show_ref,{
+        info<-template_info()
+        withref<-info[!is.na(info$ref),]$label
+        withref_index<-which(!is.na(info$ref))
+        
+        showModal(
+          modalDialog(
+            title = "",
+            selectizeInput(ns("ref_to_show"),
+                           label="Valid values for column :",
+                           multiple = F,
+                           choices = setNames(withref_index,withref)),
+            uiOutput(ns("display")),
+            easyClose = TRUE, footer = NULL,size="l" 
+          )
+        )
+      })
+      
+      observeEvent(input$ref_to_show,{
+        info<-template_info()
+        ref<-info[as.numeric(input$ref_to_show),]$ref[[1]]
+        
+        output$display_table<-DT::renderDT(
+          datatable(
+            ref,
+            escape=FALSE,rownames=FALSE,
+            options=list(
+              pageLength = 10,
+              searching = TRUE,
+              autoWidth = FALSE,
+              scrollX=TRUE,
+              scrollCollapse=TRUE)
+          )%>% formatStyle('label',backgroundColor ='#CEF3D6' )
+        )
+        
+        output$display<- renderUI({
+          DT::dataTableOutput(ns("display_table"))
+        })
+        
+      })
       
       observeEvent(input$add_row, {
         
