@@ -1,9 +1,9 @@
 {
   "parent": "data",
   "type": "subitem",
-  "rank": 3,
-  "name": "data_user_submissions",
-  "title": "My submissions",
+  "rank": 1,
+  "name": "data_entry_editor",
+  "title": "Data entry",
   "restricted": true,
   "roles": ["submitter", "manager", "admin", "r-studio"]
 }
