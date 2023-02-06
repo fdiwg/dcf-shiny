@@ -1,7 +1,7 @@
 {
   "parent": "data",
   "type": "subitem",
-  "rank": 3,
+  "rank": 4,
   "name": "data_admin_submissions",
   "title": "All submissions",
   "restricted": true,

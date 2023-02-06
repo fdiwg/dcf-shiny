@@ -1,7 +1,7 @@
 {
   "parent": "data",
   "type": "subitem",
-  "rank": 2,
+  "rank": 3,
   "name": "data_user_submissions",
   "title": "My submissions",
   "restricted": true,

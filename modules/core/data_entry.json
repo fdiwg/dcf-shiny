@@ -1,9 +1,0 @@
-{
-  "type": "item",
-  "menu": true,
-  "name": "data_entry",
-  "title": "Data entry",
-  "rank": 4,
-  "restricted": true,
-  "roles": ["submitter", "manager", "admin", "r-studio"]
-}

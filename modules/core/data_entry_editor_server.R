@@ -10,6 +10,9 @@ data_entry_editor_server <- function(id, parent.session, config, profile, compon
       ns <- session$ns
       
       template_info<-reactiveVal(NULL)
+      empty_row<-reactiveVal(NULL)
+      current_data<-reactiveVal(NULL)
+      ready<-reactiveVal(FALSE)
       
       #TASK SELECTOR
       output$task_wrapper<-renderUI({
@@ -96,11 +99,26 @@ data_entry_editor_server <- function(id, parent.session, config, profile, compon
         }
       })
       
+      output$format_wrapper<-renderUI({
+          selectizeInput(ns("format"),
+                         label="Data format",
+                         multiple = F,
+                         choices = c("Simplified"="simplified",
+                                     "Generic"="generic"),
+                         selected=NULL,
+                         options = list(
+                           placeholder = "Please select a format",
+                           onInitialize = I('function() { this.setValue(""); }')
+                         )
+          )
+      })
+      
       output$download_wrapper <- renderUI({
         req(input$task)
         req(input$reporting_entity)
+        req(input$format)
         req(!is.null(template_info()))
-        if(!is.null(input$task))if(input$task!="")if(!is.null(input$reporting_entity))if(input$reporting_entity!=""){
+        if(!is.null(input$task))if(input$task!="")if(!is.null(input$reporting_entity))if(input$reporting_entity!="")if(!is.null(input$format))if(input$format!=""){
           shinydashboard::box(title="Download template",width = 2,
                               downloadButton(ns("template_xlsx"),label="Excel",icon=shiny::icon("file-excel"),style = "padding: 5px 20px; margin: 2px 8px;"),
                               downloadButton(ns("template_csv"),label="CSV",icon=shiny::icon("file-csv"),style = "padding: 5px 20px; margin: 2px 8px;")
@@ -108,39 +126,137 @@ data_entry_editor_server <- function(id, parent.session, config, profile, compon
         }
       })
       
-      observeEvent(c(input$task,input$reporting_entity),{
+      output$file_origin_wrapper <- renderUI({
         req(input$task)
         req(input$reporting_entity)
-        if(!is.null(input$task))if(input$task!="")if(!is.null(input$reporting_entity))if(input$reporting_entity!=""){
+        req(input$format)
+        req(!is.null(template_info()))
+        if(!is.null(input$task))if(input$task!="")if(!is.null(input$reporting_entity))if(input$reporting_entity!="")if(!is.null(input$format))if(input$format!=""){
+        radioButtons(ns("file_origin"),
+                     "Data source",
+                     c("Create new data file"="new",
+                       "Import from existing data file"="import"),
+                     selected = character(0),
+                     inline = TRUE)
+        }
+      })
+      
+      output$save_wrapper <- renderUI({
+        req(input$task)
+        req(input$reporting_entity)
+        req(input$format)
+        req(ready())
+        req(!is.null(current_data()))
+        if(!is.null(input$task))if(input$task!="")if(!is.null(input$reporting_entity))if(input$reporting_entity!="")if(!is.null(input$format))if(input$format!=""){
+          downloadButton(ns("save_data"),label=NULL,icon=shiny::icon("save"))
+        }
+      })
+      
+      observeEvent(input$file_origin,{
+        req(!is.null(input$file_origin))
+        if(input$file_origin=="new"){
+          ready<-ready(TRUE)
+        }
+        if(input$file_origin=="import"){
+          ready<-ready(FALSE)
+          output$file_wrapper<-renderUI({
+              fileInput(ns("file"), label = "File to edit",multiple = FALSE,accept = c(".csv"),buttonLabel = "Choose file")
+          })
+        }
+      })
+      
+      observeEvent(input$file,{
+        req(input$file)
+        info<-template_info()
+        if(!is.null(input$file)){
+          data_to_load<-readr::read_csv(input$file$datapath,col_types = readr::cols(.default = "c"))
+          if(all(names(data_to_load)==info$id)){
+            data_to_lead<-as.data.frame(data_to_load)
+            if(any(!is.na(info$ref))){
+              cols<-which(!is.na(info$ref))
+              correct_order<-names(data_to_load)
+              data_to_load$row_order<-1:nrow(data_to_load)
+              for(col in cols){
+                ref<-info[col,]$ref[[1]]
+                ref<-as.data.frame(ref)
+                ref<-unique(subset(ref,code%in%unique(data_to_load[,col]),select=c(code,label)))
+                
+                data_to_load<-merge(data_to_load,ref,by.x=names(data_to_load[col]),by.y="code",all.x=T,sort=F)
+                data_to_load<-data_to_load[,-1]
+                names(data_to_load)[ncol(data_to_load)]<-correct_order[col]
+                data_to_load<-subset(data_to_load,select=c(correct_order,"row_order"))
+              }
+              data_to_load <- data_to_load[order(data_to_load$row_order), ]
+              data_to_load <-subset(data_to_load,select=-c(row_order))
+            }
+            names(data_to_load)<-info$label
+            current_data<-current_data(data_to_load)
+            ready<-ready(TRUE)
+          }else{
+            stop("NOT CORRECT COLUMNS DEFINITIONS")
+          }
+        }
+      })
+      
+      observeEvent(c(input$task,input$reporting_entity,input$format),{
+        req(input$task)
+        req(input$reporting_entity)
+        req(input$format)
+        if(!is.null(input$task))if(input$task!="")if(!is.null(input$reporting_entity))if(input$reporting_entity!="")if(!is.null(input$format))if(input$format!=""){
           task<-getTaskProperties(config,id=input$task)
           taskRules <- task$dsd_ref_url
-          taskDef<-readTaskColumnDefinitions(file = taskRules, format = "simplified", config = config, reporting_entity = input$reporting_entity,force=T)
+          taskDef<-readTaskColumnDefinitions(file = taskRules, format = input$format, config = config, reporting_entity = input$reporting_entity,force=T)
           task_template<-do.call(rbind,lapply(taskDef, function(x){
             id<-x$id
             label<-if(!is.null(x$aliases[[1]])){x$aliases[[1]]}else{x$id}
             mandatory<-!x$na_allowed
-            if(!is.null(x$allowed_values)){
+            if(id=="year"){
+              default_value<-NA
+              year_list<-as.character(rev(seq(1950,as.integer(substr(Sys.Date(),1,4)))))
+              ref<-list(tibble(code=year_list,label=year_list))
+              editable<-TRUE
+            }else if(!is.null(x$allowed_values)){
               if(length(x$allowed_values)==1){
                 default_value<-unlist(x$allowed_values)
                 ref<-list(NA)
+                editable<-FALSE
               }else{
                 default_value<-NA
                 ref<-list(tibble(code=unlist(x$allowed_values),label=unlist(x$allowed_values)))
+                editable<-TRUE
               }
             }else{
               default_value<-NA
               ref<-list(if(!is.null(x$ref)){readr::read_csv(x$ref)}else{NA})
+              editable<-TRUE
             }
             
-            data<-tibble(id=id,label=label,mandatory=mandatory,default_value=default_value,ref=ref)
+            data<-tibble(id=id,label=label,mandatory=mandatory,default_value=default_value,ref=ref,editable=editable)
             }))
           template_info<-template_info(task_template)
+
+          info<-template_info()
+          col_names<-info$label
+          values_type<-info$default_value
+          values_type[is.na(values_type)]<-""
+          if(any(!is.na(info$ref))){
+            cols<-which(!is.na(info$ref))
+            for(col in cols){
+              values_type[col]<-NA_character_
+            }
+          }
+          data_template = data.frame(matrix(nrow = 1, ncol = length(col_names))) 
+          names(data_template) = col_names
+          data_template[1,]<-values_type
+          
+          empty_row<-empty_row(data_template)
+          current_data<-current_data(data_template[rep(seq_len(nrow(data_template)), 10), ])
         }
       })
       
       output$template_csv <- downloadHandler(
         filename = function() { 
-          sprintf("template_%s_%s.zip",input$task,input$reporting_entity)
+          sprintf("template_%s_%s_%s.zip",input$task,input$reporting_entity,input$format)
         },
         content = function(filename) {
           list_files<-c()
@@ -153,7 +269,7 @@ data_entry_editor_server <- function(id, parent.session, config, profile, compon
           data_template = data.frame(matrix(nrow = 1, ncol = length(col_names))) 
           names(data_template) = col_names
           data_template[1,]<-values_type
-          data_file_path<-sprintf("template_data_%s_%s.csv",input$task,input$reporting_entity)
+          data_file_path<-sprintf("template_data_%s_%s_%s.csv",input$task,input$reporting_entity,input$format)
           write.csv(data_template, data_file_path,row.names = F)
           list_files<-c(list_files,data_file_path)
           with_ref<-subset(info,!is.na(ref))
@@ -175,7 +291,7 @@ data_entry_editor_server <- function(id, parent.session, config, profile, compon
       
       output$template_xlsx <- downloadHandler(
         filename = function() { 
-          sprintf("template_%s_%s.xlsx",input$task,input$reporting_entity)
+          sprintf("template_%s_%s_%s.xlsx",input$task,input$reporting_entity,input$format)
         },
         content = function(filename) {
           info<-template_info()
@@ -219,6 +335,95 @@ data_entry_editor_server <- function(id, parent.session, config, profile, compon
           # Save workbook
           saveWorkbook(wb, filename, overwrite = TRUE)
         })
+      
+      output$save_data <- downloadHandler(
+        filename = function() { 
+          sprintf("data_%s_%s_%s.csv",input$task,input$reporting_entity,input$format)
+        },
+        content = function(filename) {
+          data_to_save<-hot_to_r(input$table)
+          data_to_save<-as.data.frame(data_to_save)
+          info<-template_info()
+          names(data_to_save)<-info$id
+          if(any(!is.na(info$ref))){
+            cols<-which(!is.na(info$ref))
+            correct_order<-names(data_to_save)
+            data_to_save$row_order<-1:nrow(data_to_save)
+            for(col in cols){
+              ref<-info[col,]$ref[[1]]
+              ref<-as.data.frame(ref)
+              ref<-unique(subset(ref,label%in%unique(data_to_save[,col]),select=c(code,label)))
+              
+              data_to_save<-merge(data_to_save,ref,by.x=names(data_to_save[col]),by.y="label",all.x=T,sort=F)
+              data_to_save<-data_to_save[,-1]
+              names(data_to_save)[ncol(data_to_save)]<-c(correct_order[col])
+              data_to_save<-subset(data_to_save,select=c(correct_order,"row_order"))
+              
+            }
+            data_to_save <- data_to_save[order(data_to_save$row_order), ]
+            data_to_save <-subset(data_to_save,select=-c(row_order))
+          }
+          
+          write.csv(data_to_save, filename,row.names = F)
+        })
+      
+      
+      observeEvent(current_data(),{
+      output$table<-renderRHandsontable({
+        req(!is.null(current_data()))
+        req(ready())
+        data<-current_data()
+        row.names(data)<-1:nrow(data)
+        info<-template_info()
+        editable_table<-rhandsontable(data)
+        
+         if(any(!info$editable)){
+           cols<-which(info$editable==FALSE)
+           for(col in cols){
+             editable_table <- hot_col(editable_table, col = col, readOnly = TRUE)
+           }
+         }
+        
+        if(any(!is.na(info$ref))){
+          cols<-which(!is.na(info$ref))
+          for(col in cols){
+            withref<-info[col,]
+            ref<-withref$ref[[1]]
+            ref_code<-ref$label
+
+            print(head(ref_code))
+            editable_table <- hot_col(editable_table,col=col, type = "dropdown", source = ref_code)
+          }
+        }
+          
+        
+        return(editable_table)
+        
+      
+      })
+      })
+      
+      output$table_wrapper<-renderUI({
+        req(!is.null(current_data()))
+        req(ready())
+        tagList(
+        rHandsontableOutput(ns("table")),
+        br(),
+        actionButton(ns("add_row"),"Add row",icon=icon("plus"),class = "btn-info")
+        )
+        })
+      
+      observeEvent(input$add_row, {
+        
+        print("ADD ROW")
+        new_row<-empty_row()
+        
+        last_data <- hot_to_r(input$table)
+        new_data <- rbind(last_data,new_row)
+        
+        current_data<-current_data(new_data)
+      })
+
       
       #-----------------------------------------------------------------------------------
     }
