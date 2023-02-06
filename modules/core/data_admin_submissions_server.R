@@ -151,12 +151,32 @@ data_admin_submissions_server <- function(id, parent.session, config, profile, c
         })
       }
       
+      manageButtonDownloadEvents <- function(data, uuids){
+        prefix <- paste0("button_download_")
+        if(length(data)>0) if(nrow(data)>0) lapply(1:nrow(data),function(i){
+          x <- data[i,]
+          button_id <- paste0(prefix,uuids[i])
+          
+          output[[button_id]] <- downloadHandler(
+            filename = function() { 
+              sprintf("submission_datacall-%s_%s_for_%s.zip",x$data_call_id,x$task_id,x$reporting_entity)
+            },
+            content = function(filename) {
+              items<-copyItemsSubmission(store, data_submission_id=x$id, wd=tempdir())
+              setwd(tempdir())
+              zip(zipfile=filename,files=items$name)
+            },
+            contentType = "application/zip")
+        })
+      }
+      
       #Remind
       manageButtonReminderEvents <- function(data, uuids){
         prefix <- paste0("button_reminder_")
         if(length(data)>0) if(nrow(data)>0) lapply(1:nrow(data),function(i){
           x <- data[i,]
           button_id <- paste0(prefix,uuids[i])
+          
           observeEvent(input[[button_id]],{
             shinyjs::disable(button_id)
             print(datacall())
@@ -372,7 +392,7 @@ data_admin_submissions_server <- function(id, parent.session, config, profile, c
                                          title = "Browse data submission", label = "", icon = icon("eye")),
                             actionButton(inputId = ns(paste0('button_reject_', uuids[i])), class="btn btn-danger", style = "margin-right: 2px;",
                                          title = "Reject data submission", label = "", icon = icon("remove")),
-                            actionButton(inputId = ns(paste0('button_download_', uuids[i])), class="btn btn-default", style = "margin-right: 2px;",
+                            downloadButton(outputId = ns(paste0('button_download_', uuids[i])), class="btn btn-default", style = "margin-right: 2px;",
                                          title = "Download data submission", label = "", icon = icon("download"))
                           ),"character"),
                         ifelse(item$status=="REJECTED",as(
@@ -383,7 +403,7 @@ data_admin_submissions_server <- function(id, parent.session, config, profile, c
                                          title = "Accept data submission", label = "", icon = icon("check")),
                             actionButton(inputId = ns(paste0('button_reminder_', uuids[i])), class="btn btn-warning", style = "margin-right: 2px;",
                                          title = "Send a reminder", label = "", icon = icon("bell")),
-                            actionButton(inputId = ns(paste0('button_download_', uuids[i])), class="btn btn-default", style = "margin-right: 2px;",
+                            downloadButton(outputId = ns(paste0('button_download_', uuids[i])), class="btn btn-default", style = "margin-right: 2px;",
                                          title = "Download data submission", label = "", icon = icon("download"))
                           ),"character"),  as(
                           tagList(
@@ -393,7 +413,7 @@ data_admin_submissions_server <- function(id, parent.session, config, profile, c
                                          title = "Accept data submission", label = "", icon = icon("check")),
                             actionButton(inputId = ns(paste0('button_reject_', uuids[i])), class="btn btn-danger", style = "margin-right: 2px;",
                                          title = "Reject data submission", label = "", icon = icon("remove")),
-                            actionButton(inputId = ns(paste0('button_download_', uuids[i])), class="btn btn-default", style = "margin-right: 2px;",
+                            downloadButton(outputId = ns(paste0('button_download_', uuids[i])), class="btn btn-default", style = "margin-right: 2px;",
                                          title = "Download data submission", label = "", icon = icon("download"))
                           ),"character")
                 )))
@@ -515,6 +535,7 @@ data_admin_submissions_server <- function(id, parent.session, config, profile, c
         
         #manage action buttons
         manageButtonBrowseEvents(data, uuids)
+        manageButtonDownloadEvents(data, uuids)
         manageButtonReminderEvents(data, uuids)
         manageButtonAcceptEvents(data, uuids)
         manageButtonRejectEvents(data, uuids)
