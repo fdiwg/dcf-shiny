@@ -14,6 +14,62 @@ data_entry_editor_server <- function(id, parent.session, config, profile, compon
       current_data<-reactiveVal(NULL)
       ready<-reactiveVal(FALSE)
       
+      output$menu<-renderUI({
+        tabBox(id = "tabbox",title=NULL,height="600px",width = "100%",
+               tabPanel(title=tagList(icon("gear"),"Settings"),
+                        value="tab_settings",
+                          div(
+                            uiOutput(ns("task_wrapper")),
+                            uiOutput(ns("reporting_entity_wrapper")),
+                            uiOutput(ns("format_wrapper")),
+                            uiOutput(ns("run_wrapper"))
+                          )
+                        )
+               )
+      })
+      
+      observeEvent(template_info(),{
+        req(!is.null(template_info()))
+        
+        info<-template_info()
+        
+        appendTab(inputId = "tabbox",
+                  session = parent.session,
+                  select=TRUE,
+          tabPanel(title=tagList(icon("edit"),"Editor"),
+                   value="tab_editor",
+                     uiOutput(ns("buttons_wrapper")),
+                     br(),
+                     uiOutput(ns("table_wrapper"))
+                   
+          )
+        )
+        
+        if(any(!is.na(info$ref))){
+          appendTab(inputId = "tabbox",
+                    session = parent.session,
+                    select=FALSE,
+            tabPanel(title=tagList(icon("search"),"Referentials"),
+                     value ="tab_referentials",
+                     div(
+                       uiOutput(ns("ref_to_show_wrapper")),
+                       uiOutput(ns("display"))
+                     )
+            )
+          )
+        }
+          
+        appendTab(inputId = "tabbox",
+                  session = parent.session,
+                  select=FALSE,
+                  tabPanel(title=tagList(icon("download"),"Templates"),
+                           value="tab_templates",
+                           uiOutput(ns("download_wrapper"))
+                  )
+        )
+        
+      })
+      
       #TASK SELECTOR
       output$task_wrapper<-renderUI({
         selectizeInput(ns("task"),
@@ -113,6 +169,18 @@ data_entry_editor_server <- function(id, parent.session, config, profile, compon
           )
       })
       
+      output$run_wrapper <- renderUI({
+        req(input$task)
+        req(input$reporting_entity)
+        req(input$format)
+        if(!is.null(input$task))if(input$task!="")if(!is.null(input$reporting_entity))if(input$reporting_entity!="")if(!is.null(input$format))if(input$format!=""){
+
+          withBusyIndicatorUI(
+            actionButton(ns("run"),title="Run selection",label="Load template")
+          )
+        }
+      })
+      
       output$download_wrapper <- renderUI({
         req(input$task)
         req(input$reporting_entity)
@@ -126,18 +194,19 @@ data_entry_editor_server <- function(id, parent.session, config, profile, compon
         }
       })
       
-      output$file_origin_wrapper <- renderUI({
+      output$buttons_wrapper <- renderUI({
         req(input$task)
         req(input$reporting_entity)
         req(input$format)
         req(!is.null(template_info()))
         if(!is.null(input$task))if(input$task!="")if(!is.null(input$reporting_entity))if(input$reporting_entity!="")if(!is.null(input$format))if(input$format!=""){
-        radioButtons(ns("file_origin"),
-                     "Data source",
-                     c("Create new data file"="new",
-                       "Import from existing data file"="import"),
-                     selected = character(0),
-                     inline = TRUE)
+
+          div(
+            actionButton(ns("new_data"),title="Create a new data table",label="New data",icon=icon("file-circle-plus"),class = "btn-light"),
+            actionButton(ns("import_data"),title="Import an existing data table",label="Import data",icon=icon("folder-open"),class = "btn-light"),
+            uiOutput(ns("save_wrapper"))
+            )
+
         }
       })
       
@@ -148,27 +217,33 @@ data_entry_editor_server <- function(id, parent.session, config, profile, compon
         req(ready())
         req(!is.null(current_data()))
         if(!is.null(input$task))if(input$task!="")if(!is.null(input$reporting_entity))if(input$reporting_entity!="")if(!is.null(input$format))if(input$format!=""){
-          downloadButton(ns("save_data"),label=NULL,icon=shiny::icon("save"))
+          downloadButton(ns("save_data"),title="Save your data",label="Save data",icon=shiny::icon("save"),class = "btn-success")
         }
       })
       
-      observeEvent(input$file_origin,{
-        req(!is.null(input$file_origin))
-        if(input$file_origin=="new"){
+      observeEvent(input$new_data,{
+        req(input$new_data)
           ready<-ready(TRUE)
-        }
-        if(input$file_origin=="import"){
-          ready<-ready(FALSE)
-          output$file_wrapper<-renderUI({
-              fileInput(ns("file"), label = "File to edit",multiple = FALSE,accept = c(".csv"),buttonLabel = "Choose file")
-          })
-        }
       })
+      
+      observeEvent(input$import_data,{
+        req(input$import_data)
+          ready<-ready(FALSE)
+          showModal(
+            modalDialog(
+              title = "",
+              fileInput(ns("file"), label = "File to edit",multiple = FALSE,accept = c(".csv"),buttonLabel = "Choose file"),
+              easyClose = TRUE, footer = NULL,size="s" 
+            )
+          )
+              
+          })
       
       observeEvent(input$file,{
         req(input$file)
         info<-template_info()
         if(!is.null(input$file)){
+          removeModal()
           data_to_load<-readr::read_csv(input$file$datapath,col_types = readr::cols(.default = "c"))
           if(all(names(data_to_load)==info$id)){
             data_to_lead<-as.data.frame(data_to_load)
@@ -198,11 +273,12 @@ data_entry_editor_server <- function(id, parent.session, config, profile, compon
         }
       })
       
-      observeEvent(c(input$task,input$reporting_entity,input$format),{
+      observeEvent(input$run,{
         req(input$task)
         req(input$reporting_entity)
         req(input$format)
         if(!is.null(input$task))if(input$task!="")if(!is.null(input$reporting_entity))if(input$reporting_entity!="")if(!is.null(input$format))if(input$format!=""){
+          withBusyIndicatorServer(ns("run"), {
           task<-getTaskProperties(config,id=input$task)
           taskRules <- task$dsd_ref_url
           taskDef<-readTaskColumnDefinitions(file = taskRules, format = input$format, config = config, reporting_entity = input$reporting_entity,force=T)
@@ -251,6 +327,7 @@ data_entry_editor_server <- function(id, parent.session, config, profile, compon
           
           empty_row<-empty_row(data_template)
           current_data<-current_data(data_template[rep(seq_len(nrow(data_template)), 10), ])
+          })
         }
       })
       
@@ -407,34 +484,29 @@ data_entry_editor_server <- function(id, parent.session, config, profile, compon
         req(!is.null(current_data()))
         req(ready())
         info<-template_info()
-        tagList(
+        div(
           div(
             rHandsontableOutput(ns("table"))
           ),
           br(),
           div(
-          actionButton(ns("add_row"),"Add row",icon=icon("plus"),class = "btn-info"),
-          if(any(!is.na(info$ref))){actionButton(ns("show_ref"),"Show referential details",icon=icon("search"),class = "btn-warning")}else{NULL}
+          actionButton(ns("add_row"),title="Add a new row to the table",label="Add row",icon=icon("plus"),class = "btn-info")
           )
         )
         })
       
-      observeEvent(input$show_ref,{
+      output$ref_to_show_wrapper<-renderUI({
+        req(!is.null(template_info()))
         info<-template_info()
+        req(any(!is.na(info$ref)))
+    
         withref<-info[!is.na(info$ref),]$label
         withref_index<-which(!is.na(info$ref))
+        selectizeInput(ns("ref_to_show"),
+                       label="Valid values for column :",
+                       multiple = F,
+                       choices = setNames(withref_index,withref))
         
-        showModal(
-          modalDialog(
-            title = "",
-            selectizeInput(ns("ref_to_show"),
-                           label="Valid values for column :",
-                           multiple = F,
-                           choices = setNames(withref_index,withref)),
-            uiOutput(ns("display")),
-            easyClose = TRUE, footer = NULL,size="l" 
-          )
-        )
       })
       
       observeEvent(input$ref_to_show,{
@@ -448,9 +520,7 @@ data_entry_editor_server <- function(id, parent.session, config, profile, compon
             options=list(
               pageLength = 10,
               searching = TRUE,
-              autoWidth = FALSE,
-              scrollX=TRUE,
-              scrollCollapse=TRUE)
+              autoWidth = T)
           )%>% formatStyle('label',backgroundColor ='#CEF3D6' )
         )
         
