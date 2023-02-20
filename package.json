@@ -1,8 +1,9 @@
 {
   "id": "dcf-shiny",
-  "version": "0.0.20221202",
-  "date": "2022-12-02",
+  "version": "0.0.9999",
+  "date": "2023-02-07",
   "dependencies": [
+    {"package": "R6", "version": "2.5.1", "repos": "https://cran.r-project.org"},
     {"package": "dotenv", "version": "1.0.3", "repos": "https://cran.r-project.org"},
     {"package": "stringi", "version": "1.7.6", "repos": "https://cran.r-project.org"},
     {"package": "tibble", "version": "3.1.8", "repos": "https://cran.r-project.org"},
