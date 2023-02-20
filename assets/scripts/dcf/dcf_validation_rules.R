@@ -77,6 +77,7 @@ numeric_vrule <- R6Class("numeric_vrule",
    public = list(
      initialize = function(...){
        self$type = "numeric"
+       self$name = "Numeric data type"
      }
    )
 )
@@ -86,6 +87,7 @@ integer_vrule <- R6Class("integer_vrule",
    public = list(
      initialize = function(...){
        self$type = "integer"
+       self$name = "Integer data type"
      }
    )
 )
@@ -95,6 +97,7 @@ double_vrule <- R6Class("double_vrule",
    public = list(
      initialize = function(...){
        self$type = "double"
+       self$name = "Double data type"
      }
    )
 )
@@ -104,6 +107,7 @@ logical_vrule <- R6Class("logical_vrule",
    public = list(
      initialize = function(...){
        self$type = "logical"
+       self$name = "Logical data type"
      }
    )
 )
@@ -119,6 +123,54 @@ complex_vrule <- R6Class("complex_vrule",
     
     validate = function(value){
       stop("Method not implemented")
+    }
+  )
+)
+
+#op_vrule
+op_vrule <- R6Class("op_vrule",
+  inherit = abstract_vrule,
+  public = list(
+    category = "Operators",
+    operator = NA,
+    rules = list(),
+    initialize = function(operator, ...){
+      self$operator = operator
+      rules = list(...)
+      if(!all(sapply(rules, is, "abstract_vrule"))){
+        stop("At least one rule defined is not an object extending 'abstract_vrule'")
+      }
+      self$rules = rules
+    },
+    
+    validate = function(value){
+      report <- do.call("rbind", lapply(self$rules, function(rule){
+        rule$validate(value)
+      }))
+      return(report)
+    }
+  )
+)
+
+#and_vrule
+and_vrule <- R6Class("and_vrule",
+  inherit = op_vrule,
+  public = list(
+    initialize = function(...){
+      super$initialize(operator = "&", ...)
+    },
+    
+    validate = function(value){
+      report <- super$validate(value)
+      if(nrow(report)>0) if(any(report$type == "ERROR")){
+        report <- rbind(report, data.frame(
+          category = self$category,
+          rule = "And operator",
+          type = "ERROR",
+          message = sprintf("Value %s is not valid because at least one validation rule is not fulfilled", value)
+        ))
+      }
+      return(report)
     }
   )
 )
