@@ -90,6 +90,15 @@ integer_vrule <- R6Class("integer_vrule",
    )
 )
 
+double_vrule <- R6Class("double_vrule",
+   inherit = datatype_vrule,
+   public = list(
+     initialize = function(...){
+       self$type = "double"
+     }
+   )
+)
+
 logical_vrule <- R6Class("logical_vrule",
    inherit = datatype_vrule,
    public = list(
