@@ -206,7 +206,7 @@ data_entry_editor_server <- function(id, parent.session, config, profile, compon
         if(!is.null(input$task))if(input$task!="")if(!is.null(input$reporting_entity))if(input$reporting_entity!="")if(!is.null(input$format))if(input$format!=""){
 
           withBusyIndicatorUI(
-            actionButton(ns("run"),title="Run selection",label="Load template")
+            actionButton(ns("run"),title="Run selection",label="Run selection")
           )
         }
       })
@@ -559,7 +559,8 @@ data_entry_editor_server <- function(id, parent.session, config, profile, compon
         data<-current_data()
         row.names(data)<-1:nrow(data)
         info<-template_info()
-        editable_table<-rhandsontable(data)
+        editable_table<-rhandsontable(data) %>%
+               hot_context_menu(allowRowEdit = T, allowColEdit = F)
         
          if(any(!info$editable)){
            cols<-which(info$editable==FALSE)
@@ -597,7 +598,11 @@ data_entry_editor_server <- function(id, parent.session, config, profile, compon
           ),
           br(),
           div(
-          actionButton(ns("add_row"),title="Add a new row to the table",label="Add row",icon=icon("plus"),class = "btn-info")
+            column(1,
+                   actionButton(ns("add_row"),title="Add new row(s) to the table",label="Add row",icon=icon("plus"),class = "btn-info")),
+            column(1,
+                   numericInput(ns("nb_add_row"),label=NULL,min=1,max=100,step=1,value=1))
+          
           )
         )
         })
@@ -639,13 +644,20 @@ data_entry_editor_server <- function(id, parent.session, config, profile, compon
       
       observeEvent(input$add_row, {
         
-        print("ADD ROW")
         new_row<-empty_row()
         
-        last_data <- hot_to_r(input$table)
-        new_data <- rbind(last_data,new_row)
+        for (i in 1 : input$nb_add_row){
+          
+          if(i==1){
+            last_data <- hot_to_r(input$table)
+          }else {
+            last_data <- new_data
+          }
+          new_data <- rbind(last_data,new_row)
+          }
+          
+          current_data<-current_data(new_data)
         
-        current_data<-current_data(new_data)
       })
 
       
