@@ -13,8 +13,10 @@ data_entry_editor_server <- function(id, parent.session, config, profile, compon
       empty_row<-reactiveVal(NULL)
       current_data<-reactiveVal(NULL)
       ready<-reactiveVal(FALSE)
+      menu_tabs<-reactiveVal(c())
       
       output$menu<-renderUI({
+
         tabBox(id = "tabbox",title=NULL,height="600px",width = "100%",
                tabPanel(title=tagList(icon("gear"),"Settings"),
                         value="tab_settings",
@@ -33,6 +35,15 @@ data_entry_editor_server <- function(id, parent.session, config, profile, compon
         
         info<-template_info()
         
+        if("tab_editor"%in%menu_tabs()){
+           removeTab(inputId = "tabbox",
+                     session = parent.session,
+                     target = "tab_editor")
+         }
+
+         tabs_list<-unique(c(menu_tabs(),"tab_editor"))
+         menu_tabs<-menu_tabs(tabs_list)
+        
         appendTab(inputId = "tabbox",
                   session = parent.session,
                   select=TRUE,
@@ -46,6 +57,16 @@ data_entry_editor_server <- function(id, parent.session, config, profile, compon
         )
         
         if(any(!is.na(info$ref))){
+          
+          if("tab_referentials"%in%menu_tabs()){
+            removeTab(inputId = "tabbox",
+                      session = parent.session,
+                      target = "tab_referentials")
+          }
+          
+          tabs_list<-unique(c(menu_tabs(),"tab_referentials"))
+          menu_tabs<-menu_tabs(tabs_list)
+          
           appendTab(inputId = "tabbox",
                     session = parent.session,
                     select=FALSE,
@@ -58,7 +79,16 @@ data_entry_editor_server <- function(id, parent.session, config, profile, compon
             )
           )
         }
-          
+        
+        if("tab_templates"%in%menu_tabs()){
+          removeTab(inputId = "tabbox",
+                    session = parent.session,
+                    target = "tab_templates")
+        }
+         
+        tabs_list<-unique(c(menu_tabs(),"tab_templates"))
+        menu_tabs<-menu_tabs(tabs_list)
+         
         appendTab(inputId = "tabbox",
                   session = parent.session,
                   select=FALSE,
@@ -176,7 +206,7 @@ data_entry_editor_server <- function(id, parent.session, config, profile, compon
         if(!is.null(input$task))if(input$task!="")if(!is.null(input$reporting_entity))if(input$reporting_entity!="")if(!is.null(input$format))if(input$format!=""){
 
           withBusyIndicatorUI(
-            actionButton(ns("run"),title="Run selection",label="Load template")
+            actionButton(ns("run"),title="Run selection",label="Run selection")
           )
         }
       })
@@ -278,55 +308,133 @@ data_entry_editor_server <- function(id, parent.session, config, profile, compon
         req(input$reporting_entity)
         req(input$format)
         if(!is.null(input$task))if(input$task!="")if(!is.null(input$reporting_entity))if(input$reporting_entity!="")if(!is.null(input$format))if(input$format!=""){
+          reset<-FALSE
+          if(!is.null(input$table)){
+            reset<-TRUE
+            showModal(
+              modalDialog(
+                title = "Warning unsaved data will be delete",
+                p("The refresh of the selection will reset unsaved data."),
+                p("Do you confirm to reset selection ?"),
+                actionButton(ns("reset_ok"), "Confirm"),
+                actionButton(ns("reset_cancel"), "Cancel", style = "float:right;"),
+                easyClose = FALSE, footer = NULL,size="s" 
+              )
+            )
+          }
+          req(reset==FALSE)
           withBusyIndicatorServer(ns("run"), {
-          task<-getTaskProperties(config,id=input$task)
-          taskRules <- task$dsd_ref_url
-          taskDef<-readTaskColumnDefinitions(file = taskRules, format = input$format, config = config, reporting_entity = input$reporting_entity,force=T)
-          task_template<-do.call(rbind,lapply(taskDef, function(x){
-            id<-x$id
-            label<-if(!is.null(x$aliases[[1]])){x$aliases[[1]]}else{x$id}
-            mandatory<-!x$na_allowed
-            if(id=="year"){
-              default_value<-NA
-              year_list<-as.character(rev(seq(1950,as.integer(substr(Sys.Date(),1,4)))))
-              ref<-list(tibble(code=year_list,label=year_list))
-              editable<-TRUE
-            }else if(!is.null(x$allowed_values)){
-              if(length(x$allowed_values)==1){
-                default_value<-unlist(x$allowed_values)
-                ref<-list(NA)
-                editable<-FALSE
+            task<-getTaskProperties(config,id=input$task)
+            taskRules <- task$dsd_ref_url
+            taskDef<-readTaskColumnDefinitions(file = taskRules, format = input$format, config = config, reporting_entity = input$reporting_entity,force=T)
+            task_template<-do.call(rbind,lapply(taskDef, function(x){
+              id<-x$id
+              label<-if(!is.null(x$aliases[[1]])){x$aliases[[1]]}else{x$id}
+              mandatory<-!x$na_allowed
+              if(id=="year"){
+                default_value<-NA
+                year_list<-as.character(rev(seq(1950,as.integer(substr(Sys.Date(),1,4)))))
+                ref<-list(tibble(code=year_list,label=year_list))
+                editable<-TRUE
+              }else if(!is.null(x$allowed_values)){
+                if(length(x$allowed_values)==1){
+                  default_value<-unlist(x$allowed_values)
+                  ref<-list(NA)
+                  editable<-FALSE
+                }else{
+                  default_value<-NA
+                  ref<-list(tibble(code=unlist(x$allowed_values),label=unlist(x$allowed_values)))
+                  editable<-TRUE
+                }
               }else{
                 default_value<-NA
-                ref<-list(tibble(code=unlist(x$allowed_values),label=unlist(x$allowed_values)))
+                ref<-list(if(!is.null(x$ref)){readr::read_csv(x$ref)}else{NA})
                 editable<-TRUE
               }
-            }else{
-              default_value<-NA
-              ref<-list(if(!is.null(x$ref)){readr::read_csv(x$ref)}else{NA})
-              editable<-TRUE
-            }
-            
-            data<-tibble(id=id,label=label,mandatory=mandatory,default_value=default_value,ref=ref,editable=editable)
+              
+              data<-tibble(id=id,label=label,mandatory=mandatory,default_value=default_value,ref=ref,editable=editable)
             }))
-          template_info<-template_info(task_template)
-
-          info<-template_info()
-          col_names<-info$label
-          values_type<-info$default_value
-          values_type[is.na(values_type)]<-""
-          if(any(!is.na(info$ref))){
-            cols<-which(!is.na(info$ref))
-            for(col in cols){
-              values_type[col]<-NA_character_
+            template_info<-template_info(task_template)
+            
+            info<-template_info()
+            col_names<-info$label
+            values_type<-info$default_value
+            values_type[is.na(values_type)]<-""
+            if(any(!is.na(info$ref))){
+              cols<-which(!is.na(info$ref))
+              for(col in cols){
+                values_type[col]<-NA_character_
+              }
             }
-          }
-          data_template = data.frame(matrix(nrow = 1, ncol = length(col_names))) 
-          names(data_template) = col_names
-          data_template[1,]<-values_type
-          
-          empty_row<-empty_row(data_template)
-          current_data<-current_data(data_template[rep(seq_len(nrow(data_template)), 10), ])
+            data_template = data.frame(matrix(nrow = 1, ncol = length(col_names))) 
+            names(data_template) = col_names
+            data_template[1,]<-values_type
+            
+            empty_row<-empty_row(data_template)
+            current_data<-current_data(data_template[rep(seq_len(nrow(data_template)), 10), ])
+          })
+        }
+      })
+      
+      observeEvent(input$reset_cancel,{
+        removeModal()
+      })
+      
+      observeEvent(input$reset_ok,{
+        removeModal()
+        req(input$task)
+        req(input$reporting_entity)
+        req(input$format)
+        if(!is.null(input$task))if(input$task!="")if(!is.null(input$reporting_entity))if(input$reporting_entity!="")if(!is.null(input$format))if(input$format!=""){
+          withBusyIndicatorServer(ns("run"), {
+            task<-getTaskProperties(config,id=input$task)
+            taskRules <- task$dsd_ref_url
+            taskDef<-readTaskColumnDefinitions(file = taskRules, format = input$format, config = config, reporting_entity = input$reporting_entity,force=T)
+            task_template<-do.call(rbind,lapply(taskDef, function(x){
+              id<-x$id
+              label<-if(!is.null(x$aliases[[1]])){x$aliases[[1]]}else{x$id}
+              mandatory<-!x$na_allowed
+              if(id=="year"){
+                default_value<-NA
+                year_list<-as.character(rev(seq(1950,as.integer(substr(Sys.Date(),1,4)))))
+                ref<-list(tibble(code=year_list,label=year_list))
+                editable<-TRUE
+              }else if(!is.null(x$allowed_values)){
+                if(length(x$allowed_values)==1){
+                  default_value<-unlist(x$allowed_values)
+                  ref<-list(NA)
+                  editable<-FALSE
+                }else{
+                  default_value<-NA
+                  ref<-list(tibble(code=unlist(x$allowed_values),label=unlist(x$allowed_values)))
+                  editable<-TRUE
+                }
+              }else{
+                default_value<-NA
+                ref<-list(if(!is.null(x$ref)){readr::read_csv(x$ref)}else{NA})
+                editable<-TRUE
+              }
+              
+              data<-tibble(id=id,label=label,mandatory=mandatory,default_value=default_value,ref=ref,editable=editable)
+            }))
+            template_info<-template_info(task_template)
+            
+            info<-template_info()
+            col_names<-info$label
+            values_type<-info$default_value
+            values_type[is.na(values_type)]<-""
+            if(any(!is.na(info$ref))){
+              cols<-which(!is.na(info$ref))
+              for(col in cols){
+                values_type[col]<-NA_character_
+              }
+            }
+            data_template = data.frame(matrix(nrow = 1, ncol = length(col_names))) 
+            names(data_template) = col_names
+            data_template[1,]<-values_type
+            
+            empty_row<-empty_row(data_template)
+            current_data<-current_data(data_template[rep(seq_len(nrow(data_template)), 10), ])
           })
         }
       })
@@ -397,7 +505,6 @@ data_entry_editor_server <- function(id, parent.session, config, profile, compon
               data<-with_ref[i,]
               data$label<-gsub("/","-",data$label)
               ref<-data$ref[[1]]
-              ref<-subset(ref,select=-c(uri))
               ref[is.na(ref)]<-""
               col_names<-gsub("/","-",col_names)
               
@@ -452,7 +559,8 @@ data_entry_editor_server <- function(id, parent.session, config, profile, compon
         data<-current_data()
         row.names(data)<-1:nrow(data)
         info<-template_info()
-        editable_table<-rhandsontable(data)
+        editable_table<-rhandsontable(data) %>%
+               hot_context_menu(allowRowEdit = T, allowColEdit = F)
         
          if(any(!info$editable)){
            cols<-which(info$editable==FALSE)
@@ -490,7 +598,11 @@ data_entry_editor_server <- function(id, parent.session, config, profile, compon
           ),
           br(),
           div(
-          actionButton(ns("add_row"),title="Add a new row to the table",label="Add row",icon=icon("plus"),class = "btn-info")
+            column(1,
+                   actionButton(ns("add_row"),title="Add new row(s) to the table",label="Add row",icon=icon("plus"),class = "btn-info")),
+            column(1,
+                   numericInput(ns("nb_add_row"),label=NULL,min=1,max=100,step=1,value=1))
+          
           )
         )
         })
@@ -532,13 +644,20 @@ data_entry_editor_server <- function(id, parent.session, config, profile, compon
       
       observeEvent(input$add_row, {
         
-        print("ADD ROW")
         new_row<-empty_row()
         
-        last_data <- hot_to_r(input$table)
-        new_data <- rbind(last_data,new_row)
+        for (i in 1 : input$nb_add_row){
+          
+          if(i==1){
+            last_data <- hot_to_r(input$table)
+          }else {
+            last_data <- new_data
+          }
+          new_data <- rbind(last_data,new_row)
+          }
+          
+          current_data<-current_data(new_data)
         
-        current_data<-current_data(new_data)
       })
 
       
