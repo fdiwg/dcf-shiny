@@ -397,7 +397,6 @@ data_entry_editor_server <- function(id, parent.session, config, profile, compon
               data<-with_ref[i,]
               data$label<-gsub("/","-",data$label)
               ref<-data$ref[[1]]
-              ref<-subset(ref,select=-c(uri))
               ref[is.na(ref)]<-""
               col_names<-gsub("/","-",col_names)
               
