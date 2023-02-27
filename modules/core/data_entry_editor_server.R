@@ -13,8 +13,10 @@ data_entry_editor_server <- function(id, parent.session, config, profile, compon
       empty_row<-reactiveVal(NULL)
       current_data<-reactiveVal(NULL)
       ready<-reactiveVal(FALSE)
+      menu_tabs<-reactiveVal(c())
       
       output$menu<-renderUI({
+
         tabBox(id = "tabbox",title=NULL,height="600px",width = "100%",
                tabPanel(title=tagList(icon("gear"),"Settings"),
                         value="tab_settings",
@@ -33,6 +35,15 @@ data_entry_editor_server <- function(id, parent.session, config, profile, compon
         
         info<-template_info()
         
+        if("tab_editor"%in%menu_tabs()){
+           removeTab(inputId = "tabbox",
+                     session = parent.session,
+                     target = "tab_editor")
+         }
+
+         tabs_list<-unique(c(menu_tabs(),"tab_editor"))
+         menu_tabs<-menu_tabs(tabs_list)
+        
         appendTab(inputId = "tabbox",
                   session = parent.session,
                   select=TRUE,
@@ -46,6 +57,16 @@ data_entry_editor_server <- function(id, parent.session, config, profile, compon
         )
         
         if(any(!is.na(info$ref))){
+          
+          if("tab_referentials"%in%menu_tabs()){
+            removeTab(inputId = "tabbox",
+                      session = parent.session,
+                      target = "tab_referentials")
+          }
+          
+          tabs_list<-unique(c(menu_tabs(),"tab_referentials"))
+          menu_tabs<-menu_tabs(tabs_list)
+          
           appendTab(inputId = "tabbox",
                     session = parent.session,
                     select=FALSE,
@@ -58,7 +79,16 @@ data_entry_editor_server <- function(id, parent.session, config, profile, compon
             )
           )
         }
-          
+        
+        if("tab_templates"%in%menu_tabs()){
+          removeTab(inputId = "tabbox",
+                    session = parent.session,
+                    target = "tab_templates")
+        }
+         
+        tabs_list<-unique(c(menu_tabs(),"tab_templates"))
+        menu_tabs<-menu_tabs(tabs_list)
+         
         appendTab(inputId = "tabbox",
                   session = parent.session,
                   select=FALSE,
