@@ -1,4 +1,5 @@
 #draft model to define validation rules 
+require(R6)
 
 #abstract_vrule
 abstract_vrule <- R6Class("abstract_vrule",
