@@ -43,7 +43,6 @@
     {"repo": "eblondel/atom4R", "from": "github", "dependencies": false},
     {"repo": "r-geoflow/geoflow", "from": "github", "dependencies": false},
     {"package": "openxlsx", "version": "4.2.5.1", "repos": "https://cran.r-project.org"},
-    {"package": "rhandsontable", "version": "0.3.8", "repos": "https://cran.r-project.org"},
-    {"package": "R6", "version": "2.5.1", "repos": "https://cran.r-project.org"}
+    {"package": "rhandsontable", "version": "0.3.8", "repos": "https://cran.r-project.org"}
   ]
 }
