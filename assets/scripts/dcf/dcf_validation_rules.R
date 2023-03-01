@@ -112,14 +112,14 @@ integer_vrule <- R6Class("integer_vrule",
      initialize = function(...){
        self$type = "integer"
        self$name = "Integer data type"
+     },
+     
+     validate = function(value){
+       nvr = numeric_vrule$new()
+       rep = rbind(nvr$validate(value), super$validate(value))
+       return(rep)
      }
-   ),
-   
-   validate = function(value){
-     nvr = numeric_vrule$new()
-     rep = rbind(nvr$validate(value), super$validate(value))
-     return(rep)
-   }
+   )
 )
 
 double_vrule <- R6Class("double_vrule",
