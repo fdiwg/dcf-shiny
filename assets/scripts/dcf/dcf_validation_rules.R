@@ -1,4 +1,5 @@
 #draft model to define validation rules 
+require(R6)
 
 #abstract_vrule
 abstract_vrule <- R6Class("abstract_vrule",
@@ -28,6 +29,28 @@ simple_vrule <- R6Class("simple_vrule",
     }
     
   )                                  
+)
+
+
+#date_vrule
+datatype_vrule <- R6Class("date_vrule",
+  inherit = simple_vrule,
+  public = list(
+    category = "Dates",
+    name = "Date",
+    initialize = function(...){
+    },
+    
+    validate = function(value){
+      report <-data.frame(
+        category = character(0),
+        rule = character(0),
+        type = character(0),
+        message = character(0)
+      )
+      
+    }
+  )
 )
 
 #datatype_vrule
@@ -82,22 +105,35 @@ numeric_vrule <- R6Class("numeric_vrule",
    )
 )
 
+
 integer_vrule <- R6Class("integer_vrule",
    inherit = datatype_vrule,
    public = list(
      initialize = function(...){
        self$type = "integer"
        self$name = "Integer data type"
+     },
+     
+     validate = function(value){
+       nvr = numeric_vrule$new()
+       rep = rbind(nvr$validate(value), super$validate(value))
+       return(rep)
      }
    )
 )
 
 double_vrule <- R6Class("double_vrule",
-   inherit = datatype_vrule,
+  inherit = datatype_vrule,
    public = list(
      initialize = function(...){
        self$type = "double"
        self$name = "Double data type"
+     },
+     
+     validate = function(value){
+       nvr = numeric_vrule$new()
+       rep = rbind(nvr$validate(value), super$validate(value))
+       return(rep)
      }
    )
 )

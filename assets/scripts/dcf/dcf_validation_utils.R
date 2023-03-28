@@ -71,7 +71,7 @@ ymtodate<- function(date,period="start"){
 
 #ytodate
 ytodate<- function(date,period="start"){
-  Y<-unlist(strsplit(date[i],"-"))[1]
+  Y<-unlist(strsplit(date,"-"))[1]
   start_date<-paste0(Y,"-01-01")
   end_date<-paste0(Y,"-12-31")
   if(period=="start")return(start_date)
