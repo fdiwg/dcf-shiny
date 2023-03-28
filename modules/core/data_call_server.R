@@ -14,7 +14,7 @@ data_call_server <- function(id, parent.session, config, profile, components){
         error = NULL
       )
       
-      onlyOpened<-reactiveVal(TRUE)
+      onlyOpened<-reactiveVal(FALSE)
       
       #dcTableHandler
       dcTableHandler <- function(data, uuids){
@@ -189,7 +189,7 @@ data_call_server <- function(id, parent.session, config, profile, components){
       
       #status selector
       output$status_selector <- renderUI({
-        checkboxInput(ns("limit_status"), "Only Opened", TRUE)
+        checkboxInput(ns("limit_status"), "Only Opened", FALSE)
       })
       
       #Task selector
