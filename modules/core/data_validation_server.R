@@ -156,13 +156,16 @@ data_validation_server <- function(id, parent.session, config, profile, componen
       })
       #TAB 1 REPORTING ENTITY SELECTOR
       output$reporting_entity_wrapper <- renderUI({
+        has_task <- FALSE
+        if(!is.null(input$task))if(input$task!="") has_task <- TRUE
+        if(has_task){
         if(!is.null(profile$reporting_entities)) {
           if(all(profile$reporting_entities != "")){
             if(config$dcf$reporting_entities$name %in% c("country", "flagstate")){
               selectizeInput(ns("reporting_entity"), label = "Reporting entity", selected = NULL, multiple = FALSE, 
                choices = {
                  ref_entity <- getReportingEntityCodes(config)
-                 ref_entity <- ref_entity[ref_entity$code %in% profile$reporting_entities,]
+                 ref_entity <- ref_entity[ref_entity$code %in% getDBUserReportingEntities(profile = profile, pool = pool),]
                  entity_choices <- ref_entity$code
                  setNames(entity_choices, ref_entity$label)
                },options = list( 
@@ -185,7 +188,7 @@ data_validation_server <- function(id, parent.session, config, profile, componen
               selectizeInput(ns("reporting_entity"), label = "Reporting entity", selected = NULL, multiple = FALSE, 
                              choices = {
                                ref_entity <- getReportingEntityCodes(config)
-                               ref_entity <- ref_entity[ref_entity$code %in% profile$reporting_entities,]
+                               ref_entity <- ref_entity[ref_entity$code %in% getDBUserReportingEntities(profile = profile, pool = pool),]
                                entity_choices <- ref_entity$code
                                setNames(entity_choices, ref_entity$label)
                              },options = list( 
@@ -208,7 +211,7 @@ data_validation_server <- function(id, parent.session, config, profile, componen
               selectizeInput(ns("reporting_entity"), label = "Reporting entity", selected = NULL, multiple = FALSE,
                 choices = {
                   ref_entity <- getReportingEntityCodes(config)
-                  ref_entity <- ref_entity[ref_entity$code %in% profile$reporting_entities,]
+                  ref_entity <- ref_entity[ref_entity$code %in% getDBUserReportingEntities(profile = profile, pool = pool),]
                   entity_choices <- ref_entity$code
                   setNames(entity_choices, ref_entity$label)
                 }, options = list(
@@ -222,6 +225,9 @@ data_validation_server <- function(id, parent.session, config, profile, componen
           }
         }else{
           tags$span("")
+        }
+        }else{
+          NULL
         }
       })
       #TAB 1 FORMAT SELECTOR
