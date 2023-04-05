@@ -356,9 +356,22 @@ data_validation_server <- function(id, parent.session, config, profile, componen
                   )
         )
         
+        hostess <- Hostess$new()
+        hostess$set_loader(
+          hostess_loader(
+            preset = "circle", 
+            text_color = "white",
+            class = "label-center",
+            style="margin:0 auto;",
+            center_page = TRUE
+          ))
+        
+        Sys.sleep(1)
+        
         waiting_screen<-tagList(
           h3("Validation in progress"),
-          spin_flower(),
+          #spin_flower(),
+          hostess$get_loader(),
           h4("Please wait, validity of your dataset is currently being checked ...")
         )
         
@@ -367,7 +380,7 @@ data_validation_server <- function(id, parent.session, config, profile, componen
         INFO("Read Task '%s' column definitions", taskProperties()$name)
         task_def <- readTaskColumnDefinitions(file = taskRules, format = input$format, config = config, reporting_entity = input$reporting_entity)
         INFO("Validate data")
-        out<-validateData(file=data, task_def = task_def, config = config)
+        out<-validateData(file=data, task_def = task_def, config = config,hostess=hostess)
         INFO("Successful data validation")
         if(out$valid){
           submission$reporting_entity <- input$reporting_entity
@@ -375,6 +388,7 @@ data_validation_server <- function(id, parent.session, config, profile, componen
           if(!identical(names(data),names(loadedData()))){
             transformation$data_rename<-TRUE
           }
+          hostess$set(95)
           print(head(as.data.frame(data),2))
           if(input$format=="simplified"){
             generic_task_def <- readTaskColumnDefinitions(file = taskRules, format = "generic", config = config, reporting_entity = input$reporting_entity)
@@ -384,6 +398,7 @@ data_validation_server <- function(id, parent.session, config, profile, componen
           }
           loadedData<-loadedData(data)
         }
+        hostess$set(99)
         gbOut<-gbOut(out)
         print(names(loadedData()))
 
@@ -553,9 +568,22 @@ data_validation_server <- function(id, parent.session, config, profile, componen
       
       observeEvent(input$goSpecValid,{
         
+        hostess <- Hostess$new()
+        hostess$set_loader(
+          hostess_loader(
+            preset = "circle", 
+            text_color = "white",
+            class = "label-center",
+            style="margin:0 auto;",
+            center_page = TRUE
+          ))
+        
+        Sys.sleep(1)
+        
         waiting_screen<-tagList(
           h3("Check consistency with the ongoing data call"),
-          spin_flower(),
+          #spin_flower(),
+          hostess$get_loader(),
           h4("Please wait, your dataset is currently checked vs. the ongoing data call ...")
         )
         
@@ -565,9 +593,9 @@ data_validation_server <- function(id, parent.session, config, profile, componen
         taskSupplRules$reporting_entity<-input$reporting_entity
         data<-loadedData()
 
-        out<-validateCallRules(file = data,rules = taskSupplRules)
+        out<-validateCallRules(file = data,rules = taskSupplRules,hostess=hostess)
         dcOut<-dcOut(out)
-        
+        hostess$set(95)
         appendTab(inputId = "wizard-tabs",
                   session = parent.session,
                   select=TRUE,
