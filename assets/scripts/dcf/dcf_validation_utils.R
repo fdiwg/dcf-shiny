@@ -108,7 +108,7 @@ readTaskColumnDefinitions<- function(file, format, config = NULL, reporting_enti
 }
 
 #validateData
-validateData<-function(file, task_def, config = NULL){
+validateData<-function(file, task_def, config = NULL,hostess=NULL){
   
   rules<-task_def
   
@@ -165,6 +165,9 @@ validateData<-function(file, task_def, config = NULL){
   # ERRORS DETECTION
   ##MANDATORIES COLUMNS
   INFO("Check generic columns")
+  current_count<-0
+  add_step<-60/length(generic_cols)
+  if(!is.null(hostess)) hostess$set(90)
   for (i in generic_cols){
     
     x<-rules[[i]]
@@ -233,8 +236,9 @@ validateData<-function(file, task_def, config = NULL){
     }
     
     data_names<-data_names[!data_names %in% usedName]
+    if(!is.null(hostess)) hostess$set(current_count+add_step)
   }
-  
+  if(!is.null(hostess)) hostess$set(60)
   #CONDITIONALS COLUMNS
   ## PERID VALIDITY
   INFO("Check special columns (time)")
@@ -260,6 +264,7 @@ validateData<-function(file, task_def, config = NULL){
         date_cols[[type]][i]<-list(NULL)
       }
     }
+    if(!is.null(hostess)) hostess$set(70)
     
     if(is.null(date_cols$combined$time)&is.null(date_cols$separated$time_start)&is.null(date_cols$separated$time_end)){
       errors<-rbind(errors,data.frame(type="ERROR",rule="E02",row="-",column="time",category="Missing mandatory column",message="'time' or 'time_start' and 'time_end' columns are missing"))
@@ -424,7 +429,7 @@ validateData<-function(file, task_def, config = NULL){
       }
     }
   } 
-  
+  if(!is.null(hostess)) hostess$set(80)
   #REPORTING ENTITY COLUMN
   INFO("Check reporting entity column")
   if(!is.null(reporting_entity_col)){
@@ -472,11 +477,14 @@ validateData<-function(file, task_def, config = NULL){
     }
   }
   
+  if(!is.null(hostess)) hostess$set(85)
   ### SUPPLEMENTARIES COLUMNS
   
   for(addcol in data_names){
     errors<-rbind(errors,data.frame(type="INFO",rule="I01",row="-",column=addcol,category="Column not used",message=sprintf("'%s' is not a mandatory column and will be skiped",addcol)))
   }
+  
+  if(!is.null(hostess)) hostess$set(90)
   
   ### VALIDITY RESULTS
   if(nrow(subset(errors,type=="ERROR"))>0){
@@ -575,7 +583,7 @@ simplifiedToGeneric<-function(file,rules){
 }
 
 #validateCallRules
-validateCallRules <- function(file, rules){
+validateCallRules <- function(file, rules,hostess=NULL){
   
   errors<-data.frame(
     type=character(),
@@ -604,7 +612,7 @@ validateCallRules <- function(file, rules){
       data<-readr::read_csv(file,col_types = readr::cols(.default = "c"))
     }else{}
   }
-  
+  if(!is.null(hostess)) hostess$set(5)
   #TIME DATA CALL CONSISTANCY
   if("time_start" %in% names(rules)){
     rule<-eval_variable_expression(rules[["time_start"]])
@@ -626,7 +634,7 @@ validateCallRules <- function(file, rules){
       }
     }
   }
-  
+  if(!is.null(hostess)) hostess$set(15)
   if("time_end" %in% names(rules)){
     rule<-eval_variable_expression(rules[["time_end"]])
     #FIRST CHECK : NO YEAR IN DATA AFTER DATACALL REQUEST
@@ -661,7 +669,7 @@ validateCallRules <- function(file, rules){
       }
     }
   }
-  
+  if(!is.null(hostess)) hostess$set(30)
   if(all(c("time_start","time_end") %in% names(rules))){
     rule<-c(eval_variable_expression(rules[["time_start"]]),eval_variable_expression(rules[["time_end"]]))
     #THIRD CHECK : ALL YEAR PRESENT
@@ -686,7 +694,7 @@ validateCallRules <- function(file, rules){
       }
     }
   }
-  
+  if(!is.null(hostess)) hostess$set(45)
   if("time" %in% names(rules)){
     rule<-eval_variable_expression(rules[["time"]])
     #FIRST CHECK : ALL YEAR IN DATA MUST BE INCLUDED IN DATACALL REQUEST
@@ -763,7 +771,7 @@ validateCallRules <- function(file, rules){
       }
     }
   }
-  
+  if(!is.null(hostess)) hostess$set(60)
   if("reporting_entity" %in% names(rules)){
     rule<-rules[["reporting_entity"]]
     #FIRST CHECK :ONLY ON REPORTING ENTITY IN DATA
@@ -792,7 +800,7 @@ validateCallRules <- function(file, rules){
       }
     }
   }
-  
+  if(!is.null(hostess)) hostess$set(75)
   if(nrow(subset(errors,type=="ERROR"))>0){
     valid<-FALSE
   }else{
@@ -803,7 +811,7 @@ validateCallRules <- function(file, rules){
     tests = tests, 
     valid = valid
   )
-  
+  if(!is.null(hostess)) hostess$set(80)
   return(out)
   
 }
