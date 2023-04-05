@@ -11,6 +11,7 @@ ui <- shiny::tagList(
       useShinyjs(),
       useWaiter(),
       useHostess(),
+      rclipboardSetup(),
       tags$head(
         tags$link(rel = "stylesheet", type = "text/css", href = "dcf-shiny.css")
       )
