@@ -1,7 +1,7 @@
 {
   "id": "dcf-shiny",
-  "version": "0.0.9999",
-  "date": "2023-03-13",
+  "version": "0.1.0",
+  "date": "2023-04-05",
   "dependencies": [
     {"package": "R6", "version": "2.5.1", "repos": "https://cran.r-project.org"},
     {"package": "dotenv", "version": "1.0.3", "repos": "https://cran.r-project.org"},
