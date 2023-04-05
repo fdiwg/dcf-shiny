@@ -53,12 +53,15 @@ if(out$valid){
           row_spec(which(test$status =="NOT TESTED"), bold = T, color = "#808080", background = "#f0f0f0")  
 ```
 
-# Details of errors
+# Summary of errors
 ```{r, results='asis',message=FALSE, warning=FALSE, comment=FALSE,echo=FALSE}
 if(nrow(out$errors)==0){
   cat("\\normalsize\\color{green1} No error detected \\color{black}")
 }else{
-  kableExtra::kable(out$errors,format = "latex", booktabs = T,linesep = "")%>%
+  kableExtra::kable(out$errors%>%
+                      group_by(type,rule,column,category)%>%
+                      summarise(`number of rows`=length(row))%>%
+                      ungroup(),format = "latex", booktabs = T,linesep = "")%>%
     kableExtra::kable_styling(latex_options = c("striped","scale_down","HOLD_position"),font_size = 12,stripe_color="#e8e8e8")%>%
           row_spec(which(out$errors$type =="INFO"), bold = F, color = "black", background = "#fcfdd0")%>%
           row_spec(which(out$errors$type =="WARNING"), bold = F, color = "black", background = "#FDEBD0")%>%
