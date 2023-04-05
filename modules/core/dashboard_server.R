@@ -28,6 +28,15 @@ dashboard_server <- function(id, parent.session, config, profile, components){
         }
       })
       
+      output$clip <- renderUI({
+        rclipButton(
+          inputId = ns("clipbtn"),
+          label = "Copy token",
+          clipText = profile$jwt, 
+          icon = icon("copy")
+        )
+      })
+      
       output$roles <- renderDataTable({
         data.frame(
           roles = paste0(profile$shiny_app_roles, collapse=", ")
