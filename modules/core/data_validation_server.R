@@ -529,12 +529,24 @@ data_validation_server <- function(id, parent.session, config, profile, componen
       #Download Pdf 
       output$gbreport <- downloadHandler(
         filename = function(){ 
-          basename(gbReportPath()) },
+          gsub("pdf","zip",basename(gbReportPath())) },
         content = function(file){
-          file.copy(gbReportPath(),file)
-        }
-      )
-      
+          list_files<-c()
+          tmpdir <- tempdir()
+          current_path<-getwd()
+          setwd(tempdir())
+          list_files<-c(list_files,basename(gbReportPath()))
+          out<-gbOut()
+          if(nrow(out$errors)>0){
+            file_path<-gsub(".pdf","_errors_detail.csv",basename(gbReportPath()))
+            write.csv(out$errors,file_path,row.names = F)
+            list_files<-c(list_files,file_path)
+          }
+          zip(zipfile=file,files=list_files)
+          setwd(current_path)
+          },
+          contentType = "application/zip")
+
       #TAB 4 - CONSISTENCY WITH DATA CALL
       #TAB 4 MANAGER
       #TODO call validateCallRules once we added the tab
@@ -664,11 +676,23 @@ data_validation_server <- function(id, parent.session, config, profile, componen
       #Download Pdf 
       output$dcreport <- downloadHandler(
         filename = function(){ 
-          basename(dcReportPath()) },
+          gsub("pdf","zip",basename(dcReportPath())) },
         content = function(file){
-          file.copy(dcReportPath(),file)
-        }
-      )
+          list_files<-c()
+          tmpdir <- tempdir()
+          current_path<-getwd()
+          setwd(tempdir())
+          list_files<-c(list_files,basename(dcReportPath()))
+          out<-dcOut()
+          if(nrow(out$errors)>0){
+            file_path<-gsub(".pdf","_errors_detail.csv",basename(dcReportPath()))
+            write.csv(out$errors,file_path,row.names = F)
+            list_files<-c(list_files,file_path)
+          }
+          zip(zipfile=file,files=list_files)
+          setwd(current_path)
+        },
+        contentType = "application/zip")
       
       #TAB 5 - SEND DATA
       #TAB 5 MANAGER
