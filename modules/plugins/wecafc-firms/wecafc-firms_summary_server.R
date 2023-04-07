@@ -60,10 +60,12 @@ function(id, parent.session, config, profile, components){
         }
         
         df<-df%>%
-          complete(nesting(time_end),flagstate=entity_list,fill = list(value=0))%>%
+          complete(nesting(time_end=full_seq(time_end, 1)),flagstate=entity_list,fill = list(value=0))%>%
           rename(year=time_end)%>%
           arrange(desc(flagstate),year)%>%
           pivot_wider(names_from = year,values_from = value,names_sort=T)
+        
+        print(head(as.data.frame(df)))
         
         y_lab<-df$flagstate
         x_lab<-colnames(df)[-1]
