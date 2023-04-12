@@ -68,7 +68,7 @@ RUN /rocker_scripts/install_geospatial.sh
 RUN install2.r --error --skipinstalled --ncpus -1 httpuv
 RUN R -e "install.packages(c('remotes','jsonlite','yaml'), repos='https://cran.r-project.org/')"
 # clone app
-RUN git -C /root/ clone git@github.com:fdiwg/dcf-shiny.git && echo "OK!"
+RUN git -C /root/ clone https://github.com/fdiwg/dcf-shiny.git && echo "OK!"
 RUN ln -s /root/dcf-shiny /srv/dcf-shiny
 # install R app package dependencies
 RUN R -e "source('./srv/dcf-shiny/install.R')"
