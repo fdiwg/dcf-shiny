@@ -10,10 +10,109 @@ function(id, parent.session, config, profile, components){
       reporting_entities<-config$dcf$reporting_entities$codelist_ref$code
       
       data<-reactiveVal(NULL)
+      data_s<-reactiveVal(NULL)
+      
+      pretty_seq<-function(x){
+        
+        break_list<-which(c(1,diff(x)) != 1)
+        done<-c()
+        new_vec<-c()
+        
+        if(length(break_list>0)){
+          for(i in break_list){
+            
+            target<-x[1:i-1]
+            
+            target<-setdiff(target,done)
+            
+            done<-c(done,target)
+            
+            min_v<-min(target)
+            
+            max_v<-max(target)
+            
+            seq_v<-if(min_v!=max_v){paste0(min_v,"-",max_v)}else{as.character(min_v)}
+            
+            new_vec<-c(new_vec,seq_v)
+          }
+          
+          remaining<-setdiff(x,done)
+          new_vec<-c(new_vec,remaining)
+        }else{
+          min_v<-min(x)
+          max_v<-max(x)
+          new_vec<-if(min_v!=max_v){paste0(min_v,"-",max_v)}else{as.character(min_v)}
+        }
+        return(new_vec)
+      }
+      
+      output$menu<-renderUI({
+        
+        tabBox(id = "tabbox",title=NULL,height="600px",width = "100%",
+               tabPanel(title=tagList(icon("clipboard")," Summary"),
+                        value="tab_summary",
+                        fluidRow(
+                          div(
+                            class = "col-md-2",
+                            withBusyIndicatorUI(
+                              actionButton(ns("summaryBtn"),"Compute summary")
+                            )
+                          ),
+                          div(
+                            class = "col-md-2",
+                            uiOutput(ns("entities_selector_s"))
+                          ),
+                          div(
+                            class = "col-md-2",
+                            uiOutput(ns("stat_selector_s"))
+                          )
+                        ),
+                        fluidRow(
+                          withSpinner(plotlyOutput(ns("heatmap_s")),type=4)
+                        )
+               ),
+               tabPanel(title=tagList(icon("list")," By Task"),
+                        value="tab_by_task",
+                        fluidRow(
+                          div(
+                            class = "col-md-2",
+                            uiOutput(ns("task_selector"))
+                          ),
+                          div(
+                            class = "col-md-2",
+                            uiOutput(ns("entities_selector"))
+                          )
+                        ),
+                        fluidRow(
+                          withSpinner(plotlyOutput(ns("heatmap")),type=4)
+                        )
+               )
+        )
+      })
+      
+      
       
       #status selector
       output$entities_selector <- renderUI({
         checkboxInput(ns("limit_entities"), "Limit to entities with data", TRUE)
+      })
+      
+      output$entities_selector_s <- renderUI({
+        checkboxInput(ns("limit_entities_s"), "Limit to entities with data", TRUE)
+      })
+      
+      output$stat_selector_s<-renderUI({
+        selectizeInput(ns("stat_s"),
+                       label="Statistic",
+                       multiple = F,
+                       choices = c("Oldest available year"="min_year",
+                                   "Most recent available year"="max_year",
+                                   "Covered period"="period",
+                                   "Available years"="available_years",
+                                   "Number of years"="nb_year",
+                                   "Number of records"="nb_record"),
+                       selected="period"
+        )
       })
       
       #Task selector
@@ -28,6 +127,34 @@ function(id, parent.session, config, profile, components){
                          onInitialize = I('function() { this.setValue(""); }')
                        )
         )
+      })
+      
+      observeEvent(input$summaryBtn,{
+        withBusyIndicatorServer(ns("summaryBtn"), {
+        summary<-do.call("rbind",lapply(getTasks(config,withId=TRUE),function(x){
+        items <- SH$listWSItems(parentFolderID = subset(task_folders,name==x)$id)
+        last_modification_time <- max(items$lastModificationTime)
+        items <- items[items$lastModificationTime == last_modification_time,]
+        items <- items [endsWith(items$name,"_db_new.csv"),]
+        item<-SH$downloadItem(item = items, wd = tempdir())
+        file<-readr::read_csv(item)
+
+        file<-file%>%
+          group_by(flagstate)%>%
+          summarise(period=paste0("first:",year(min(time_end,na.rm=T)),"- last:",year(max(time_end,na.rm=T))),
+                    min_year=as.character(year(min(time_end,na.rm=T))),
+                    max_year=as.character(year(max(time_end,na.rm=T))),
+                    nb_year=as.character(length(unique(year(time_end)))),
+                    nb_record=as.character(length(flagstate)),
+                    available_years=paste0(pretty_seq(sort(unique(year(time_end)))),collapse=";"))%>%
+          arrange(desc(flagstate))%>%
+          ungroup()%>%
+          mutate(task=x)
+        
+        })
+        )
+        data_s<-data_s(summary)
+        })
       })
       
       observeEvent(input$task,{
@@ -96,6 +223,100 @@ function(id, parent.session, config, profile, components){
                     showlegend = FALSE,
                     xaxis = list(tickvals=seq(min(x_lab),max(x_lab),1),ticktext=as.character(seq(min(x_lab),max(x_lab),1)),showgrid = F)
         )
+        return(fig)
+      })
+      
+      output$heatmap_s<-renderPlotly({
+        req(!is.null(data_s()))
+        req(!is.null(input$limit_entities_s))
+        print("RUN HEATMAP")
+        req(!is.null(input$stat_s))
+        print(input$stat_s)
+        df<-data_s()
+        df<-df[,c("flagstate","task",input$stat_s)]
+
+        names(df)[names(df) == input$stat_s] <- "stat"
+        df<-unique(df)
+        
+        df<-df%>%
+        rowwise()%>%
+        mutate(value=ifelse(input$stat_s%in%c("nb_year","nb_record"),as.numeric(stat),1))%>%
+        ungroup()
+        
+        max_value<-max(df$value,na.rm=T)
+        
+        print(max_value)
+        if(isTRUE(input$limit_entities_s)){
+          entity_list<-unique(df$flagstate)
+        }else{
+          entity_list<-reporting_entities
+        }
+        
+        df<-df%>%
+          complete(nesting(task),flagstate=entity_list,fill = list(value=0,stat="(no data)"))%>%
+          arrange(desc(flagstate))
+        
+        text<-df%>%
+          select(-value)
+        
+        dfm<-df%>%
+          select(-stat)%>%
+          pivot_wider(names_from = task,values_from = value,names_sort=T)
+        
+
+          
+        
+        print(head(as.data.frame(dfm)))
+        print(head(as.data.frame(text)))
+        
+        y_lab<-dfm$flagstate
+        x_lab<-colnames(dfm)[-1]
+        
+        df_matrix<-as.matrix(dfm[,-1])
+        
+        # colorScale <- data.frame(
+        #   z = c(0,1),
+        #   col=c("grey","green")
+        # ) 
+        
+        if(input$stat_s%in%c("nb_year","nb_record")){
+        print("HERE")
+        fig<-plot_ly(
+          height = 150+40*length(y_lab),
+          x=x_lab,
+          y=y_lab,
+          z = df_matrix,
+          zmin=0,
+          zmax=max(as.numeric(text$stat)),
+          xgap=10,
+          ygap=10,
+          color = df$value,
+          colors = c("grey", "#45AD15"),
+          type = "heatmap"
+        )
+        
+        }else{
+          
+        fig<-plot_ly(
+          height = 150+40*length(y_lab),
+          x=x_lab,
+          y=y_lab,
+          z = df_matrix,
+          zmin=0,
+          zmax=1,
+          xgap=10,
+          ygap=10,
+          colorscale = setNames(data.frame(c(0,1),c("grey","#45AD15") ), NULL),
+          colorbar=list(tickmode='array',tickvals=c(0,1),ticktext=c("no data","data"),len=0.2), 
+          type = "heatmap"
+        )
+        
+        }
+        
+        fig<-layout(fig,
+                    showlegend = FALSE,
+                    xaxis = list(side ="top",showgrid = F)
+        )%>% add_annotations(x = text$task, y = text$flagstate, text = text$stat, xref = 'x', yref = 'y', showarrow = FALSE, font=list(color='black'))
         return(fig)
       })
       
