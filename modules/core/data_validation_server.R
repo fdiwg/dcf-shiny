@@ -20,6 +20,10 @@ data_validation_server <- function(id, parent.session, config, profile, componen
         dcReportPath<<-reactiveVal(NULL)
         taskProperties<<-reactiveVal(NULL)
         loadedData<<-reactiveVal(NULL)
+        file_info<<-reactiveValues(
+          datapath = NULL,
+          name = NULL
+        )
         transformation<<-reactiveValues(
           data_reformat = FALSE,
           data_rename = FALSE
@@ -302,11 +306,31 @@ data_validation_server <- function(id, parent.session, config, profile, componen
         if(!is.null(input$file)){
           if(any(endsWith(input$file$datapath,c("xls","xlsx")))){
             data<-read_excel(input$file$datapath,col_types = "text")
+            file_info$datapath<-input$file$datapath
+            file_info$name<-input$file$name
           }else if(any(endsWith(input$file$datapath,"csv"))){
             data<-readr::read_csv(input$file$datapath,col_types = readr::cols(.default = "c"))
+            file_info$datapath<-input$file$datapath
+            file_info$name<-input$file$name
+            print(file_info$name)
+          }else if(any(endsWith(input$file$datapath,"zip"))){
+            files<-zip_list(input$file$datapath)
+            unzip(input$file$datapath,files=c(files$filename[1]),exdir = dirname(input$file$datapath))
+            target_file<-file.path(dirname(input$file$datapath),files$filename[1])
+            if(any(endsWith(target_file,c("xls","xlsx")))){
+              data<-read_excel(target_file,col_types = "text")
+            }else if(any(endsWith(target_file,"csv"))){
+              data<-readr::read_csv(target_file,col_types = readr::cols(.default = "c"))
+            }else{
+              stop()
+            }
+            file_info$datapath<-target_file
+            file_info$name<-basename(target_file)
+            print(file_info$name)
           }else{
             stop()
           }
+            
           loadedData<-loadedData(data)
           DT::datatable(
             data,
@@ -412,7 +436,7 @@ data_validation_server <- function(id, parent.session, config, profile, componen
         info<-list(task_id=input$task,
                    date=Sys.Date(),
                    task_name=taskProperties()$name,
-                   file=input$file$name,
+                   file=file_info$name,
                    format=input$format,
                    flagstate=input$reporting_entity)
         
@@ -500,7 +524,7 @@ data_validation_server <- function(id, parent.session, config, profile, componen
             ),
             column(6,style = "border: 1px solid black;",
                    p(strong("Task Name: "),taskProperties()$name),
-                   p(strong("File : "),input$file$name)
+                   p(strong("File : "),file_info$name)
             ),
             column(3,style = "border: 1px solid black;",
                    p(strong("Format : "),input$format),
@@ -826,13 +850,13 @@ data_validation_server <- function(id, parent.session, config, profile, componen
         hostess$set(25)
         
         #original file
-        new_filename<-file.path(dirname(input$file$datapath),input$file$name)
-        file.rename(input$file$datapath,new_filename)
+        new_filename<-file.path(dirname(file_info$datapath),file_info$name)
+        file.rename(file_info$datapath,new_filename)
         uploadedOriginalDataId <- store$uploadFile(folderPath = file.path(config$dcf$user_workspace, dc_folder), file = new_filename, description ="Original dataset")
         
         #file for submission
         if(!is.null(uploadedOriginalDataId)){
-          INFO("Successful upload for source file '%s'", input$file$datapath)
+          INFO("Successful upload for source file '%s'", file_info$datapath)
           data_filename <- file.path(getwd(), paste0(dc_folder, ".csv"))
           readr::write_csv(loadedData(), data_filename)
           uploadedDataId <- store$uploadFile(folderPath = file.path(config$dcf$user_workspace, dc_folder), file = data_filename, description ="Formated dataset")
