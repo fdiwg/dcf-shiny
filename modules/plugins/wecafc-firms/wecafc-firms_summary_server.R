@@ -65,6 +65,10 @@ function(id, parent.session, config, profile, components){
                           div(
                             class = "col-md-2",
                             uiOutput(ns("stat_selector_s"))
+                          ),
+                          div(
+                            class = "col-md-2",
+                            uiOutput(ns("download_wrapper"))
                           )
                         ),
                         fluidRow(
@@ -156,6 +160,61 @@ function(id, parent.session, config, profile, components){
         data_s<-data_s(summary)
         })
       })
+      
+      output$download_wrapper<-renderUI({
+        req(data_s())
+        if(nrow(data_s())>0){
+        downloadButton(ns("download"),label="Download summary",icon=shiny::icon("file-excel"),style = "padding: 5px 20px; margin: 2px 8px;")
+        }
+      })
+      
+      output$download <- downloadHandler(
+        filename = function() { 
+          sprintf("summary.xlsx")
+        },
+        content = function(filename) {
+          req(nrow(data_s())>0)
+          wb = createWorkbook()
+          
+          for(i in c("period","available_years","min_year","max_year","nb_year","nb_record")){
+          df<-data_s()
+          df<-df[,c("flagstate","task",i)]
+          
+          names(df)[names(df) == i] <- "stat"
+          df<-unique(df)
+          
+          if(isTRUE(input$limit_entities_s)){
+            entity_list<-unique(df$flagstate)
+          }else{
+            entity_list<-reporting_entities
+          }
+          
+          df<-df%>%
+            rowwise()%>%
+            mutate(value=ifelse(input$stat_s%in%c("nb_year","nb_record"),as.numeric(stat),1))%>%
+            ungroup()%>%
+            complete(nesting(task),flagstate=entity_list,fill = list(value=0,stat="(no data)"))%>%
+            arrange(desc(flagstate))
+          
+          df_values<-df$value
+          
+          df<-df%>%
+            select(-value)%>%
+            pivot_wider(names_from = task,values_from = stat,names_sort=T)%>%
+            rename(` `=flagstate)
+        
+          addWorksheet(wb, i)
+          setColWidths(wb, i, cols = 1:ncol(df), widths = "auto")
+          nodataStyle <- createStyle(fontColour = "black", bgFill = "gray")
+          dataStyle <- createStyle(fontColour = "black", bgFill = "#45AD15")
+          conditionalFormatting(wb, i, cols = 2:ncol(df), rows = 1:nrow(df)+1, type = "contains", rule = "(no data)", style = nodataStyle)
+          conditionalFormatting(wb, i, cols = 2:ncol(df), rows = 1:nrow(df)+1, type = "notcontains", rule = "(no data)", style = dataStyle)
+          writeData(wb, sheet = i, x = df, startCol = 1)
+
+          }
+          saveWorkbook(wb, filename, overwrite = TRUE)
+          
+        })
       
       observeEvent(input$task,{
         req(input$task)
