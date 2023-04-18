@@ -20,27 +20,23 @@ dashboard_server <- function(id, parent.session, config, profile, components){
         }
       })
       
-      output$token <- renderUI({
+      output$token_wrapper <- renderUI({
         if("admin" %in% profile$shiny_app_roles){
-          shiny::tagList("Token: ", tags$span(profile$jwt),tags$br(), "VRE context:", tags$span(profile$vre_context))
+          div(
+            column(2,shinyjs::disabled(passwordInput(ns("token"), "Token:",value=profile$jwt))),
+            column(1,rclipButton(inputId = ns("clipbtn"),label = "Copy token",clipText = input$token,icon = icon("copy")))
+          )
         }else{
           tags$span("<hidden>")
         }
       })
       
-      output$clip <- renderUI({
-        rclipButton(
-          inputId = ns("clipbtn"),
-          label = "Copy token",
-          clipText = profile$jwt, 
-          icon = icon("copy")
-        )
-      })
-      
       output$roles <- renderDataTable({
+        datatable(
         data.frame(
-          roles = paste0(profile$shiny_app_roles, collapse=", ")
-        )
+          #roles = paste0(profile$shiny_app_roles, collapse=", ")
+          role = paste0(sprintf("<span class='badge' style='background-color:%s'>%s</span>","gray",profile$shiny_app_roles),collapse=" ")
+        ),escape=F)
       })
       #----------------------------------------------------------------------------------- 
     }

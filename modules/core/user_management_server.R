@@ -142,8 +142,8 @@ user_management_server <- function(id, parent.session, config, profile, componen
               "Full name" = data[i,"fullname"],
               "Registered in DB" = if(data[i,"db"]){as(icon("check"),"character")}else{""},
               "User ID" = data[i,"id_user"],
-              "User roles" = data[i,"roles"],
-              "Reporting entities" = data[i,"reporting_entities"],
+              "User roles" = paste0(sprintf("<span class='badge' style='background-color:%s'>%s</span>","gray",unlist(strsplit(unlist(data[i,"roles"]),","))),collapse=" "),
+              "Reporting entities" = paste0(sprintf("<span class='badge' style='background-color:%s'>%s</span>","gray",unlist(strsplit(unlist(data[i,"reporting_entities"]),","))),collapse=" "),
               Actions = if(data[i,"id_user"]==""){
                 as(actionButton(inputId = ns(paste0('button_save_', uuids[i])), class="btn btn-primary", style = "margin-right: 2px;",
                                 title = "Save user to DB", label = "", icon = icon("tasks")),"character")

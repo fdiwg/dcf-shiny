@@ -20,6 +20,10 @@ data_validation_server <- function(id, parent.session, config, profile, componen
         dcReportPath<<-reactiveVal(NULL)
         taskProperties<<-reactiveVal(NULL)
         loadedData<<-reactiveVal(NULL)
+        file_info<<-reactiveValues(
+          datapath = NULL,
+          name = NULL
+        )
         transformation<<-reactiveValues(
           data_reformat = FALSE,
           data_rename = FALSE
@@ -38,6 +42,24 @@ data_validation_server <- function(id, parent.session, config, profile, componen
           #output$callValidReport<<-renderUI({NULL})
           output$dataCallMessage<<-renderUI({NULL})
         }
+        
+        table_relation<<-reactiveVal(
+          data.frame(
+            type=character(0),
+            description=character(0),
+            link=character(0)
+          ))
+        
+        table_process<<-reactiveVal(
+          data.frame(
+            id=character(0),
+            title=character(0),
+            description=character(0),
+            link=character(0)
+          ))
+        keywords<<-reactiveVal(NULL)
+        keywords_color<<-reactiveVal(NULL)
+        
       }
       #Initialize reactive values
       #-----------------------------------------------------------------------------------
@@ -258,7 +280,7 @@ data_validation_server <- function(id, parent.session, config, profile, componen
       #TAB 1 FILE SELECTOR
       output$file_wrapper<-renderUI({
         if(!is.null(input$format))if(input$format!=""){
-          fileInput(ns("file"), label = "File to test",multiple = FALSE,accept = c(".xlsx",".xls",".csv"),buttonLabel = "Choose file")
+          fileInput(ns("file"), label = "File to test",multiple = FALSE,accept = c(".xlsx",".xls",".csv",".zip"),buttonLabel = "Choose file")
         }else{
           NULL
         }
@@ -302,11 +324,31 @@ data_validation_server <- function(id, parent.session, config, profile, componen
         if(!is.null(input$file)){
           if(any(endsWith(input$file$datapath,c("xls","xlsx")))){
             data<-read_excel(input$file$datapath,col_types = "text")
+            file_info$datapath<-input$file$datapath
+            file_info$name<-input$file$name
           }else if(any(endsWith(input$file$datapath,"csv"))){
             data<-readr::read_csv(input$file$datapath,col_types = readr::cols(.default = "c"))
+            file_info$datapath<-input$file$datapath
+            file_info$name<-input$file$name
+            print(file_info$name)
+          }else if(any(endsWith(input$file$datapath,"zip"))){
+            files<-zip_list(input$file$datapath)
+            unzip(input$file$datapath,files=c(files$filename[1]),exdir = dirname(input$file$datapath))
+            target_file<-file.path(dirname(input$file$datapath),files$filename[1])
+            if(any(endsWith(target_file,c("xls","xlsx")))){
+              data<-read_excel(target_file,col_types = "text")
+            }else if(any(endsWith(target_file,"csv"))){
+              data<-readr::read_csv(target_file,col_types = readr::cols(.default = "c"))
+            }else{
+              stop()
+            }
+            file_info$datapath<-target_file
+            file_info$name<-basename(target_file)
+            print(file_info$name)
           }else{
             stop()
           }
+            
           loadedData<-loadedData(data)
           DT::datatable(
             data,
@@ -412,7 +454,7 @@ data_validation_server <- function(id, parent.session, config, profile, componen
         info<-list(task_id=input$task,
                    date=Sys.Date(),
                    task_name=taskProperties()$name,
-                   file=input$file$name,
+                   file=file_info$name,
                    format=input$format,
                    flagstate=input$reporting_entity)
         
@@ -500,7 +542,7 @@ data_validation_server <- function(id, parent.session, config, profile, componen
             ),
             column(6,style = "border: 1px solid black;",
                    p(strong("Task Name: "),taskProperties()$name),
-                   p(strong("File : "),input$file$name)
+                   p(strong("File : "),file_info$name)
             ),
             column(3,style = "border: 1px solid black;",
                    p(strong("Format : "),input$format),
@@ -691,7 +733,7 @@ data_validation_server <- function(id, parent.session, config, profile, componen
           downloadButton(ns("dcreport"),"Download Report",icon=icon("download")),
           if(out$valid){
             #Next
-            actionButton(ns("goSend"),"Next")
+            actionButton(ns("goMetadata"),"Next")
           }else{
             #Close
             actionButton(ns("close2"),"Finish")
@@ -724,25 +766,211 @@ data_validation_server <- function(id, parent.session, config, profile, componen
       
       #TAB 5 - SEND DATA
       #TAB 5 MANAGER
-      observeEvent(input$goSend,{
+      observeEvent(input$goMetadata,{
         appendTab(inputId = "wizard-tabs",
                   session = parent.session,
                   select=TRUE,
-                  tabPanel("5-Send Data", 
-                           tagList(
-                             #Next
-                             p("You are going to send your data to the manager."),
-                             p("Validity reports (conformity with standards, consistency with data call) will be attached to the submission"),
-                             p("You may also add notes to the submission here below. Once ready, click on 'Send' to proceed with the submission"),
-                             shiny::textAreaInput(ns("message"), value = submission$notes, label = "Submission notes", placeholder = "Add submission notes"),br(),
-                             actionButton(ns("send"),"Send")
-                           )
+                  tabPanel("5-Metadata", 
+                           tabBox(id = "metadata",title=NULL,height="600px",width = "100%",
+                                  tabPanel(title=tagList(icon("file-pen"),"Identification"),
+                                           value="tab_desc",
+                                           box(title="Informations",collapsible = T,
+                                               fluidRow(
+                                                 column(3,textInput(ns("file_id"),"Identifier", value = tolower(gsub(" |-","_",unlist(strsplit(file_info$name,".",fixed=T))[1])), width = NULL, placeholder = "Add a identifier")),
+                                                 column(3,textInput(ns("file_title"),"Title", value = "", width = NULL, placeholder = "Add a title")),
+                                                 column(6,shiny::textAreaInput(ns("file_description"), value = "", label = "Abstract", placeholder = "Add a description"))
+                                               )
+                                             ),
+                                           fluidRow(),
+                                           box(title="Keywords",collapsible = T,
+                                               fluidRow(
+                                                  column(2,textInput(ns("file_keyword"),"Enter new keyword",value = "", width = NULL, placeholder = "Add keyword")),
+                                                  column(2,
+                                                    selectizeInput(ns("keyword_topic"),
+                                                                  label="Keword topic",
+                                                                  multiple = F,
+                                                                  choices = geometa::ISOKeywordType$values(),
+                                                                  selected="theme"
+                                                    )
+                                                  ),
+                                                  column(2,
+                                                    shinyWidgets::circleButton(ns("add_keyword"),title="Add keyword",size="sm",label="",icon=icon("plus"),class = "btn-success"),
+                                                    shinyWidgets::circleButton(ns("clear_keyword"),title="Clear keywords",size="sm",label="",icon=icon("trash"),class = "btn-warning")
+                                                  )
+                                                ),
+                                                fluidRow(
+                                                  div(uiOutput(ns("keyword_list")))
+                                                )
+                                           )
+                                  ),
+                                  tabPanel(title=tagList(icon("link"),"Relations"),
+                                           value="tab_relation",
+                                           box(title="Relations",collapsible = T,
+                                               fluidRow(
+                                                 column(3,textInput(ns("relation_type"),"Type",value = "", width = NULL, placeholder = "'website','metadata','data'...")),
+                                                 column(3,textInput(ns("relation_description"),"Description",value = "", width = NULL, placeholder = "Relation description")),
+                                                 column(3,textInput(ns("relation_link"),"Link",value = "", width = NULL, placeholder = "http://...")),
+                                                 column(3,
+                                                        shinyWidgets::circleButton(ns("add_relation"),title="Add relation",size="sm",label="",icon=icon("plus"),class = "btn-success"),
+                                                        shinyWidgets::circleButton(ns("clear_relation"),title="Clear relation",size="sm",label="",icon=icon("trash"),class = "btn-warning"))
+                                               ),
+                                               uiOutput(ns("relation_table_wrapper"))
+                                           )
+                                  ),
+                                  tabPanel(title=tagList(icon("list-check"),"Provenance"),
+                                           value="tab_process",
+                                           div(
+                                             textInput(ns("process_statement"),"Statement", value = "Data processing", width = NULL, placeholder = "Declare statement"),
+                                             box(title="Processes",collapsible = T,
+                                                 fluidRow(
+                                                   column(3,textInput(ns("process_name"),"Title",value = "", width = NULL, placeholder = "Process title")),
+                                                   column(3,textInput(ns("process_description"),"Description",value = "", width = NULL, placeholder = "Process description")),
+                                                   column(3,textInput(ns("process_link"),"Link",value = "", width = NULL, placeholder = "http://...")),
+                                                   column(3,
+                                                    shinyWidgets::circleButton(ns("add_process"),title="Add process",size="sm",label="",icon=icon("plus"),class = "btn-success"),
+                                                    shinyWidgets::circleButton(ns("clear_process"),title="Clear process",size="sm",label="",icon=icon("trash"),class = "btn-warning"))
+                                                  ),
+                                                  uiOutput(ns("process_table_wrapper"))
+                                             )
+                                           )
+                                  )
+                           ),
+                           actionButton(ns("goSend"),"Next")
+
                   )
         )
       })
       
-      #TAB 6 - THANK YOU
-      #TAB 6 MANAGER
+      observeEvent(input$add_relation, {
+        req(input$relation_type!="")
+        req(input$relation_description!="")
+        req(input$relation_link!="")
+        
+        new_relation<-data.frame(
+          type=input$relation_type,
+          description=input$relation_description,
+          link=input$relation_link
+        )
+        table_relation<-table_relation(rbind(table_relation(),new_relation))
+        updateTextInput(session, "relation_type",value = "")
+        updateTextInput(session, "relation_description",value = "")
+        updateTextInput(session, "relation_link",value = "")
+      })
+      
+      observeEvent(input$clear_relation, {
+        table_relation<-table_relation(
+          data.frame(
+          type=character(0),
+          description=character(0),
+          link=character(0)
+        ))
+        updateTextInput(session, "relation_type",value = NULL)
+        updateTextInput(session, "relation_description",value = NULL)
+        updateTextInput(session, "relation_link",value = NULL)
+      })
+      
+      output$relation_table<-DT::renderDT(server = FALSE, {
+        DT::datatable(
+          table_relation(), 
+          escape = FALSE,
+          options = list(dom = 't',
+                         ordering=F)
+        )
+      })
+      
+      output$relation_table_wrapper<-renderUI({
+        if(nrow(table_relation())>0){
+          DTOutput(ns("relation_table"))
+        }else{NULL}
+      })
+
+      keycolor_list<-setNames(rainbow(length(geometa::ISOKeywordType$values())),geometa::ISOKeywordType$values())
+      
+      observeEvent(input$add_keyword,{
+        keywords<-keywords(c(keywords(),paste0(input$keyword_topic,":",input$file_keyword)))
+        keywords_color<-keywords_color(c(keywords_color(),keycolor_list[input$keyword_topic][[1]]))
+        print(keywords())
+        print(keywords_color())
+        updateTextInput(session, "file_keyword",value = "")
+      })
+      
+      observeEvent(input$clear_keyword,{
+        keywords<-keywords(NULL)
+        keywords_color<-keywords_color(NULL)
+        updateTextInput(session, "file_keyword",value = "")
+      })
+      
+      output$keyword_list<-renderUI({
+        req(!is.null(keywords))
+        tagList(
+          HTML(paste0(sprintf("<span class='badge' style='background-color:%s'>%s</span>",keywords_color(),keywords())),collapse=" ")
+          )
+      })
+      
+      observeEvent(input$add_process, {
+        req(input$process_name!="")
+        req(input$process_description!="")
+        
+        new_process<-data.frame(
+          id=paste0("Process ",nrow(table_process())+1),
+          title=input$process_name,
+          description=input$process_description,
+          link=input$process_link
+        )
+        table_process<-table_process(rbind(table_process(),new_process))
+        print(table_process())
+        updateTextInput(session, "process_name",value = "")
+        updateTextInput(session, "process_description",value = "")
+        updateTextInput(session, "process_link",value = "")
+      })
+      
+      observeEvent(input$clear_process, {
+        table_process<-table_process(
+          data.frame(
+            id=character(0),
+            title=character(0),
+            description=character(0),
+            link=character(0)
+          ))
+        updateTextInput(session, "process_name",value = NULL)
+        updateTextInput(session, "process_description",value = NULL)
+        updateTextInput(session, "process_link",value = NULL)
+      })
+      
+      output$process_table<-DT::renderDT(server = FALSE, {
+        DT::datatable(
+          table_process(), 
+          escape = FALSE,
+          options = list(dom = 't',
+                         ordering=F)
+        )
+      })
+      
+      output$process_table_wrapper<-renderUI({
+        if(nrow(table_process())>0){
+          DTOutput(ns("process_table"))
+        }else{NULL}
+      })
+
+      #TAB 6
+      observeEvent(input$goSend,{
+        appendTab(inputId = "wizard-tabs",
+                  session = parent.session,
+                  select=TRUE,
+                  tabPanel("6-Send Data",
+                     tagList(
+                       p("You are going to send your data to the manager."),
+                       p("Validity reports (conformity with standards, consistency with data call) will be attached to the submission"),
+                       p("You may also add notes to the submission here below. Once ready, click on 'Send' to proceed with the submission"),
+                       shiny::textAreaInput(ns("message"), value = submission$notes, label = "Submission notes", placeholder = "Add submission notes"),br(),
+                       actionButton(ns("send"),"Send")
+                     )
+                  )
+        )
+      })
+      
+      #TAB 7 - THANK YOU
+      #TAB 7 MANAGER
       
       submitData<- function(new=TRUE,session,dc_folder,submission,pool,profile,store,config,input){
         
@@ -826,13 +1054,13 @@ data_validation_server <- function(id, parent.session, config, profile, componen
         hostess$set(25)
         
         #original file
-        new_filename<-file.path(dirname(input$file$datapath),input$file$name)
-        file.rename(input$file$datapath,new_filename)
+        new_filename<-file.path(dirname(file_info$datapath),file_info$name)
+        file.rename(file_info$datapath,new_filename)
         uploadedOriginalDataId <- store$uploadFile(folderPath = file.path(config$dcf$user_workspace, dc_folder), file = new_filename, description ="Original dataset")
         
         #file for submission
         if(!is.null(uploadedOriginalDataId)){
-          INFO("Successful upload for source file '%s'", input$file$datapath)
+          INFO("Successful upload for source file '%s'", file_info$datapath)
           data_filename <- file.path(getwd(), paste0(dc_folder, ".csv"))
           readr::write_csv(loadedData(), data_filename)
           uploadedDataId <- store$uploadFile(folderPath = file.path(config$dcf$user_workspace, dc_folder), file = data_filename, description ="Formated dataset")
