@@ -262,7 +262,7 @@ data_entry_editor_server <- function(id, parent.session, config, profile, compon
           showModal(
             modalDialog(
               title = "",
-              fileInput(ns("file"), label = "File to edit",multiple = FALSE,accept = c(".csv"),buttonLabel = "Choose file"),
+              fileInput(ns("file"), label = "File to edit",multiple = FALSE,accept = c(".csv",".zip"),buttonLabel = "Choose file"),
               easyClose = TRUE, footer = NULL,size="s" 
             )
           )
@@ -274,7 +274,22 @@ data_entry_editor_server <- function(id, parent.session, config, profile, compon
         info<-template_info()
         if(!is.null(input$file)){
           removeModal()
-          data_to_load<-readr::read_csv(input$file$datapath,col_types = readr::cols(.default = "c"))
+          if(any(endsWith(input$file$datapath,"csv"))){
+            data_to_load<-readr::read_csv(input$file$datapath,col_types = readr::cols(.default = "c"))
+          }else if(any(endsWith(input$file$datapath,"zip"))){
+            files<-zip_list(input$file$datapath)
+            unzip(input$file$datapath,files=c(files$filename[1]),exdir = dirname(input$file$datapath))
+            target_file<-file.path(dirname(input$file$datapath),files$filename[1])
+            if(any(endsWith(target_file,c("xls","xlsx")))){
+              data_to_load<-read_excel(target_file,col_types = "text")
+            }else if(any(endsWith(target_file,"csv"))){
+              data_to_load<-readr::read_csv(target_file,col_types = readr::cols(.default = "c"))
+            }else{
+              stop()
+            }
+          }else{
+            stop()
+          }
           if(all(names(data_to_load)==info$id)){
             data_to_lead<-as.data.frame(data_to_load)
             if(any(!is.na(info$ref))){

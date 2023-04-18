@@ -280,7 +280,7 @@ data_validation_server <- function(id, parent.session, config, profile, componen
       #TAB 1 FILE SELECTOR
       output$file_wrapper<-renderUI({
         if(!is.null(input$format))if(input$format!=""){
-          fileInput(ns("file"), label = "File to test",multiple = FALSE,accept = c(".xlsx",".xls",".csv"),buttonLabel = "Choose file")
+          fileInput(ns("file"), label = "File to test",multiple = FALSE,accept = c(".xlsx",".xls",".csv",".zip"),buttonLabel = "Choose file")
         }else{
           NULL
         }
