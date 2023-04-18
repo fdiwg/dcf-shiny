@@ -6,8 +6,7 @@ dashboard_ui <- function(id){
     tabName = "dashboard",
     uiOutput(ns("welcome")),hr(),
     uiOutput(ns("status")),br(),
-    uiOutput(ns("token")),br(),
-    uiOutput(ns("clip")),br(),
+    uiOutput(ns("token_wrapper")),br(),
     dataTableOutput(ns("roles"))
   )
 }
