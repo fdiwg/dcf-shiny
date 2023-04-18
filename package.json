@@ -44,6 +44,7 @@
     {"repo": "r-geoflow/geoflow", "from": "github", "dependencies": false},
     {"package": "openxlsx", "version": "4.2.5.1", "repos": "https://cran.r-project.org"},
     {"package": "rhandsontable", "version": "0.3.8", "repos": "https://cran.r-project.org"},
-    {"package": "rclipboard", "version": "0.1.6", "repos": "https://cran.r-project.org"}
+    {"package": "rclipboard", "version": "0.1.6", "repos": "https://cran.r-project.org"},
+    {"package": "shinyWidgets", "version": "0.7.0", "repos": "https://cran.r-project.org"}
   ]
 }
