@@ -776,7 +776,7 @@ data_validation_server <- function(id, parent.session, config, profile, componen
                                            value="tab_desc",
                                            box(title="Informations",collapsible = T,
                                                fluidRow(
-                                                 column(3,textInput(ns("file_id"),"Identifier", value = "", width = NULL, placeholder = "Add a identifier")),
+                                                 column(3,textInput(ns("file_id"),"Identifier", value = tolower(gsub(" |-","_",unlist(strsplit(file_info$name,".",fixed=T))[1])), width = NULL, placeholder = "Add a identifier")),
                                                  column(3,textInput(ns("file_title"),"Title", value = "", width = NULL, placeholder = "Add a title")),
                                                  column(6,shiny::textAreaInput(ns("file_description"), value = "", label = "Abstract", placeholder = "Add a description"))
                                                )
