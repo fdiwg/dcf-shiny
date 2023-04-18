@@ -32,9 +32,11 @@ dashboard_server <- function(id, parent.session, config, profile, components){
       })
       
       output$roles <- renderDataTable({
+        datatable(
         data.frame(
-          roles = paste0(profile$shiny_app_roles, collapse=", ")
-        )
+          #roles = paste0(profile$shiny_app_roles, collapse=", ")
+          role = paste0(sprintf("<span class='badge' style='background-color:%s'>%s</span>","gray",profile$shiny_app_roles),collapse=" ")
+        ),escape=F)
       })
       #----------------------------------------------------------------------------------- 
     }
