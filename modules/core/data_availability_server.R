@@ -1,4 +1,4 @@
-function(id, parent.session, config, profile, components){
+data_availability_server <-function(id, parent.session, config, profile, components){
   moduleServer(
     id,
     function(input, output, session) {

@@ -1,0 +1,10 @@
+{
+  "parent": "data",
+  "type": "subitem",
+  "rank": 5,
+  "name": "data_availability",
+  "title": "Data availability",
+  "restricted": true,
+  "roles": ["manager", "supervisor", "admin", "r-studio"]
+}
+
