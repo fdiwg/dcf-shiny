@@ -5,8 +5,9 @@ dashboard_ui <- function(id){
   shinydashboard::tabItem(
     tabName = "dashboard",
     uiOutput(ns("welcome")),hr(),
-    uiOutput(ns("status")),br(),
-    uiOutput(ns("token_wrapper")),br(),
-    dataTableOutput(ns("roles"))
+    uiOutput(ns("user_roles")),
+    uiOutput(ns("ressource_management")),
+    uiOutput(ns("datacall_stat")),
+    uiOutput(ns("token_wrapper"))
   )
 }

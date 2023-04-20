@@ -58,6 +58,37 @@ getDBUsersWithRole <- function(pool, profile, role,reporting_entities=NULL){
   return(users)
 }
 
+#getUsers
+getUsers <- function(pool,profile){
+  out_users <- data.frame(
+    username = character(0),
+    fullname = character(0),
+    db = character(0),
+    id_user = character(0),
+    stringsAsFactors = FALSE
+  )
+  out_vre <- httr::GET("https://api.d4science.org/rest/2/users/get-all-fullnames-and-usernames",
+                       httr::add_headers("Authorization" = paste("Bearer", profile$access$access_token)))
+  if(httr::status_code(out_vre)==200){
+    out_c <- content(out_vre)$result
+    out_users <- data.frame(
+      username = names(out_c),
+      fullname = as.character(out_c),
+      db = rep(FALSE,length(out_c)),
+      id_user = rep("",length(out_c)),
+      stringsAsFactors = FALSE
+    ) 
+    db_users <- getDBUsers(pool)
+    if(!is.null(db_users)) if(nrow(db_users)>0){
+      out_users$db <- sapply(out_users$username, function(x){x %in% db_users$username})
+      out_users$id_user <- sapply(out_users$username, function(x){if(x %in% db_users$username){db_users[db_users$username == x, "id_user"]}else{""}})
+      out_users$roles <- sapply(out_users$username, function(x){if(x %in% db_users$username){db_users[db_users$username == x, "roles"]}else{""}})
+      out_users$reporting_entities <- sapply(out_users$username, function(x){if(x %in% db_users$username){db_users[db_users$username == x, "reporting_entities"]}else{""}})
+    }
+  }
+  return(out_users)
+}
+
 #createDBUser
 createDBUser <- function(pool, username, fullname, roles = NULL, reporting_entities = NULL, profile){
   if(is.null(roles)) roles = ""
