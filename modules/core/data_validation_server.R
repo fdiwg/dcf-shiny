@@ -10,6 +10,7 @@ data_validation_server <- function(id, parent.session, config, profile, componen
       ns <- session$ns
       
       restart<-reactiveVal(TRUE)
+      keycolor_list<-setNames(rainbow(length(geometa::ISOKeywordType$values())),geometa::ISOKeywordType$values())
       
       #RESTART FUNCTION
       restartProcess<-function(initialize=F){
@@ -50,10 +51,17 @@ data_validation_server <- function(id, parent.session, config, profile, componen
             link=character(0)
           ))
         
+        table_keyword<<-reactiveVal(
+          data.frame(
+            type=character(0),
+            description=character(0),
+            link=character(0)
+          ))
+        
         table_process<<-reactiveVal(
           data.frame(
             id=character(0),
-            title=character(0),
+            name=character(0),
             description=character(0),
             link=character(0)
           ))
@@ -778,36 +786,43 @@ data_validation_server <- function(id, parent.session, config, profile, componen
                                                fluidRow(
                                                  column(3,textInput(ns("file_id"),"Identifier", value = tolower(gsub(" |-","_",unlist(strsplit(file_info$name,".",fixed=T))[1])), width = NULL, placeholder = "Add a identifier")),
                                                  column(3,textInput(ns("file_title"),"Title", value = "", width = NULL, placeholder = "Add a title")),
-                                                 column(6,shiny::textAreaInput(ns("file_description"), value = "", label = "Abstract", placeholder = "Add a description"))
+                                                 column(6,shiny::textAreaInput(ns("file_description"), value = "", label = "Abstract", placeholder = "Add a abstract"))
                                                )
                                              ),
                                            fluidRow(),
                                            box(title="Keywords",collapsible = T,
                                                fluidRow(
-                                                  column(2,textInput(ns("file_keyword"),"Enter new keyword",value = "", width = NULL, placeholder = "Add keyword")),
-                                                  column(2,
-                                                    selectizeInput(ns("keyword_topic"),
-                                                                  label="Keword topic",
+                                                  column(3,
+                                                    selectizeInput(ns("keyword_type"),
+                                                                  label="Type",
                                                                   multiple = F,
                                                                   choices = geometa::ISOKeywordType$values(),
                                                                   selected="theme"
                                                     )
                                                   ),
-                                                  column(2,
+                                                  column(3,textInput(ns("keyword_description"),"Keyword",value = "", width = NULL, placeholder = "Add keyword")),
+                                                  column(3,textInput(ns("keyword_link"),"Link",value = "", width = NULL, placeholder = "http://...")),
+                                                  column(3,
                                                     shinyWidgets::circleButton(ns("add_keyword"),title="Add keyword",size="sm",label="",icon=icon("plus"),class = "btn-success"),
                                                     shinyWidgets::circleButton(ns("clear_keyword"),title="Clear keywords",size="sm",label="",icon=icon("trash"),class = "btn-warning")
                                                   )
                                                 ),
                                                 fluidRow(
                                                   div(uiOutput(ns("keyword_list")))
-                                                )
+                                                ),
+                                               uiOutput(ns("keyword_table_wrapper"))
                                            )
                                   ),
                                   tabPanel(title=tagList(icon("link"),"Relations"),
                                            value="tab_relation",
                                            box(title="Relations",collapsible = T,
                                                fluidRow(
-                                                 column(3,textInput(ns("relation_type"),"Type",value = "", width = NULL, placeholder = "'website','metadata','data'...")),
+                                                 column(3, selectizeInput(ns("relation_type"),
+                                                                          label="Type",
+                                                                          multiple = F,
+                                                                          choices = c("website","metadata","data"),
+                                                                          selected="website"
+                                                 )),
                                                  column(3,textInput(ns("relation_description"),"Description",value = "", width = NULL, placeholder = "Relation description")),
                                                  column(3,textInput(ns("relation_link"),"Link",value = "", width = NULL, placeholder = "http://...")),
                                                  column(3,
@@ -852,7 +867,6 @@ data_validation_server <- function(id, parent.session, config, profile, componen
           link=input$relation_link
         )
         table_relation<-table_relation(rbind(table_relation(),new_relation))
-        updateTextInput(session, "relation_type",value = "")
         updateTextInput(session, "relation_description",value = "")
         updateTextInput(session, "relation_link",value = "")
       })
@@ -864,9 +878,8 @@ data_validation_server <- function(id, parent.session, config, profile, componen
           description=character(0),
           link=character(0)
         ))
-        updateTextInput(session, "relation_type",value = NULL)
-        updateTextInput(session, "relation_description",value = NULL)
-        updateTextInput(session, "relation_link",value = NULL)
+        updateTextInput(session, "relation_description",value = "")
+        updateTextInput(session, "relation_link",value = "")
       })
       
       output$relation_table<-DT::renderDT(server = FALSE, {
@@ -883,27 +896,60 @@ data_validation_server <- function(id, parent.session, config, profile, componen
           DTOutput(ns("relation_table"))
         }else{NULL}
       })
-
-      keycolor_list<-setNames(rainbow(length(geometa::ISOKeywordType$values())),geometa::ISOKeywordType$values())
       
-      observeEvent(input$add_keyword,{
-        keywords<-keywords(c(keywords(),paste0(input$keyword_topic,":",input$file_keyword)))
-        keywords_color<-keywords_color(c(keywords_color(),keycolor_list[input$keyword_topic][[1]]))
+      observeEvent(input$add_keyword, {
+        req(input$keyword_type!="")
+        req(input$keyword_description!="")
+        keyword_label<-paste0(input$keyword_type,":",input$keyword_description)
+        keywords<-keywords(c(keywords(),if(startsWith(input$keyword_link,"http")){sprintf("<a href='%s' target='_blank'>%s</a>",input$keyword_link,keyword_label)}else{keyword_label}))
         print(keywords())
-        print(keywords_color())
-        updateTextInput(session, "file_keyword",value = "")
+        keywords_color<-keywords_color(c(keywords_color(),keycolor_list[input$keyword_type][[1]]))
+        keywords_url<-c(keywords_url(),input$keyword_link)
+        
+        new_keyword<-data.frame(
+          type=input$keyword_type,
+          description=input$keyword_description,
+          link=input$keyword_link
+        )
+        table_keyword<-table_keyword(rbind(table_keyword(),new_keyword))
+        updateTextInput(session, "keyword_description",value = "")
+        updateTextInput(session, "keyword_link",value = "")
       })
       
-      observeEvent(input$clear_keyword,{
+      observeEvent(input$clear_keyword, {
+        
         keywords<-keywords(NULL)
         keywords_color<-keywords_color(NULL)
-        updateTextInput(session, "file_keyword",value = "")
+        
+        table_keyword<-table_keyword(
+          data.frame(
+            type=character(0),
+            description=character(0),
+            link=character(0)
+          ))
+        updateTextInput(session, "keyword_description",value = "")
+        updateTextInput(session, "keyword_link",value = "")
+      })
+      
+      output$keyword_table<-DT::renderDT(server = FALSE, {
+        DT::datatable(
+          table_keyword(), 
+          escape = FALSE,
+          options = list(dom = 't',
+                         ordering=F)
+        )
+      })
+      
+      output$keyword_table_wrapper<-renderUI({
+        if(nrow(table_keyword())>0){
+          DTOutput(ns("keyword_table"))
+        }else{NULL}
       })
       
       output$keyword_list<-renderUI({
         req(!is.null(keywords))
         tagList(
-          HTML(paste0(sprintf("<span class='badge' style='background-color:%s'>%s</span>",keywords_color(),keywords())),collapse=" ")
+          HTML(paste0("<span> Keywords : </span>",paste0(sprintf("<span class='badge' style='background-color:%s'>%s</span>",keywords_color(),keywords()),collapse=" ")))
           )
       })
       
@@ -932,9 +978,9 @@ data_validation_server <- function(id, parent.session, config, profile, componen
             description=character(0),
             link=character(0)
           ))
-        updateTextInput(session, "process_name",value = NULL)
-        updateTextInput(session, "process_description",value = NULL)
-        updateTextInput(session, "process_link",value = NULL)
+        updateTextInput(session, "process_name",value = "")
+        updateTextInput(session, "process_description",value = "")
+        updateTextInput(session, "process_link",value = "")
       })
       
       output$process_table<-DT::renderDT(server = FALSE, {
