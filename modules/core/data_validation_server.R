@@ -1000,6 +1000,94 @@ data_validation_server <- function(id, parent.session, config, profile, componen
 
       #TAB 6
       observeEvent(input$goSend,{
+        #entities = list()
+        entity <- geoflow::geoflow_entity$new()
+        #identifier
+        entity$identifiers[["id"]]<-input$file_id
+
+        #title
+        entity$setTitle(key = "title", input$file_title)
+        
+        #description
+        entity$setDescription(key = "abstract", input$file_abstract)
+
+        #subjects
+        if(nrow(table_keyword())>0){
+          for(key in unique(table_keyword()$type)){
+            target<-subset(table_keyword(),type==key)
+            
+            subj <- geoflow::geoflow_subject$new()
+            subj$setKey(key)
+            subj$setName(key)
+            for(i in 1:nrow(target)){
+              keyword<-target[i,]
+              if(keyword$link==""){
+                subj$addKeyword(keyword$description)
+              }else{
+                subj$addKeyword(keyword$description,keyword$link)
+              }                  
+            }
+            entity$addSubject(subj)
+          }
+        }
+        
+        #contacts
+        #TODO
+        
+        #date
+        entity$addDate("creation", as(Sys.Date(), "character"))
+        
+        #type
+        entity$setType(type = "dataset")
+        
+        #language
+        entity$setLanguage("eng")
+        
+        #spatial
+        #TODO
+        
+        #temporal
+        #TODO
+        
+        #relations
+        if(nrow(table_relation())>0){
+          for(i in 1:nrow(table_relation())){
+            relation<-table_relation()[i,]
+            
+            rela <- geoflow::geoflow_relation$new()
+            rela$setKey("http")
+            rela$setName(relation$type)
+            rela$setDescription(relation$description)
+            rela$setLink(relation$type)
+            entity$addRelation(rela)
+          }
+        }
+        
+        #rights
+        #TODO
+        
+        #provenace
+        if(nrow(table_process())>0){
+          
+            prov<-geoflow::geoflow_provenance$new()
+            prov$setStatement(input$process_statement)
+            for(i in 1:nrow(table_process())){
+            process<-table_process()[i,]
+            pros<-geoflow::geoflow_process$new()
+            pros$setDescription(process$description)
+            #pros$setProcessor()
+            pros$setRationale(process$title)
+            prov$addProcess(pros)
+            }
+            entity$setProvenance(prov)
+        }
+        
+        #data
+        #TODO
+        
+        metadata_geoflow<-entity$asDataFrame()
+        print(metadata_geoflow)
+        
         appendTab(inputId = "wizard-tabs",
                   session = parent.session,
                   select=TRUE,
