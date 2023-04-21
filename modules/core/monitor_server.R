@@ -30,6 +30,37 @@ monitor_server <- function(id, parent.session, config, profile, components){
         rownames = FALSE,
         escape= FALSE
       )
+      
+      output$status <- renderUI({
+        if(profile$expired){
+          tags$span(shiny::icon(c('times-circle')), "Token is expired", style="color:red;")
+        }else{
+          tags$span(shiny::icon(c('check-circle')), "Token is valid", style="color:green;")
+        }
+      })
+
+      output$ressources_wrapper <- renderUI({
+        
+          box(title=HTML("<b>Ressources</b>"),collapsible = T,width=12,
+                DT::dataTableOutput(ns("resources")),
+          )
+      })
+            
+      output$token_wrapper <- renderUI({
+        
+        if("admin" %in% profile$shiny_app_roles){
+          box(title=HTML("<b>Token</b>"),collapsible = T,width=12,
+              div(
+                uiOutput(ns("status")),
+                column(2,shinyjs::disabled(passwordInput(ns("token"), "Token:",value=profile$jwt))),
+                column(1,rclipButton(inputId = ns("clipbtn"),label = "Copy token",clipText = input$token,icon = icon("copy")))
+              )
+          )
+        }else{
+          NULL
+        }
+      })
+      
       #-----------------------------------------------------------------------------------
     }
   )

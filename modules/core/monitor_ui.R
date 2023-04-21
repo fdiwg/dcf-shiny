@@ -4,6 +4,7 @@ monitor_ui <- function(id){
   
   shinydashboard::tabItem(
     tabName = "monitor",
-    DT::dataTableOutput(ns("resources"))
+    uiOutput(ns("ressources_wrapper")),
+    uiOutput(ns("token_wrapper"))
   )
 }

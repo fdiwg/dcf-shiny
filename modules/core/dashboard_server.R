@@ -9,50 +9,50 @@ dashboard_server <- function(id, parent.session, config, profile, components){
       
       ns <- session$ns
       
+      current_datacalls<-reactiveVal(NULL)
+      
       output$welcome <- renderUI({
         h2(sprintf("Welcome %s!", profile$name))
       })
       
-      output$status <- renderUI({
-        if(profile$expired){
-          tags$span(shiny::icon(c('times-circle')), "Token is expired", style="color:red;")
+      output$user_roles<-renderUI({
+        roles_list<-setNames(names(config$dcf$roles), unlist(config$dcf$roles))
+        my_roles<-roles_list[roles_list%in%profile$shiny_app_roles]
+        ref_entity <- getReportingEntityCodes(config)
+        ref_entity_db <- ref_entity[ref_entity$code %in% getDBUserReportingEntities(profile = profile, pool = pool),]
+        if(nrow(ref_entity_db>0)){
+          entity_choices <- ref_entity_db$code
+          reporting_entities_list<-setNames(entity_choices, ref_entity_db$label)
+          if(config$dcf$reporting_entities$name %in% c("country", "flagstate")){
+            assignedRE<-p(HTML(paste0(sprintf("<span><img src=\"https://raw.githubusercontent.com/fdiwg/flags/main/%s.gif\" height=16 width=32/> %s[%s]</span>",tolower(reporting_entities_list),names(reporting_entities_list),reporting_entities_list),collapse = "<br>")),style="column-count: 2;max-height:250px;overflow-y: auto;")
+          }else if(config$dcf$reporting_entities$name == "rfmo"){
+            assignedRE<-p(HTML(paste0(sprintf("<span><img src=\"https://www.fao.org/fishery/services/storage/fs/fishery/images/organization/logo/%s.jpg\" height=16 width=32/> %s[%s]</span>",tolower(reporting_entities_list),names(reporting_entities_list),reporting_entities_list),collapse = "<br>")),style="column-count: 2;max-height:250px;overflow-y: auto;")
+          }else{
+            assignedRE<-p(HTML(paste0(sprintf("<span>%s[%s]</span>",tolower(reporting_entities_list),names(reporting_entities_list),reporting_entities_list),collapse = "<br>")),style="column-count: 2;max-height:250px;overflow-y: auto;")
+          }
         }else{
-          tags$span(shiny::icon(c('check-circle')), "Token is valid", style="color:green;")
+          assignedRE<-"(no assigned reporting entity)"  
         }
-      })
-      
-      output$token_wrapper <- renderUI({
         
-        if("admin" %in% profile$shiny_app_roles){
-          box(title=HTML("<b>Token</b>"),collapsible = T,width=12,
-          div(
-            uiOutput(ns("status")),
-            column(2,shinyjs::disabled(passwordInput(ns("token"), "Token:",value=profile$jwt))),
-            column(1,rclipButton(inputId = ns("clipbtn"),label = "Copy token",clipText = input$token,icon = icon("copy")))
-          )
-          )
-        }else{
-          NULL
-        }
-      })
-    
-      current_datacalls<-reactiveVal(NULL)
-      observe({
-      datacalls<-getDataCalls(pool)
-      datacalls<-datacalls%>%
-        group_by(task_id)%>%
-        filter(date_end==max(date_end))%>%
-        rowwise()%>%
-        mutate(status=ifelse(status=="OPENED","OPEN","CLOSED"))%>%
-        mutate(time_remaining=as.numeric(date_end-Sys.Date(),unit="days"))%>%
-        mutate(time_label=ifelse(time_remaining>0,sprintf("expires on <u>%s</u> (<b>%s day(s)<b/> remaining)",date_end,time_remaining),sprintf("expired since %s (%s day(s))",date_end,abs(time_remaining))))%>%
-        ungroup()%>%
-        arrange(task_id)
-      
-      current_datacalls<-current_datacalls(datacalls)
+        box(title=HTML("<b>My profile</b>"),collapsible = T,width = 12,
+            infoBox("Assigned roles",HTML(paste0(names(my_roles),collapse = "<br>")), icon = icon("user"), fill = TRUE,color="red",width = 6),
+            infoBox("Assigned reporting entities",assignedRE, icon = icon("file-pen"), fill = TRUE,color="yellow",width = 6)
+        )
       })
       
       output$datacall_stat<-renderUI({
+        datacalls<-getDataCalls(pool)
+        datacalls<-datacalls%>%
+          group_by(task_id)%>%
+          filter(date_end==max(date_end))%>%
+          rowwise()%>%
+          mutate(status=ifelse(status=="OPENED","OPEN","CLOSED"))%>%
+          mutate(time_remaining=as.numeric(date_end-Sys.Date(),unit="days"))%>%
+          mutate(time_label=ifelse(time_remaining>0,sprintf("expires on <u>%s</u> (<b>%s day(s)<b/> remaining)",date_end,time_remaining),sprintf("expired since %s (%s day(s))",date_end,abs(time_remaining))))%>%
+          ungroup()%>%
+          arrange(task_id)
+        
+        current_datacalls<-current_datacalls(datacalls)
         req(!is.null(current_datacalls()))
         boxes<-list()
           for(i in 1:nrow(current_datacalls())){
@@ -87,32 +87,7 @@ dashboard_server <- function(id, parent.session, config, profile, components){
       )
           }
         return(box(title=HTML("<b>Current datacalls</b>"),collapsible = T,width = 12,boxes))
-      })
-
-      output$user_roles<-renderUI({
         
-        roles_list<-setNames(names(config$dcf$roles), unlist(config$dcf$roles))
-        my_roles<-roles_list[roles_list%in%profile$shiny_app_roles]
-        ref_entity <- getReportingEntityCodes(config)
-        ref_entity_db <- ref_entity[ref_entity$code %in% getDBUserReportingEntities(profile = profile, pool = pool),]
-        if(nrow(ref_entity_db>0)){
-          entity_choices <- ref_entity_db$code
-          reporting_entities_list<-setNames(entity_choices, ref_entity_db$label)
-          if(config$dcf$reporting_entities$name %in% c("country", "flagstate")){
-            assignedRE<-p(HTML(paste0(sprintf("<span><img src=\"https://raw.githubusercontent.com/fdiwg/flags/main/%s.gif\" height=16 width=32/> %s[%s]</span>",tolower(reporting_entities_list),names(reporting_entities_list),reporting_entities_list),collapse = "<br>")),style="column-count: 2;max-height:250px;overflow-y: auto;")
-          }else if(config$dcf$reporting_entities$name == "rfmo"){
-            assignedRE<-p(HTML(paste0(sprintf("<span><img src=\"https://www.fao.org/fishery/services/storage/fs/fishery/images/organization/logo/%s.jpg\" height=16 width=32/> %s[%s]</span>",tolower(reporting_entities_list),names(reporting_entities_list),reporting_entities_list),collapse = "<br>")),style="column-count: 2;max-height:250px;overflow-y: auto;")
-          }else{
-            assignedRE<-p(HTML(paste0(sprintf("<span>%s[%s]</span>",tolower(reporting_entities_list),names(reporting_entities_list),reporting_entities_list),collapse = "<br>")),style="column-count: 2;max-height:250px;overflow-y: auto;")
-          }
-        }else{
-          assignedRE<-"(no assigned reporting entity)"  
-        }
-        
-        box(title=HTML("<b>My profile</b>"),collapsible = T,width = 12,
-        infoBox("Assigned roles",HTML(paste0(names(my_roles),collapse = "<br>")), icon = icon("user"), fill = TRUE,color="red",width = 6),
-        infoBox("Assigned reporting entities",assignedRE, icon = icon("file-pen"), fill = TRUE,color="yellow",width = 6)
-        )
       })
       
       output$ressource_management<-renderUI({
@@ -130,11 +105,11 @@ dashboard_server <- function(id, parent.session, config, profile, components){
             infoBox("Users",nrow(users), icon = icon("users"), fill = TRUE,color="aqua",width = 6),
             valueBox(subtitle="Users without roles",value=nrow(dbUsersNoRole), icon = icon("user-xmark"),color=ifelse(nrow(dbUsersNoRole)>0,"yellow","green"),width = 6),
             infoBox("Users in db",nrow(dbUsers), icon = icon("users-viewfinder"), fill = TRUE,color="aqua",width = 6),
-            valueBox(subtitle="Submitters associates with no reporting entity",value=nrow(dbUsersSubmitterNoRE), icon = icon("user-xmark"),color=ifelse(nrow(dbUsersSubmitterNoRE)>0,"yellow","green"),width = 6)
+            valueBox(subtitle="SUBMITTER NOT ASSOCIATED TO A REPORTING ENTITY",value=nrow(dbUsersSubmitterNoRE), icon = icon("user-xmark"),color=ifelse(nrow(dbUsersSubmitterNoRE)>0,"yellow","green"),width = 6)
             ),
             box(title=HTML("<b>Reporting entities</b>"),width = 6,
             infoBox("Reporting entities",nrow(ref_entity), icon = icon("file-signature"), fill = TRUE,color="purple",width = 6),
-            valueBox(subtitle="Reporting entities assigned with no submitter",value=nrow(RENoDb), icon = icon("file-circle-exclamation"),color=ifelse(nrow(RENoDb)>0,"yellow","green"),width = 6)
+            valueBox(subtitle="REPORTING ENTITIES NOT ASSIGNED TO A SUBMITTER",value=nrow(RENoDb), icon = icon("file-circle-exclamation"),color=ifelse(nrow(RENoDb)>0,"yellow","green"),width = 6)
             )
         )
         }else{NULL}
