@@ -6,8 +6,7 @@ dashboard_ui <- function(id){
     tabName = "dashboard",
     uiOutput(ns("welcome")),hr(),
     uiOutput(ns("user_roles")),
-    uiOutput(ns("ressource_management")),
-    uiOutput(ns("datacall_stat")),
-    uiOutput(ns("token_wrapper"))
+    shinycssloaders::withSpinner(uiOutput(ns("datacall_stat")),type=5),
+    uiOutput(ns("ressource_management"))
   )
 }
