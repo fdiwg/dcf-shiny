@@ -848,17 +848,17 @@ completeWithMissingEntities<-function(config,pool,profile,data,user_only=FALSE){
     }
   }else{
     data <- data.frame(
-      id = rep("",length(reporting_entities)),
-      data_call_id = rep("",length(reporting_entities)),
-      data_call_folder = rep("",length(reporting_entities)),
-      task_id = rep("",length(reporting_entities)),
+      id = rep("",nrow(reporting_entities)),
+      data_call_id = rep("",nrow(reporting_entities)),
+      data_call_folder = rep("",nrow(reporting_entities)),
+      task_id = rep("",nrow(reporting_entities)),
       reporting_entity = reporting_entities$code,
-      temporal_extent = rep("",length(reporting_entities)),
-      submitter = rep("",length(reporting_entities)),
-      creationTime = rep(NA,length(reporting_entities)),
-      lastModifiedBy = rep("",length(reporting_entities)),
-      lastModificationTime = rep(NA,length(reporting_entities)),
-      status = rep("MISSING",length(reporting_entities)),
+      temporal_extent = rep("",nrow(reporting_entities)),
+      submitter = rep("",nrow(reporting_entities)),
+      creationTime = rep(NA,nrow(reporting_entities)),
+      lastModifiedBy = rep("",nrow(reporting_entities)),
+      lastModificationTime = rep(NA,nrow(reporting_entities)),
+      status = rep("MISSING",nrow(reporting_entities)),
       stringsAsFactors = FALSE)
   }
   return(data)
