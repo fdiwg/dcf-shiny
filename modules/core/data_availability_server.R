@@ -11,6 +11,7 @@ data_availability_server <-function(id, parent.session, config, profile, compone
       
       data<-reactiveVal(NULL)
       data_s<-reactiveVal(NULL)
+      dataAvailable<-reactiveVal(ifelse(length(task_folders)==0,FALSE,TRUE))
       
       pretty_seq<-function(x){
         
@@ -46,50 +47,64 @@ data_availability_server <-function(id, parent.session, config, profile, compone
         return(new_vec)
       }
       
+      output$summary_content<-renderUI({
+        tagList(
+          fluidRow(
+            div(
+              class = "col-md-2",
+              withBusyIndicatorUI(
+                actionButton(ns("summaryBtn"),"Compute summary")
+              )
+            ),
+            div(
+              class = "col-md-2",
+              uiOutput(ns("entities_selector_s"))
+            ),
+            div(
+              class = "col-md-2",
+              uiOutput(ns("stat_selector_s"))
+            ),
+            div(
+              class = "col-md-2",
+              uiOutput(ns("download_wrapper"))
+            )
+          ),
+            uiOutput(ns("heatmap_s_wrapper"))
+          
+        )
+      })
+      
+      output$by_task_content<-renderUI({
+        if(dataAvailable()){
+          tagList(
+            fluidRow(
+              div(
+                class = "col-md-2",
+                uiOutput(ns("task_selector"))
+              ),
+              div(
+                class = "col-md-2",
+                uiOutput(ns("entities_selector"))
+              )
+            ),
+            fluidRow(
+              withSpinner(plotlyOutput(ns("heatmap")),type=4)
+            )
+          )}else{
+            p("(no data available)")
+          }
+      })
+      
       output$menu<-renderUI({
         
         tabBox(id = "tabbox",title=NULL,height="600px",width = "100%",
                tabPanel(title=tagList(icon("clipboard")," Summary"),
                         value="tab_summary",
-                        fluidRow(
-                          div(
-                            class = "col-md-2",
-                            withBusyIndicatorUI(
-                              actionButton(ns("summaryBtn"),"Compute summary")
-                            )
-                          ),
-                          div(
-                            class = "col-md-2",
-                            uiOutput(ns("entities_selector_s"))
-                          ),
-                          div(
-                            class = "col-md-2",
-                            uiOutput(ns("stat_selector_s"))
-                          ),
-                          div(
-                            class = "col-md-2",
-                            uiOutput(ns("download_wrapper"))
-                          )
-                        ),
-                        fluidRow(
-                          withSpinner(plotlyOutput(ns("heatmap_s")),type=4)
-                        )
+                        uiOutput(ns("summary_content"))
                ),
                tabPanel(title=tagList(icon("list")," By Task"),
                         value="tab_by_task",
-                        fluidRow(
-                          div(
-                            class = "col-md-2",
-                            uiOutput(ns("task_selector"))
-                          ),
-                          div(
-                            class = "col-md-2",
-                            uiOutput(ns("entities_selector"))
-                          )
-                        ),
-                        fluidRow(
-                          withSpinner(plotlyOutput(ns("heatmap")),type=4)
-                        )
+                        uiOutput(ns("by_task_content"))
                )
         )
       })
@@ -102,7 +117,7 @@ data_availability_server <-function(id, parent.session, config, profile, compone
       })
       
       output$entities_selector_s <- renderUI({
-        checkboxInput(ns("limit_entities_s"), "Limit to entities with data", TRUE)
+        checkboxInput(ns("limit_entities_s"), "Limit to entities with data", dataAvailable())
       })
       
       output$stat_selector_s<-renderUI({
@@ -135,6 +150,7 @@ data_availability_server <-function(id, parent.session, config, profile, compone
       
       observeEvent(input$summaryBtn,{
         withBusyIndicatorServer(ns("summaryBtn"), {
+          if(dataAvailable()){
         summary<-do.call("rbind",lapply(getTasks(config,withId=TRUE),function(x){
         items <- SH$listWSItems(parentFolderID = subset(task_folders,name==x)$id)
         last_modification_time <- max(items$lastModificationTime)
@@ -157,6 +173,23 @@ data_availability_server <-function(id, parent.session, config, profile, compone
         
         })
         )
+        }else{
+          summary<-do.call("rbind",lapply(getTasks(config,withId=TRUE),function(x){
+            
+            file<-data.frame(flagstate="",
+                             period="(no data)",
+                             min_year="(no data)",
+                             max_year="(no data)",
+                             nb_year="0",
+                             nb_record="0",
+                             available_years="(no data)",
+                             task=x)%>%
+              arrange(desc(flagstate))%>%
+              ungroup()
+          })
+          )
+            
+        }
         data_s<-data_s(summary)
         })
       })
@@ -201,6 +234,7 @@ data_availability_server <-function(id, parent.session, config, profile, compone
           df<-df%>%
             select(-value)%>%
             pivot_wider(names_from = task,values_from = stat,names_sort=T)%>%
+            filter(flagstate!="")%>%
             rename(` `=flagstate)
         
           addWorksheet(wb, i)
@@ -288,6 +322,7 @@ data_availability_server <-function(id, parent.session, config, profile, compone
       output$heatmap_s<-renderPlotly({
         req(!is.null(data_s()))
         req(!is.null(input$limit_entities_s))
+        req(dataAvailable()|(!dataAvailable()&!input$limit_entities_s))
         print("RUN HEATMAP")
         req(!is.null(input$stat_s))
         print(input$stat_s)
@@ -313,7 +348,8 @@ data_availability_server <-function(id, parent.session, config, profile, compone
         
         df<-df%>%
           complete(nesting(task),flagstate=entity_list,fill = list(value=0,stat="(no data)"))%>%
-          arrange(desc(flagstate))
+          arrange(desc(flagstate))%>%
+          filter(flagstate!="")
         
         text<-df%>%
           select(-value)
@@ -377,6 +413,22 @@ data_availability_server <-function(id, parent.session, config, profile, compone
                     xaxis = list(side ="top",showgrid = F)
         )%>% add_annotations(x = text$task, y = text$flagstate, text = text$stat, xref = 'x', yref = 'y', showarrow = FALSE, font=list(color='black'))
         return(fig)
+      })
+      output$nodata_s<-renderUI({
+        req(!is.null(data_s()))
+        req(!is.null(input$limit_entities_s))
+        req(!dataAvailable()&input$limit_entities_s)
+       p("(no data available)")
+      })
+      
+      output$heatmap_s_wrapper<-renderUI({
+        if(!dataAvailable()&input$limit_entities_s){
+          uiOutput(ns("nodata_s"))
+        }else{
+          fluidRow(
+            withSpinner(plotlyOutput(ns("heatmap_s")),type=4)
+          )
+        }
       })
       
       #-----------------------------------------------------------------------------------

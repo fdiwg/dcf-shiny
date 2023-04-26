@@ -185,18 +185,23 @@ data_entry_editor_server <- function(id, parent.session, config, profile, compon
         }
       })
       
-      output$format_wrapper<-renderUI({
-          selectizeInput(ns("format"),
-                         label="Data format",
-                         multiple = F,
-                         choices = c("Simplified"="simplified",
-                                     "Generic"="generic"),
-                         selected=NULL,
-                         options = list(
-                           placeholder = "Please select a format",
-                           onInitialize = I('function() { this.setValue(""); }')
-                         )
-          )
+      observeEvent(input$task,{
+        req(input$task)
+        
+        output$format_wrapper<-renderUI({
+          if(input$task!=""){
+            selectizeInput(ns("format"),
+                           label="Data format",
+                           multiple = F,
+                           choices = getTaskFormats(config,id=input$task),
+                           selected=NULL,
+                           options = list(
+                             placeholder = "Please select a format",
+                             onInitialize = I('function() { this.setValue(""); }')
+                           )
+            )
+          }
+        })
       })
       
       output$run_wrapper <- renderUI({
@@ -347,7 +352,7 @@ data_entry_editor_server <- function(id, parent.session, config, profile, compon
               label<-if(!is.null(x$aliases[[1]])){x$aliases[[1]]}else{x$id}
               mandatory<-!x$na_allowed
               if(id=="year"){
-                default_value<-NA
+                default_value<-NA_character_
                 year_list<-as.character(rev(seq(1950,as.integer(substr(Sys.Date(),1,4)))))
                 ref<-list(tibble(code=year_list,label=year_list))
                 editable<-TRUE
@@ -357,18 +362,18 @@ data_entry_editor_server <- function(id, parent.session, config, profile, compon
                   ref<-list(NA)
                   editable<-FALSE
                 }else{
-                  default_value<-NA
+                  default_value<-NA_character_
                   ref<-list(tibble(code=unlist(x$allowed_values),label=unlist(x$allowed_values)))
                   editable<-TRUE
                 }
               }else{
-                default_value<-NA
+                default_value<-NA_character_
                 ref<-list(if(!is.null(x$ref)){readr::read_csv(x$ref)}else{NA})
                 editable<-TRUE
               }
-              
               data<-tibble(id=id,label=label,mandatory=mandatory,default_value=default_value,ref=ref,editable=editable)
             }))
+            
             template_info<-template_info(task_template)
             
             info<-template_info()
