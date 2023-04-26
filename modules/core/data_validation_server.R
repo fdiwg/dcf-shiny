@@ -273,8 +273,7 @@ data_validation_server <- function(id, parent.session, config, profile, componen
           selectizeInput(ns("format"),
                          label="Data format",
                          multiple = F,
-                         choices = c("Simplified"="simplified",
-                                     "Generic"="generic"),
+                         choices = getTaskFormats(config,id=input$task),
                          selected=NULL,
                          options = list(
                            placeholder = "Please select a format",

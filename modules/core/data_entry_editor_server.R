@@ -185,18 +185,23 @@ data_entry_editor_server <- function(id, parent.session, config, profile, compon
         }
       })
       
-      output$format_wrapper<-renderUI({
-          selectizeInput(ns("format"),
-                         label="Data format",
-                         multiple = F,
-                         choices = c("Simplified"="simplified",
-                                     "Generic"="generic"),
-                         selected=NULL,
-                         options = list(
-                           placeholder = "Please select a format",
-                           onInitialize = I('function() { this.setValue(""); }')
-                         )
-          )
+      observeEvent(input$task,{
+        req(input$task)
+        
+        output$format_wrapper<-renderUI({
+          if(input$task!=""){
+            selectizeInput(ns("format"),
+                           label="Data format",
+                           multiple = F,
+                           choices = getTaskFormats(config,id=input$task),
+                           selected=NULL,
+                           options = list(
+                             placeholder = "Please select a format",
+                             onInitialize = I('function() { this.setValue(""); }')
+                           )
+            )
+          }
+        })
       })
       
       output$run_wrapper <- renderUI({

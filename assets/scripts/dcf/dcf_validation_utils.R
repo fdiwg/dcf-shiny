@@ -107,6 +107,16 @@ readTaskColumnDefinitions<- function(file, format, config = NULL, reporting_enti
   return(task_def)
 }
 
+#getTaskFormats
+getTaskFormats<- function(config,id){
+task<-getTaskProperties(config,id)
+taskRules <- task$dsd_ref_url
+task_def<-jsonlite::read_json(taskRules)
+task_def <- task_def$formats
+formats<-setNames(unlist(lapply(task_def, function(x){x$id})),unlist(lapply(task_def, function(x){x$name})))
+return(formats)
+}
+
 #validateData
 validateData<-function(file, task_def, config = NULL,hostess=NULL){
   
