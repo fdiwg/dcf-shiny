@@ -1009,7 +1009,7 @@ data_validation_server <- function(id, parent.session, config, profile, componen
         entity$setTitle(key = "title", input$file_title)
         
         #description
-        entity$setDescription(key = "abstract", input$file_abstract)
+        entity$setDescription(key = "abstract", input$file_description)
 
         #subjects
         if(nrow(table_keyword())>0){
@@ -1058,7 +1058,7 @@ data_validation_server <- function(id, parent.session, config, profile, componen
             rela$setKey("http")
             rela$setName(relation$type)
             rela$setDescription(relation$description)
-            rela$setLink(relation$type)
+            rela$setLink(relation$link)
             entity$addRelation(rela)
           }
         }
