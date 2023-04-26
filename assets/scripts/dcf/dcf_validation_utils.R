@@ -179,7 +179,7 @@ validateData<-function(file, task_def, config = NULL,hostess=NULL){
   add_step<-60/length(generic_cols)
   if(!is.null(hostess)) hostess$set(90)
   for (i in generic_cols){
-    
+    print(i)
     x<-rules[[i]]
     
     ### COLUMNS PRESENCE
@@ -242,10 +242,8 @@ validateData<-function(file, task_def, config = NULL,hostess=NULL){
           }
         }
       }
-      
+      data_names<-data_names[!data_names %in% usedName]
     }
-    
-    data_names<-data_names[!data_names %in% usedName]
     if(!is.null(hostess)) hostess$set(current_count+add_step)
   }
   if(!is.null(hostess)) hostess$set(60)
