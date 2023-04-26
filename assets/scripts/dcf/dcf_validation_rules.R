@@ -148,6 +148,38 @@ logical_vrule <- R6Class("logical_vrule",
    )
 )
 
+threshold_vrule <- R6Class("threshold_vrule",
+  inherit = datatype_vrule,
+  public = list(
+    category = "Thresholds",
+    name = "Threshold",
+    operator = NULL,
+    threshold = NULL,
+    initialize = function(operator, threshold){
+      self$operator = operator
+      self$threshold = threshold
+    },
+    
+    validate = function(value){
+      nvr = numeric_vrule$new()
+      rep = nvr$validate(value)
+      if(nrow(rep)==0){
+        threshold_expr = sprintf("value %s %s", self$operator, self$threshold)
+        cond = eval(parse(text = threshold_expr))
+        if(!cond){
+          rep <- data.frame(
+            category = self$category,
+            rule = self$name,
+            type = "ERROR",
+            message = sprintf("Source value %s is not %s %s", value, self$operator, self$threshold)
+          )  
+        }
+      }
+      return(rep)
+    }
+  )
+)
+
 
 #complex_vrule
 complex_vrule <- R6Class("complex_vrule",
@@ -210,6 +242,13 @@ and_vrule <- R6Class("and_vrule",
     }
   )
 )
+
+#test
+and = and_vrule$new(
+  numeric_vrule$new(),
+  double_vrule$new()
+)
+
 
 #rowbased_vrule
 rowbased_vrule <- R6Class("rowbased_vrule",
