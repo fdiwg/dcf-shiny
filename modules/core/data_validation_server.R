@@ -21,6 +21,7 @@ data_validation_server <- function(id, parent.session, config, profile, componen
         dcReportPath<<-reactiveVal(NULL)
         taskProperties<<-reactiveVal(NULL)
         loadedData<<-reactiveVal(NULL)
+        metadata_geoflow<<-reactiveVal(NULL)
         file_info<<-reactiveValues(
           datapath = NULL,
           name = NULL
@@ -903,7 +904,6 @@ data_validation_server <- function(id, parent.session, config, profile, componen
         keywords<-keywords(c(keywords(),if(startsWith(input$keyword_link,"http")){sprintf("<a href='%s' target='_blank'>%s</a>",input$keyword_link,keyword_label)}else{keyword_label}))
         print(keywords())
         keywords_color<-keywords_color(c(keywords_color(),keycolor_list[input$keyword_type][[1]]))
-        keywords_url<-c(keywords_url(),input$keyword_link)
         
         new_keyword<-data.frame(
           type=input$keyword_type,
@@ -1086,6 +1086,7 @@ data_validation_server <- function(id, parent.session, config, profile, componen
         
         metadata_geoflow<-entity$asDataFrame()
         print(metadata_geoflow)
+        file_metadata<-file_metadata(metadata_geoflow)
         
         appendTab(inputId = "wizard-tabs",
                   session = parent.session,
@@ -1200,7 +1201,16 @@ data_validation_server <- function(id, parent.session, config, profile, componen
           unlink(data_filename)
         }
         
+        #metadata file
         if(!is.null(uploadedDataId)){
+          INFO("Successful upload for source file '%s'", file_info$datapath)
+          data_filename <- file.path(getwd(), paste0(dc_folder, "_metadata_geoflow.csv"))
+          readr::write_csv(file_metadata(), data_filename)
+          uploadedMetaDataId <- store$uploadFile(folderPath = file.path(config$dcf$user_workspace, dc_folder), file = data_filename, description ="Dataset metadata")
+          unlink(data_filename)
+        }
+        
+        if(!is.null(uploadedMetaDataId)){
           INFO("Successful upload for data submission file '%s'", data_filename)
           
           # progress$set(
