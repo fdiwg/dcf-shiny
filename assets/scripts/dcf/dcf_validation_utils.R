@@ -95,16 +95,118 @@ dateFormating<- function(date,period="start"){
   return(dates)
 }
 
+# #readTaskColumnDefinitions
+# readTaskColumnDefinitions<- function(file, format, config = NULL, reporting_entity = NULL,force=F){
+#   task_def<-jsonlite::read_json(file)
+#   task_def <- task_def$formats[[format]]$columns
+#   if(!is.null(config$dcf$reporting_entities)) if(config$dcf$reporting_entities$validation|force){
+#     if(!is.null(task_def[[config$dcf$reporting_entities$name]]$ref)) task_def[[config$dcf$reporting_entities$name]]$ref <- NULL
+#     task_def[[config$dcf$reporting_entities$name]]$allowed_values <- reporting_entity
+#     task_def[[config$dcf$reporting_entities$name]]$rule_type <- "reporting_entity"
+#   }
+#   return(task_def)
+# }
+
 #readTaskColumnDefinitions
-readTaskColumnDefinitions<- function(file, format, config = NULL, reporting_entity = NULL,force=F){
+readTaskColumnDefinitions<- function(file, format, config = NULL){
+  
   task_def<-jsonlite::read_json(file)
+  
   task_def <- task_def$formats[[format]]$columns
-  if(!is.null(config$dcf$reporting_entities)) if(config$dcf$reporting_entities$validation|force){
-    if(!is.null(task_def[[config$dcf$reporting_entities$name]]$ref)) task_def[[config$dcf$reporting_entities$name]]$ref <- NULL
-    task_def[[config$dcf$reporting_entities$name]]$allowed_values <- reporting_entity
-    task_def[[config$dcf$reporting_entities$name]]$rule_type <- "reporting_entity"
+  
+  if(is.null(task_def$column_specs)){
+    if(!is.null(task_def$ref)){
+      task_def<-jsonlite::read_json(task_def$ref)
+    }else{
+      stop()
+    }
   }
+  
+  # if(!is.null(config$dcf$reporting_entities)) if(limit_reporting_entities){
+  #   
+  #   reporting_entity_col_spec_idx<-which(sapply(task_def$column_specs, function(x) any(which(x$name == config$dcf$reporting_entities$name))))
+  #   
+  #   target_rule_idx<-which(sapply(task_def$column_specs[[reporting_entity_col_spec_idx]]$rules, function(x) any(which(x$vrule == "codelist"))))
+  #   
+  #   if(!is.null(target_rule_idx)){
+  #     task_def$column_specs[[reporting_entity_col_spec_idx]]$rules[[target_rule_idx]]$args<-NULL
+  #     task_def$column_specs[[reporting_entity_col_spec_idx]]$rules[[target_rule_idx]]$args$ref_values<-list(reporting_entity)
+  #   }
+  #   
+  # }
+  
   return(task_def)
+  
+}
+
+#readDataCallRules
+readDataCallRules<- function(file, format, config = NULL,reporting_entity=NULL,data_call_limited_on=NULL){
+  
+  task_def<-jsonlite::read_json(file)
+  
+  task_def <- task_def$formats[[format]]$columns
+  
+  if(is.null(task_def$column_specs)){
+    if(!is.null(task_def$ref)){
+      task_def<-jsonlite::read_json(task_def$ref)
+    }else{
+      stop()
+    }
+  }
+  
+  dc_task_def<-task_def
+  
+  dc_task_def$column_specs<-NULL
+  
+  if(!is.null(config$dcf$reporting_entities)){
+    
+    reporting_entity_col_spec_idx<-which(sapply(task_def$column_specs, function(x) any(which(x$name == config$dcf$reporting_entities$name))))
+    reporting_entity_col_spec<-task_def$column_specs[[reporting_entity_col_spec_idx]]
+    reporting_entity_col_spec$rules<-NULL
+    reporting_entity_col_spec$rules[[1]]<-list(vrule="codelist",
+                                       args=list(ref_values=list(reporting_entity)))
+
+    
+    dc_task_def$column_specs[[length(dc_task_def$column_specs) + 1]] <- reporting_entity_col_spec
+    
+  }
+  
+  if(!is.null(data_call_limited_on)){
+    
+    #TIME DATA CALL CONSISTANCY
+    if("time_start" %in% names(data_call_limited_on)){
+      
+      threshold<-eval_variable_expression(data_call_limited_on[["time_start"]])
+      
+      time_start_col_spec_idx<-which(sapply(task_def$column_specs, function(x) any(which(x$name == "time_start"))))
+      time_start_col_spec<-task_def$column_specs[[time_start_col_spec_idx]]
+      time_start_col_spec$rules<-NULL
+      time_start_col_spec$rules[[1]]<-list(vrule="date_min",
+                                      args=list(minValue=threshold))
+      
+      
+      dc_task_def$column_specs[[length(dc_task_def$column_specs) + 1]] <- time_start_col_spec
+
+  }
+  
+    if("time_end" %in% names(data_call_limited_on)){
+      
+      threshold<-eval_variable_expression(data_call_limited_on[["time_end"]])
+      
+      time_end_col_spec_idx<-which(sapply(task_def$column_specs, function(x) any(which(x$name == "time_end"))))
+      time_end_col_spec<-task_def$column_specs[[time_end_col_spec_idx]]
+      time_end_col_spec$rules<-NULL
+      time_end_col_spec$rules[[1]]<-list(vrule="date_max",
+                                           args=list(maxValue=threshold))
+      
+      
+      dc_task_def$column_specs[[length(dc_task_def$column_specs) + 1]] <- time_end_col_spec
+
+    }
+  }
+  
+  return(dc_task_def)
+  
 }
 
 #getTaskFormats
@@ -117,32 +219,11 @@ formats<-setNames(unlist(lapply(task_def, function(x){x$id})),unlist(lapply(task
 return(formats)
 }
 
-#validateData
-validateData<-function(file, task_def, config = NULL,hostess=NULL){
+validateDataStructure<-function(file,task_def){
   
-  rules<-task_def
+  error_report=vrule::format_spec$new(json=task_def)
   
-  errors<-data.frame(
-    type=character(),
-    rule=character(),
-    row=character(),
-    column=character(),
-    category=character(),
-    message=character()
-  )
-  
-  #TODO read a file (json) with possible validity rules
-  #TODO filter on validity rules that apply this app context
-  tests<-data.frame(
-    code=c("E01","E02","E03","E04","E05", "E06", "I01"),
-    name=c("Readable Dataset",
-           "Structure of Dataset",
-           "No missing Values",
-           "Conformity with Standards",
-           "Valid Reporting entity",
-           "Valid Dates",
-           "Skipped Information")
-  )
+  task_cols<-sapply(task_def$column_specs, function(x){x$name})
   
   if(is.data.frame(file)){
     data<-file
@@ -152,368 +233,110 @@ validateData<-function(file, task_def, config = NULL,hostess=NULL){
     }else if(any(endsWith(file,"csv"))){
       data<-readr::read_csv(file,col_types = readr::cols(.default = "c"))
     }else{
-      errors<-rbind(errors,data.frame(type="ERROR",rule="E01",row="-",column="-",category="Dataset format not readable",message=sprintf("Dataset can't be read")))
-      out = list(
-        errors = errors,
-        tests= tests,
-        valid = FALSE
-      )
-      
-      return(out)
+      print("ERROR")
     }
   }
   
-  data_names<-names(data)
-  generic_cols<-names(unlist(lapply(rules, function(x){x$rule_type[x$rule_type=="generic"]})))
-  special_cols<-names(unlist(lapply(rules, function(x){x$rule_type[x$rule_type=="special"]})))
-  reporting_entity_col <- NULL
-  if(!is.null(config$dcf$reporting_entities)) if(config$dcf$reporting_entities$validation){
-    reporting_entity_cols <- rules[sapply(rules, function(x){x$rule_type=="reporting_entity"})]
-    reporting_entity_col <- reporting_entity_cols[[1]]
-  }
+  data<-as.data.frame(data)
   
-  # ERRORS DETECTION
-  ##MANDATORIES COLUMNS
-  INFO("Check generic columns")
-  current_count<-0
-  add_step<-60/length(generic_cols)
-  if(!is.null(hostess)) hostess$set(90)
-  for (i in generic_cols){
-    print(i)
-    x<-rules[[i]]
-    
-    ### COLUMNS PRESENCE
-    allowed_names<-c(x$id,unlist(x$aliases))
-    cond<-any(allowed_names%in%data_names)
-    
-    if(!cond){
-      errors<-rbind(errors,data.frame(type="ERROR",rule="E02",row="-",column=x$id,category="Missing mandatory column",message=sprintf("Column '%s' is missing",x$id)))
-    }else{
-      usedName<-allowed_names[allowed_names%in%data_names]
-      checkedCol<-data[[usedName]]
-      
-      ### NA VALUES PRESENCE
-      if(!x$na_allowed){
-        cond<-any(is.na(checkedCol))
-        if(cond){
-          cond<-all(is.na(checkedCol))
-          if(cond){
-            errors<-rbind(errors,data.frame(type="ERROR",rule="E03",row="-",column=usedName,category="Not allowed missing value",message=sprintf("All values of '%s' are missing",usedName)))
-          }else{
-            rows<-which(is.na(checkedCol))
-            for(rowid in rows){
-              errors<-rbind(errors,data.frame(type="ERROR",rule="E03",row=rowid,column=usedName,category="Not allowed missing value",message=sprintf("Missing values in '%s'",usedName)))
-            }
-          }
-        }
-      }
-      
-      ### VALUES VALIDITY
-      #### VALUES IN REFERENTIALS  
-      if(!is.null(x$ref)){
-        ref<-readr::read_csv(x$ref)
-        cond<-all(unique(checkedCol[!is.na(checkedCol)])%in%ref$code)
-        if(!cond){
-          rows<-setdiff(which(!checkedCol%in%ref$code),which(is.na(checkedCol)))
-          for(rowid in rows){
-            errors<-rbind(errors,data.frame(type="ERROR",rule="E04",row=rowid,column=usedName,category="Invalid value",message=sprintf("Value '%s' is not a valid value of '%s' referential",checkedCol[rowid],usedName)))
-          }
-        }
-      }
-      # #### VALUE IN ALLOWED VALUES
-      if(!is.null(x$allowed_values)){
-        ref<-unlist(x$allowed_values)
-        cond<-all(unique(checkedCol[!is.na(checkedCol)])%in%ref)
-        if(!cond){
-          rows<-setdiff(which(!checkedCol%in%ref),which(is.na(checkedCol)))
-          for(rowid in rows){
-            errors<-rbind(errors,data.frame(type="ERROR",rule="E04",row=rowid,column=usedName,category="Invalid value",message=sprintf("Value '%s' is not a valid value of '%s' referential",checkedCol[rowid],usedName)))
-          }
-        }
-      }
-      #### ADDITIONALS RULES
-      ##### YEAR VALIDITY
-      if(x$id=="year"){
-        cond<-nchar(checkedCol)!=4|!any(startsWith(as.character(checkedCol),c("1","2")))|checkedCol>as.integer(substr(Sys.Date(),1,4))
-        if(any(cond)){
-          rows<-which(cond)
-          for(rowid in rows){
-            errors<-rbind(errors,data.frame(type="ERROR",rule="E06",row=rowid,column=usedName,category="Invalid value",message=sprintf("value '%s' is not valid year",checkedCol[rowid])))
-          }
-        }
-      }
-      data_names<-data_names[!data_names %in% usedName]
-    }
-    if(!is.null(hostess)) hostess$set(current_count+add_step)
-  }
-  if(!is.null(hostess)) hostess$set(60)
-  #CONDITIONALS COLUMNS
-  ## PERID VALIDITY
-  INFO("Check special columns (time)")
-  if(all(c("time","time_start","time_end")%in% special_cols)){
-    
-    ## TIME ON COLUMN FORMAT  
-    date_cols<-list()
-    for (i in c("time","time_start","time_end")){
-      x<-rules[[i]]
-      type<-ifelse(i=="time","combined","separated")
-      allowed_names<-c(x$id,unlist(x$aliases))
-      cond<-any(allowed_names%in%data_names)
-      if(cond){
-        usedName<-allowed_names[allowed_names%in%data_names]
-        checkedCol<-data[[usedName]]
-        cond<-any(is.na(checkedCol))
-        if(!cond){
-          date_cols[[type]][i]<-list(checkedCol)
-        }else{
-          date_cols[[type]][i]<-list(NULL)
-        }
-      }else{
-        date_cols[[type]][i]<-list(NULL)
-      }
-    }
-    if(!is.null(hostess)) hostess$set(70)
-    
-    if(is.null(date_cols$combined$time)&is.null(date_cols$separated$time_start)&is.null(date_cols$separated$time_end)){
-      errors<-rbind(errors,data.frame(type="ERROR",rule="E02",row="-",column="time",category="Missing mandatory column",message="'time' or 'time_start' and 'time_end' columns are missing"))
-    }else{
-      if(!is.null(date_cols$combined$time)){
-        #COMBINED TIME
-        
-        checkedCol<-date_cols$combined$time
-        
-        x<-rules[["time"]]
-        allowed_names<-c(x$id,unlist(x$aliases))
-        usedName<-allowed_names[allowed_names%in%data_names]
-        ### NA VALUES PRESENCE
-        if(!x$na_allowed){
-          cond<-any(is.na(checkedCol))
-          if(cond){
-            cond<-all(is.na(checkedCol))
-            if(cond){
-              errors<-rbind(errors,data.frame(type="ERROR",rule="E03",row="-",column=usedName,category="Not allowed missing value",message=sprintf("All values of '%s' are missing",usedName)))
-            }else{
-              rows<-which(is.na(checkedCol))
-              for(rowid in rows){
-                errors<-rbind(errors,data.frame(type="ERROR",rule="E03",row=rowid,column=usedName,category="Not allowed missing value",message=sprintf("Missing values in '%s'",usedName)))
-              }
-            }
-          }
-        }
-        
-        ### VALUE FORMAT
-        decode_date<-strsplit(checkedCol,"/")
-        
-        cond<-sapply(decode_date,function(x){
-          time_start<-x[1]
-          valid_start<-grepl("(((20[012]\\d|19\\d\\d)|(1\\d|2[0123]))-((0[0-9])|(1[012]))-((0[1-9])|([12][0-9])|(3[01])))",time_start)
-          time_end<-x[2]
-          valid_end<-grepl("(((20[012]\\d|19\\d\\d)|(1\\d|2[0123]))-((0[0-9])|(1[012]))-((0[1-9])|([12][0-9])|(3[01])))",time_start)
-          if(valid_start&valid_end){
-            date_order<-as.Date(time_end)>=as.Date(time_start)
-            if(date_order){
-              date_impossible<-(as.Date(time_start)>Sys.Date()|as.Date(time_end)>Sys.Date())  
-              if(date_impossible){
-                return("Date after today")
-              }else{
-                return("valid")
-              }
-            }else{
-              return("Date end before date start")
-            }
-          }else{
-            return("Invalid date format")
-          }
-        })
-        if(any(cond!="valid")){
-          rows<-which(cond!="valid")
-          for(rowid in rows){
-            errors<-rbind(errors,data.frame(type="ERROR",rule="E06",row=rowid,column="time",category="Invalid date",message=cond[rowid]))
-          }
-        }
-        
-        data_names<-data_names[!data_names %in% usedName]   
-        
-      }else{
-        #SEPARATED TIME
-        if(is.null(date_cols$separated$time_start)|is.null(date_cols$separated$time_end)){
-          if(is.null(date_cols$separated$time_start)){
-            #TIME START MISSING
-            errors<-rbind(errors,data.frame(type="ERROR",rule="E02",row="-",column="time_start",category="Missing mandatory column",message="'time_end' is completed but 'time_start' is missing"))
-          }else{
-            #TIME END MISSING
-            errors<-rbind(errors,data.frame(type="ERROR",rule="E02",row="-",column="time_end",category="Missing mandatory column",message="'time_start' is completed but 'time_end' is missing"))
-          }
-        }else{
-          #BOTH COLUMN COMPLETED
-          
-          #TIME START
-          time_start<-date_cols$separated$time_start
-          x<-rules[["time_start"]]
-          allowed_names<-c(x$id,unlist(x$aliases))
-          usedName<-allowed_names[allowed_names%in%data_names]
-          ### NA VALUES PRESENCE
-          if(!x$na_allowed){
-            cond<-any(is.na(time_start))
-            if(cond){
-              cond<-all(is.na(time_start))
-              if(cond){
-                errors<-rbind(errors,data.frame(type="ERROR",rule="E03",row="-",column=usedName,category="Not allowed missing value",message=sprintf("All values of '%s' are missing",usedName)))
-              }else{
-                rows<-which(is.na(time_start))
-                for(rowid in rows){
-                  errors<-rbind(errors,data.frame(type="ERROR",rule="E03",row=rowid,column=usedName,category="Not allowed missing value",message=sprintf("Missing values in '%s'",usedName)))
-                }
-              }
-            }
-          }
-          valid_start<-grepl("(((20[012]\\d|19\\d\\d)|(1\\d|2[0123]))-((0[0-9])|(1[012]))-((0[1-9])|([12][0-9])|(3[01])))",time_start)
-          if(all(valid_start)){
-            date_impossible<-as.Date(time_start)>Sys.Date()
-            if(any(date_impossible)){
-              rows<-which(date_impossible)
-              for(rowid in rows){
-                errors<-rbind(errors,data.frame(type="ERROR",rule="E06",row=rowid,column=usedName,category="Invalid date",message="Date after today"))
-              }
-            }
-          }else{
-            rows<-which(!valid_start)
-            for(rowid in rows){
-              errors<-rbind(errors,data.frame(type="ERROR",rule="E06",row=rowid,column=usedName,category="Invalid date",message="Invalid date format"))
-            }
-          }
-          
-          data_names<-data_names[!data_names %in% usedName]
-          
-          #TIME END
-          time_end<-date_cols$separated$time_end
-          x<-rules[["time_end"]]
-          allowed_names<-c(x$id,unlist(x$aliases))
-          usedName<-allowed_names[allowed_names%in%data_names]
-          ### NA VALUES PRESENCE
-          if(!x$na_allowed){
-            cond<-any(is.na(time_end))
-            if(cond){
-              cond<-all(is.na(time_end))
-              if(cond){
-                errors<-rbind(errors,data.frame(type="ERROR",rule="E03",row="-",column=usedName,category="Not allowed missing value",message=sprintf("All values of '%s' are missing",usedName)))
-              }else{
-                rows<-which(is.na(time_end))
-                for(rowid in rows){
-                  errors<-rbind(errors,data.frame(type="ERROR",rule="E03",row=rowid,column=usedName,category="Not allowed missing value",message=sprintf("Missing values in '%s'",usedName)))
-                }
-              }
-            }
-          }
-          valid_end<-grepl("(((20[012]\\d|19\\d\\d)|(1\\d|2[0123]))-((0[0-9])|(1[012]))-((0[1-9])|([12][0-9])|(3[01])))",time_end)
-          if(all(valid_end)){
-            date_impossible<-as.Date(time_end)>Sys.Date()
-            if(any(date_impossible)){
-              rows<-which(date_impossible)
-              for(rowid in rows){
-                errors<-rbind(errors,data.frame(type="ERROR",rule="E06",row=rowid,column=usedName,category="Invalid date",message="Date after today"))
-              }
-            }
-          }else{
-            rows<-which(!valid_end)
-            for(rowid in rows){
-              errors<-rbind(errors,data.frame(type="ERROR",rule="E06",row=rowid,column=usedName,category="Invalid date",message="Invalid date format"))
-            }
-          }
-          
-          data_names<-data_names[!data_names %in% usedName]
-          
-          if(all(valid_start)&all(valid_end)){
-            date_order<-as.Date(time_end)>=as.Date(time_start)
-            if(!all(date_order)){
-              rows<-which(!date_order)
-              for(rowid in rows){
-                errors<-rbind(errors,data.frame(type="ERROR",rule="E06",row=rowid,column="-",category="Invalid date","Date end before date start"))
-              }
-            }
-          }
-          
-        }
-      }
-    }
-  } 
-  if(!is.null(hostess)) hostess$set(80)
-  #REPORTING ENTITY COLUMN
-  INFO("Check reporting entity column")
-  if(!is.null(reporting_entity_col)){
-    
-    print(reporting_entity_col)
-    x<-reporting_entity_col
-    
-    ### COLUMNS PRESENCE
-    allowed_names<-c(x$id,unlist(x$aliases))
-    cond<-any(allowed_names%in%data_names)
-    
-    if(!cond){
-      errors<-rbind(errors,data.frame(type="ERROR",rule="E02",row="-",column=x$id,category="Missing mandatory column",message=sprintf("Column '%s' is missing",x$id)))
-    }else{
-      usedName<-allowed_names[allowed_names%in%data_names]
-      checkedCol<-data[[usedName]]
-      
-      ### NA VALUES PRESENCE
-      if(!x$na_allowed){
-        cond<-any(is.na(checkedCol))
-        if(cond){
-          cond<-all(is.na(checkedCol))
-          if(cond){
-            errors<-rbind(errors,data.frame(type="ERROR",rule="E03",row="-",column=usedName,category="Not allowed missing value",message=sprintf("All values of '%s' are missing",usedName)))
-          }else{
-            rows<-which(is.na(checkedCol))
-            for(rowid in rows){
-              errors<-rbind(errors,data.frame(type="ERROR",rule="E03",row=rowid,column=usedName,category="Not allowed missing value",message=sprintf("Missing values in '%s'",usedName)))
-            }
-          }
-        }
-      }
-      
-      ### VALUES VALIDITY
-      #### VALUE IN ALLOWED VALUES
-      INFO("Check reporting entity allowed values")
-      print(x)
-      if(!is.null(x$allowed_values)){
-        ref<-unlist(x$allowed_values)
-        cond<-any(!(unique(checkedCol[!is.na(checkedCol)])%in%ref))
-        if(cond){
-          errors<-rbind(errors,data.frame(type="ERROR",rule="E05",row="-",column=usedName,category="Invalid reporting entity",message=sprintf("At least one reporting entity does not match the selected reporting entity ('%s') for the '%s' column.",x$allowed_values, usedName)))
-        }
-      }
-    }
-  }
+  errors<-error_report$validateStructure(data)
   
-  if(!is.null(hostess)) hostess$set(85)
-  ### SUPPLEMENTARIES COLUMNS
+  report<-errors[,c("col","type")]
+  columns_info<-do.call("rbind",lapply(task_def$column_specs, function(x){data.frame(name=x$name,required=x$required)}))
   
-  for(addcol in data_names){
-    errors<-rbind(errors,data.frame(type="INFO",rule="I01",row="-",column=addcol,category="Column not used",message=sprintf("'%s' is not a mandatory column and will be skiped",addcol)))
-  }
+  summary<-merge(columns_info,report,by.x="name",by.y="col",all.x=T,all.y=F,sort=F)
   
-  if(!is.null(hostess)) hostess$set(90)
+  summary<-summary%>%
+    rowwise()%>%
+    mutate(required=ifelse(required==TRUE,"MANDATORY","OPTIONAL"))%>%
+    mutate(type=ifelse(is.na(type),"EXISTING","MISSING"))%>%
+    mutate(name=factor(name,levels=task_cols))%>%
+    ungroup()%>%
+    arrange(name)%>%
+    mutate(name=as.character(name))
   
-  ### VALIDITY RESULTS
+  names(summary)<-c("column","type","status")
+  
+  
   if(nrow(subset(errors,type=="ERROR"))>0){
     valid<-FALSE
   }else{
     valid<-TRUE
   }
-  out = list(
-    errors = errors,
-    tests = tests, 
-    valid = valid
+  
+  out<-list(
+    errors=errors,
+    summary=summary,
+    valid=valid
   )
   
-  return(out)
+  }
+
+validateDataContent<-function(file,task_def,config =NULL,hostess=NULL,prettify=FALSE){
   
+    error_report=vrule::format_spec$new(json=task_def)
+    
+    task_cols<-sapply(task_def$column_specs, function(x){x$name})
+    
+    if(is.data.frame(file)){
+      data<-file
+    }else{
+      if(any(endsWith(file,c("xls","xlsx")))){
+        data<-read_excel(file,col_types = "text")
+      }else if(any(endsWith(file,"csv"))){
+        data<-readr::read_csv(file,col_types = readr::cols(.default = "c"))
+      }else{
+        print("ERROR")
+      }
+    }
+    
+    data<-as.data.frame(data)
+    
+    if(prettify){
+      errors<-error_report$validate_and_display_as_handsontable(data)
+    }else{
+      errors<-error_report$validateContent(data)
+    }
+    
+    errors<-subset(errors,category!="Data structure")
+    
+    report<-unique(errors[,c("col","type")])
+    columns_info<-do.call("rbind",lapply(task_def$column_specs, function(x){data.frame(name=x$name)}))
+    if(nrow(report>0)){
+      summary<-merge(columns_info,report,by.x="name",by.y="col",all.x=T,all.y=F,sort=F)
+    }else{
+      summary<-columns_info
+      summary$type<-NA
+    }
+    summary<-summary%>%
+      rowwise()%>%
+      mutate(type=ifelse(is.na(type),"SUCCESS",type))%>%
+      group_by(name)%>%
+      summarise(status=ifelse(any("ERROR"%in%type),"FAILED",
+                        ifelse(any("WARNING"%in%type),"PASSED WITH WARNING","PASSED")))%>%
+      ungroup()%>%
+      mutate(name=factor(name,levels=task_cols))%>%
+      arrange(name)%>%
+      mutate(name=as.character(name))
+
+    names(summary)<-c("column","status")
+    
+    if(nrow(subset(errors,type=="ERROR"))>0){
+           valid<-FALSE
+         }else{
+           valid<-TRUE
+       }
+         out = list(
+           errors = errors,
+           summary = summary, 
+           valid = valid
+         )
+    
+    return(out)
 }
 
 #standardizeNames
 standardizeNames<-function(file,task_def,exclude_unused=T){
-  
-  rules<-task_def
   
   if(is.data.frame(file)){
     data<-file
@@ -525,13 +348,13 @@ standardizeNames<-function(file,task_def,exclude_unused=T){
     }else{}
   }
   
-  rules_cols<-names(rules)
+  task_cols<-sapply(task_def$column_specs, function(x){x$name})
   data_names<-names(data)
   
-  for (i in rules_cols){
-    x<-rules[[i]]
-    std_name<-x$id
-    alt_names<-unlist(x$aliases)
+  for (i in 1:length(task_def$column_specs)){
+    target<-task_def$column_specs[[i]]
+    std_name<-target$name
+    alt_names<-unlist(target$aliases)
     if(std_name%in%data_names){}else{
       if(any(alt_names%in%data_names)){
         usedName<-alt_names[alt_names%in%data_names]
@@ -541,7 +364,7 @@ standardizeNames<-function(file,task_def,exclude_unused=T){
   }
   
   if(exclude_unused){
-    data<-data[rules_cols]
+    data<-data[intersect(task_cols,names(data))]
   }
   
   return(data)
@@ -551,7 +374,16 @@ standardizeNames<-function(file,task_def,exclude_unused=T){
 simplifiedToGeneric<-function(file,rules){
   
   rules<-jsonlite::read_json(rules)
+  
   task_def <- rules$formats[["generic"]]$columns
+  
+  if(is.null(task_def$column_specs)){
+    if(!is.null(task_def$ref)){
+      task_def<-jsonlite::read_json(task_def$ref)
+    }else{
+      stop()
+    }
+  }
   
   type=rules$measurement
   
@@ -566,14 +398,17 @@ simplifiedToGeneric<-function(file,rules){
   }
   
   names(data)<-gsub("_unit","__measurement_unit",names(data))
-  measurement_type<-paste0(unlist(task_def$measurement$allowed_values),"_",unlist(task_def$measurement_type$allowed_values))
+  
+  measurement_type<-paste0(type,"_",unlist(task_def$column_specs[[which(sapply(task_def$column_specs, function(x) any(which(x$name == "measurement_type"))))]]$rules[[1]]$args$ref_values))
+  
   names(data)[names(data) %in% measurement_type]<-paste0(names(data)[names(data) %in% measurement_type],"__measurement_value")
-  names(data)[grepl("__measurement",names(data),fixed = T)]<-gsub(paste0(task_def$measurement$allowed_values[[1]],"_"),"",names(data)[grepl("__measurement",names(data),fixed = T)])
+  
+  names(data)[grepl("__measurement",names(data),fixed = T)]<-gsub(paste0(type,"_"),"",names(data)[grepl("__measurement",names(data),fixed = T)])
   
   newdata<-data%>%
     pivot_longer(names(data)[grepl("__measurement",names(data),fixed = T)],names_to = c("measurement_type", ".value"), 
                  names_sep="__" )%>%
-    mutate(measurement=task_def$measurement$allowed_values[[1]])%>%
+    mutate(measurement=type)%>%
     rowwise()%>%
     mutate(date=ifelse("period"%in%names(data),paste0(year,"-",period),paste0(year,"-NA")))%>%
     ungroup()%>%
@@ -581,11 +416,16 @@ simplifiedToGeneric<-function(file,rules){
            time_end=dateFormating(date,"end"),
            time=paste0(time_start,"/",time_end))
   
-  if("measurement_obs"%in%names(task_def)){
-    names(newdata)[endsWith(names(newdata),"_obs",names(newdata))] <- "measurement_obs" 
+  if("measurement_obs"%in%sapply(task_def$column_specs, function(x){x$name})){
+    if(any(endsWith(names(newdata),"_obs"))){
+      names(newdata)[endsWith(names(newdata),"_obs",names(newdata))] <- "measurement_obs" 
+    }else{
+      newdata$measurement_obs<-NA
+    }
+    
   }
   
-  newdata<-newdata[names(task_def)]
+  newdata<-newdata[sapply(task_def$column_specs, function(x){x$name})]
   
   return(newdata)
 }

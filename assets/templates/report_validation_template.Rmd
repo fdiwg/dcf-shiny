@@ -1,0 +1,173 @@
+---
+title: "Report of Validation"
+subtitle: "Conformity with standards and datacall"
+output: 
+  pdf_document:
+    keep_tex: true
+    latex_engine: xelatex
+header-includes:
+  - \usepackage{fontawesome5}
+  - \usepackage{xcolor}
+  - \usepackage{colortbl}
+  - \usepackage{booktabs}
+  - \usepackage{float}
+---
+\definecolor{green1}{HTML}{008000}
+\definecolor{orange1}{HTML}{FFA500}
+\definecolor{red1}{HTML}{FF0000}
+
+\begin{center}
+\vspace{-0.5cm}
+\noindent\rule{8cm}{0.4pt}
+
+`r sprintf('Task: %s [%s] for %s',info$task_name,info$task_id,info$flagstate)`\\
+`r config$dcf$context`\\
+`r config$dcf$name`\\
+`r info$date`\\
+
+\noindent\rule{8cm}{0.4pt}
+\end{center}
+
+# Tested file information
+
+* **Original File Name: **`r info$file`  
+* **Original File Format: **`r info$format`  
+
+# Validity of file
+```{r,results='asis', message=FALSE, warning=FALSE, comment=FALSE,echo=FALSE}
+
+valid<-FALSE
+if(!ds_out$valid){
+  valid<-FALSE
+}else{
+  if(is.null(gb_out$valid)){
+    valid<-FALSE
+  }else{
+    if(!gb_out$valid){
+      valid<-FALSE
+    }else{
+      if(is.null(dc_out$valid)){
+        valid<-FALSE
+      }else{
+        if(!dc_out$valid){
+          valid<-FALSE
+        }else{
+          valid<-TRUE
+        }
+      }
+    }
+  }
+}
+
+if(valid){
+  cat("\\LARGE\\color{green1}\\faCheckCircle \\color{black} Data is valid")
+}else{
+  cat("\\LARGE\\color{red1}\\faTimesCircle \\color{black} Data is invalid")
+}
+```
+
+# Validation summary
+## Conformity with Standards - Data Structure
+
+```{r,results='asis', message=FALSE, warning=FALSE, comment=FALSE,echo=FALSE}
+
+summary<-ds_out$summary
+summary$test<-ifelse(summary$status=="EXISTING","E",ifelse(summary$type=="OPTIONAL","MO","MM"))
+summary$icon<-ifelse(summary$test=="E","\\color{green1}\\faCheckCircle \\color{black}",
+                     ifelse(summary$test=="MO","\\color{orange1}\\faExclamationTriangle \\color{black}",
+                            "\\color{red1}\\faTimesCircle \\color{black}"))
+summary$column<-gsub("_","\\_",summary$column,fixed=T)
+
+summary<-summary[,c("column","type","status","icon")]
+
+kableExtra::kable(summary,format = "latex",booktabs = T,escape=F,align = "llrc",col.names = NULL,linesep = "")%>%
+  kableExtra::kable_styling(latex_options = c("HOLD_position"),font_size = 8,full_width = F)%>%
+  row_spec(which(summary$icon =="\\color{green1}\\faCheckCircle \\color{black}"), bold = T, color = "#008000", background = "#d3f4cc")%>%
+  row_spec(which(summary$icon =="\\color{orange1}\\faExclamationTriangle \\color{black}"), bold = T, color = "#FFA500", background = "#f5dfc0")%>%
+  row_spec(which(summary$icon =="\\color{red1}\\faTimesCircle \\color{black}"), bold = T, color = "#FF0000", background = "#ffbfc1")
+
+```
+
+## Conformity with Standards - Data Content
+
+```{r,results='asis', message=FALSE, warning=FALSE, comment=FALSE,echo=FALSE}
+
+valid<-FALSE
+if(!ds_out$valid){
+  valid<-FALSE
+}else{
+  if(is.null(gb_out$valid)){
+    valid<-FALSE
+  }else{
+    valid<-TRUE
+  }
+}
+
+if(!valid){
+  cat("\\normalsize Data content can't be tested because data strucure in not valid")
+}else{
+  summary<-gb_out$summary
+  summary$icon<-ifelse(summary$status=="PASSED","\\color{green1}\\faCheckCircle \\color{black}",
+                       ifelse(summary$status=="PASSED WITH WARNING","\\color{orange1}\\faExclamationTriangle \\color{black}",
+                              "\\color{red1}\\faTimesCircle \\color{black}"))
+  
+  summary$column<-gsub("_","\\_",summary$column,fixed=T)
+  
+  kableExtra::kable(summary,format = "latex",booktabs = T,escape=F,align = "lrc",col.names = NULL,linesep = "")%>%
+    kableExtra::kable_styling(latex_options = c("HOLD_position"),font_size = 8,full_width = F)%>%
+    row_spec(which(summary$status =="PASSED"), bold = T, color = "#008000", background = "#d3f4cc")%>%
+    row_spec(which(summary$status =="WARNING"), bold = T, color = "#FFA500", background = "#f5dfc0")%>%
+    row_spec(which(summary$status =="FAILED"), bold = T, color = "#FF0000", background = "#ffbfc1")
+  
+}
+
+```
+
+
+## Consistancy with Data Call
+
+```{r,results='asis', message=FALSE, warning=FALSE, comment=FALSE,echo=FALSE}
+
+valid<-FALSE
+if(!ds_out$valid){
+  valid<-FALSE
+  message<-"\\normalsize Data content can't be tested because data strucure in not valid"
+}else{
+  if(is.null(gb_out$valid)){
+    valid<-FALSE
+    message<-"\\normalsize Data content can't be tested because data strucure in not valid"
+  }else{
+    if(!gb_out$valid){
+        valid<-FALSE
+        message<-"\\normalsize Consistancy with data call can't be tested because data content in not valid"
+    }else{
+      if(is.null(dc_out$valid)){
+        valid<-FALSE
+        message<-"\\normalsize Consistancy with data call can't be tested because data content in not valid"
+      }else{
+        if(!dc_out$valid){
+          valid<-FALSE
+          message<-"\\normalsize Consistancy with data call can't be tested because no data call is open"
+        }else{
+          valid<-TRUE
+        }
+      }
+    }
+  }
+}
+if(!valid){
+  cat(message)
+}else{
+  summary<-dc_out$summary
+  summary$icon<-ifelse(summary$status=="PASSED","\\color{green1}\\faCheckCircle \\color{black}",
+                       ifelse(summary$status=="PASSED WITH WARNING","\\color{orange1}\\faExclamationTriangle \\color{black}",
+                              "\\color{red1}\\faTimesCircle \\color{black}"))
+  
+  kableExtra::kable(summary,format = "latex",booktabs = T,escape=F,align = "lrc",col.names = NULL,linesep = "")%>%
+    kableExtra::kable_styling(latex_options = c("HOLD_position"),font_size = 8,full_width = F)%>%
+    row_spec(which(summary$status =="PASSED"), bold = T, color = "#008000", background = "#d3f4cc")%>%
+    row_spec(which(summary$status =="WARNING"), bold = T, color = "#FFA500", background = "#f5dfc0")%>%
+    row_spec(which(summary$status =="FAILED"), bold = T, color = "#FF0000", background = "#ffbfc1")
+  
+}
+```
