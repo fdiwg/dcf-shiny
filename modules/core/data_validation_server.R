@@ -15,12 +15,14 @@ data_validation_server <- function(id, parent.session, config, profile, componen
       #RESTART FUNCTION
       restartProcess<-function(initialize=F){
         dataCall<<-reactiveVal(FALSE)
+        dsOut<<-reactiveVal(NULL)
         gbOut<<-reactiveVal(NULL)
-        gbReportPath<<-reactiveVal(NULL)
+        valReportPath<<-reactiveVal(NULL)
         dcOut<<-reactiveVal(NULL)
-        dcReportPath<<-reactiveVal(NULL)
+        goReport<<-reactiveVal(FALSE)
         taskProperties<<-reactiveVal(NULL)
         loadedData<<-reactiveVal(NULL)
+        metadata_geoflow<<-reactiveVal(NULL)
         file_info<<-reactiveValues(
           datapath = NULL,
           name = NULL
@@ -124,18 +126,13 @@ data_validation_server <- function(id, parent.session, config, profile, componen
         restartProcess()
         restart<-restart(TRUE)
       })
-      #GO BACK HOME FROM TAB 4
+      #GO BACK HOME FROM TAB 5
       observeEvent(input$close2,{
         restartProcess()
         restart<-restart(TRUE)
       })
-      #GO BACK HOME FROM TAB 6
+      #GO BACK HOME FROM TAB 5 MODAL
       observeEvent(input$close3,{
-        restartProcess()
-        restart<-restart(TRUE)
-      })
-      #GO BACK HOME FROM TAB 6 MODAL
-      observeEvent(input$close4,{
         restartProcess()
         restart<-restart(TRUE)
         removeModal()
@@ -397,10 +394,13 @@ data_validation_server <- function(id, parent.session, config, profile, componen
         appendTab(inputId = "wizard-tabs",
                   session = parent.session,
                   select=TRUE,
-                  tabPanel(title="3-Conformity with standards", 
+                  tabPanel(title="3-Data Validation", 
                            value="standard_validation",
                            tagList(
-                             uiOutput(ns("globalValidReport"))
+                             uiOutput(ns("dataInfoValidReport")),
+                             uiOutput(ns("dataStructureValidReport")),
+                             uiOutput(ns("dataContentValidReport")),
+                             uiOutput(ns("dataCallValidReport"))
                            )
                   )
         )
@@ -427,86 +427,178 @@ data_validation_server <- function(id, parent.session, config, profile, componen
         waiter_show(html = waiting_screen, color = "#14141480")
         data<-loadedData()
         INFO("Read Task '%s' column definitions", taskProperties()$name)
-        task_def <- readTaskColumnDefinitions(file = taskRules, format = input$format, config = config, reporting_entity = input$reporting_entity)
-        INFO("Validate data")
-        out<-validateData(file=data, task_def = task_def, config = config,hostess=hostess)
-        INFO("Successful data validation")
+        task_def <- readTaskColumnDefinitions(file = taskRules, format = input$format, config = config)
+        hostess$set(5)
+        
+        #Validation of structure
+        
+        INFO("Validate data structure")
+        out<-validateDataStructure(file=data, task_def = task_def)
+        dsOut<-dsOut(out)
+        hostess$set(10)
+        
         if(out$valid){
-          submission$reporting_entity <- input$reporting_entity
-          data<-standardizeNames(file=data,task_def = task_def)
-          if(!identical(names(data),names(loadedData()))){
-            transformation$data_rename<-TRUE
+          INFO("Validate data content")
+          out<-validateDataContent(file=data, task_def = task_def, config = config,hostess=hostess)
+          gbOut<-gbOut(out)
+          hostess$set(50)
+          INFO("Successful data validation")
+          if(out$valid){
+            submission$reporting_entity <- input$reporting_entity
+            data<-standardizeNames(file=data,task_def = task_def)
+             hostess$set(80)
+             if(input$format=="simplified"){
+               data<-simplifiedToGeneric(file=data, taskRules)
+               
+             }
+             if(!is.null(submission$data_call_id)){
+               taskSupplRules<-taskProperties()$data_call_limited_on
+               task_def <- readDataCallRules(file = taskRules, format = "generic", config = config,reporting_entity = input$reporting_entity,data_call_limited_on=taskSupplRules)
+               out<-validateDataContent(file=data, task_def = task_def, config = config,hostess=hostess)
+               dcOut<-dcOut(out)
+               hostess$set(95)
+             }
+
+             loadedData<-loadedData(data)
           }
-          hostess$set(95)
-          print(head(as.data.frame(data),2))
-          if(input$format=="simplified"){
-            generic_task_def <- readTaskColumnDefinitions(file = taskRules, format = "generic", config = config, reporting_entity = input$reporting_entity)
-            data<-simplifiedToGeneric(file=data, taskRules)
-            transformation$data_reformat<-TRUE
-            print(head(as.data.frame(data),2))
-          }
-          loadedData<-loadedData(data)
+          hostess$set(99)
         }
-        hostess$set(99)
-        gbOut<-gbOut(out)
-        print(names(loadedData()))
+        
+        goReport<-goReport(TRUE)
+        #print(names(loadedData()))
 
       })
+      
+      
       #TAB 3 REPORT ROUTINE
-      output$globalValidReport<-renderUI({
-        req(!is.null(gbOut()))
-        out<-gbOut()
-        
+
+      output$dataInfoValidReport<-renderUI({
+        req(!is.null(dsOut()))
+        out<-dsOut()
         #PDF Report
         info<-list(task_id=input$task,
                    date=Sys.Date(),
                    task_name=taskProperties()$name,
                    file=file_info$name,
                    format=input$format,
-                   flagstate=input$reporting_entity)
+                   flagstate=input$reporting_entity)      
         
-        report_path<-file.path(tempdir(), sprintf("datacall-%s_task-%s_for_%s_report_standard_conformity.pdf",submission$data_call_id,input$task,input$reporting_entity))
-        gbReportPath<-gbReportPath(report_path)
-        print(report_path)
-        print(out$errors)
-        rmarkdown::render("assets/templates/report_standard_conformity_template.Rmd", output_file = report_path ,output_format = "pdf_document",output_options = list(keep_tex = TRUE), params = list(out,info,config))
+        valid<-FALSE
+        if(dsOut()$valid){
+          valid<-TRUE
+          if(is.null(gbOut())){
+            valid<-FALSE
+          }else{
+            if(!gbOut()$valid){
+            valid<-FALSE
+            }else{
+              if(!dcOut()$valid){
+                valid<-FALSE
+              }else{
+                valid<-TRUE
+              }
+            }
+          }
+        }
+        
+        content<-tagList(
+          br(),
+          #Data informations
+          box(title=HTML("<b>Submission information</b>"),status = "info", solidHeader = TRUE,collapsible = F,collapsed=F,width = 12,
+              div(
+                column(3,style = "border: 1px solid black;",
+                       p(strong("Task ID: "),input$task),
+                       p(strong("Date of Report : "),Sys.Date())
+                ),
+                column(6,style = "border: 1px solid black;",
+                       p(strong("Task Name: "),taskProperties()$name),
+                       p(strong("File : "),file_info$name)
+                ),
+                column(3,style = "border: 1px solid black;",
+                       p(strong("Format : "),input$format),
+                       p(strong("Approved for Upload : "),span(ifelse(valid,"Yes","No"),style = ifelse(valid,"color:green","color:red")))
+                )
+              ),
+              br(),
+        if(valid){
+          div(shiny::icon(c('check-circle')), "Data is valid", style="margin-top:15px;margin-left:10px;color:green;font-size: 180%")
+        }else{
+          div(shiny::icon(c('times-circle')), "Data is invalid", style="margin-top:15px;margin-left:10px;color:red;font-size: 180%")
+        },
+        div(
+          column(9,
+        if(valid){
+          div("Congratulations! Your data passed the validation step. You can see below the data analysis details and click 'next'", style="margin-top:5px;color:green;font-size: 100%")
+        }else{
+          div("Oops somethink seems to be incorrect in your data. Please see below the data analysis details and click 'finish' to return to home page and try again.", style="margin-top:5px;color:red;font-size: 100%")
+        }
+        ),
+          column(3,
+            downloadButton(ns("gbreport"),"Download Report",icon=icon("download"))
+          )
+        )
+        )
+        )
+        
+        return(content)
+        
+      })
+      
+      output$dataStructureValidReport<-renderUI({
+        req(!is.null(dsOut()))
+        out<-dsOut()
+        
+        #Box Text
+        summary<-out$summary
+        summary$status<-ifelse(summary$status=="EXISTING","PASSED",ifelse(summary$type=="OPTIONAL","PASSED WITH WARNING","FAILED"))
+        status<-ifelse(any("FAILED"%in%summary$status),"FAILED",
+                       ifelse(any("PASSED WITH WARNING"%in%summary$status),"PASSED WITH WARNING","PASSED"))
+        status_icon<-switch (status,
+                             "PASSED"=tags$span(shiny::icon("check-circle")),
+                             "PASSED WITH WARNING"=tags$span(shiny::icon("exclamation-triangle")),
+                             "FAILED"=tags$span(shiny::icon("times-circle"))
+                             
+        )
+        status_box<-switch (status,
+                            "PASSED"="success",
+                            "PASSED WITH WARNING"="warning",
+                            "FAILED"="danger"
+                            
+        )
+        
+        status_text<-sprintf("1/3 %s <span><b> Conformity with Standards - Data Structure - %s</b></span>",status_icon,status)
         
         #HTML Report
         #Table with summary of rules
-        output$gbSummary<-DT::renderDT(server = FALSE, {
-          if(nrow(out$errors)!=0){
-          x<-unique(subset(out$errors,select="rule"))
-          x$status<-"FAILED"
-          test<-merge(out$tests,x,by.x="code",by.y="rule",all.x=T,all.y=F)
-          test[is.na(test)]<-"PASSED"
-          test[startsWith(test$code,"I"),]$status<-"WARNING" 
-          }else{
-            test<-out$test
-            test$status<-"PASSED"
-          }
-          test<-subset(test,select=-c(code))
-          test$icon<-ifelse(test$status=="PASSED",paste0(tags$span(shiny::icon("check-circle"), title = "Passed", style = "color:green;"), collapse=""),
-                            ifelse(test$status=="WARNING",paste0(tags$span(shiny::icon("exclamation-triangle"), title = "Warning", style = "color:orange;"), collapse=""),
-                                   paste0(tags$span(shiny::icon("times-circle"), title = "Failed", style = "color:red;"), collapse="")))
+        output$dsSummary<-DT::renderDT(server = FALSE, {
+          summary<-out$summary
+          summary$test<-ifelse(summary$status=="EXISTING","E",ifelse(summary$type=="OPTIONAL","MO","MM"))
+          summary$icon<-ifelse(summary$test=="E",paste0(tags$span(shiny::icon("check-circle"), title = "Existing column", style = "color:green;"), collapse=""),
+                               ifelse(summary$test=="MO",paste0(tags$span(shiny::icon("exclamation-triangle"), title = "Missing optional column", style = "color:orange;"), collapse=""),
+                                      paste0(tags$span(shiny::icon("times-circle"), title = "Missing mandatory column", style = "color:red;"), collapse="")))
+          
+          
           
           DT::datatable(
-            test, 
+            summary,
             rownames = NULL,
             escape = FALSE,
-            colnames = c('','',''), 
+            colnames = c('Column','Column type','Status','',''),
             options = list(dom = 't',
                            ordering=F,
-                           columnDefs = list(list(className = 'dt-center', targets = 1:2))))%>%
-            formatStyle("status",target = 'row',backgroundColor = styleEqual(c("PASSED","WARNING","FAILED"), c("#d3f4cc","#f5dfc0","#ffbfc1")))%>%
-            formatStyle("status", fontWeight = 'bold',color= styleEqual(c("PASSED","WARNING","FAILED"), c("green","orange","red")))
+                           pageLength=nrow(summary),
+                           columnDefs = list(list(className = 'dt-center', targets = 1:2),
+                                             list(visible=FALSE, targets=c(3)))))%>%
+            formatStyle("test",target = 'row',backgroundColor = styleEqual(c("E","MO","MM"), c("#d3f4cc","#f5dfc0","#ffbfc1")))%>%
+            formatStyle("test", fontWeight = 'bold',color= styleEqual(c("E","MO","MM"), c("green","orange","red")))
           
         })
         
         #Table with details of errors
-        output$gbErrors<-DT::renderDT(server = FALSE, {
+        output$dsErrors<-DT::renderDT(server = FALSE, {
           if(nrow(out$errors)>0){
             DT::datatable(
-              out$errors,
+              out$errors[,c("type","rule","row","col","category","message")],
               colnames = c("Type","Rule","Row","Column","Category","Message"), 
               extensions = c("Buttons"),
               escape = FALSE,
@@ -529,40 +621,138 @@ data_validation_server <- function(id, parent.session, config, profile, componen
         
         #Status message
         content<-tagList(
-          if(out$valid){
-            tags$div(shiny::icon(c('check-circle')), "Data is valid", style="margin-top:5px;color:green;font-size: 200%")
-          }else{
-            tags$div(shiny::icon(c('times-circle')), "Data is invalid", style="margin-top:5px;color:red;font-size: 200%")
-          },
           br(),
-          if(out$valid){
-            p("Congratulations! Your data passed the validation step. You can see below the data analysis details and click 'next'")
-          }else{
-            p("Oops somethink seems to be incorrect in your data. Please see below the data analysis details and click 'finish' to return to home page and try again.")
-          },
-          br(),
-          #Data informations
-          fluidRow(
-            column(3,style = "border: 1px solid black;",
-                   p(strong("Task ID: "),input$task),
-                   p(strong("Date of Report : "),Sys.Date())
-            ),
-            column(6,style = "border: 1px solid black;",
-                   p(strong("Task Name: "),taskProperties()$name),
-                   p(strong("File : "),file_info$name)
-            ),
-            column(3,style = "border: 1px solid black;",
-                   p(strong("Format : "),input$format),
-                   p(strong("Approved for Upload : "),span(ifelse(out$valid,"Yes","No"),style = ifelse(out$valid,"color:green","color:red")))
+          box(title=HTML(status_text),status = status_box, solidHeader = TRUE,collapsible = T,collapsed=T,width = 12,
+              fluidRow(
+                column(4,
+                       h3("SUMMARY"),
+                       fluidRow(column(10,offset=1,DTOutput(ns("dsSummary"))))
+                ),
+                column(8,
+                       h3("DETAILS"),
+                       if(nrow(out$errors)>0){
+                         DTOutput(ns("dsErrors"))
+                       }else{
+                         tags$span("No error detected",style = "color:green")
+                       }
+                )
+              )
+          )
+        )
+        return(content)      
+      })
+      
+      output$dataContentValidReport<-renderUI({
+        req(!is.null(dsOut()))
+        if(!dsOut()$valid){
+          #Box Message
+          status<-"NOT TESTED"
+          status_icon<-switch (status,
+                               "NOT TESTED"=tags$span(shiny::icon("ban")),
+                               "PASSED"=tags$span(shiny::icon("check-circle")),
+                               "PASSED WITH WARNING"=tags$span(shiny::icon("exclamation-triangle")),
+                               "FAILED"=tags$span(shiny::icon("times-circle"))
+                               
+          )
+          status_box<-switch (status,
+                              "NOT TESTED"=NULL,
+                              "PASSED"="success",
+                              "PASSED WITH WARNING"="warning",
+                              "FAILED"="danger"
+                              
+          )
+          
+          status_text<-sprintf("2/3 %s <span><b> Conformity with Standards - Data Content - %s</b></span>",status_icon,status)
+          content<-tagList(
+            br(),
+            box(title=HTML(status_text),status = status_box, solidHeader = TRUE,collapsible = T,collapsed = T,width = 12,
+                div(
+                 p("Data content can't be tested because data strucure in not valid") 
+                )
             )
-          ),
+          )
+        }else{
+          req(!is.null(gbOut()))
+        
+        out<-gbOut()
+        #Box Message
+        summary<-out$summary
+        status<-ifelse(any("FAILED"%in%summary$status),"FAILED",
+                       ifelse(any("PASSED WITH WARNING"%in%summary$status),"PASSED WITH WARNING","PASSED"))
+        status_icon<-switch (status,
+            "PASSED"=tags$span(shiny::icon("check-circle")),
+            "PASSED WITH WARNING"=tags$span(shiny::icon("exclamation-triangle")),
+            "FAILED"=tags$span(shiny::icon("times-circle"))
+            
+        )
+        status_box<-switch (status,
+                            "PASSED"="success",
+                            "PASSED WITH WARNING"="warning",
+                            "FAILED"="danger"
+                            
+        )
+        
+        status_text<-sprintf("2/3 %s <span><b> Conformity with Standards - Data Content - %s</b></span>",status_icon,status)
+        
+        
+        #HTML Report
+        #Table with summary of rules
+        output$gbSummary<-DT::renderDT(server = FALSE, {
+          summary<-out$summary
+          summary$icon<-ifelse(summary$status=="PASSED",paste0(tags$span(shiny::icon("check-circle"), title = "Passed", style = "color:green;"), collapse=""),
+                               ifelse(summary$status=="PASSED WITH WARNING",paste0(tags$span(shiny::icon("exclamation-triangle"), title = "Passed with warning", style = "color:orange;"), collapse=""),
+                                      paste0(tags$span(shiny::icon("times-circle"), title = "Failed", style = "color:red;"), collapse="")))
+          
+
+          DT::datatable(
+            summary,
+            rownames = NULL,
+            escape = FALSE,
+            colnames = c('Column','Status',''),
+            options = list(dom = 't',
+                           ordering=F,
+                           pageLength=nrow(summary),
+                           columnDefs = list(list(className = 'dt-center', targets = 1:2))))%>%
+            formatStyle("status",target = 'row',backgroundColor = styleEqual(c("PASSED","PASSED WITH WARNING","FAILED"), c("#d3f4cc","#f5dfc0","#ffbfc1")))%>%
+            formatStyle("status", fontWeight = 'bold',color= styleEqual(c("PASSED","PASSED WITH WARNING","FAILED"), c("green","orange","red")))
+          
+        })
+
+        #Table with details of errors
+        output$gbErrors<-DT::renderDT(server = FALSE, {
+          if(nrow(out$errors)>0){
+            DT::datatable(
+              out$errors[,c("type","rule","row","col","category","message")],
+              colnames = c("Type","Rule","Row","Column","Category","Message"),
+              extensions = c("Buttons"),
+              escape = FALSE,
+              filter = list(position = 'top',clear =FALSE),
+              options = list(
+                dom = 'Bfrtip',
+                scrollX=TRUE,
+                pageLength=5,
+                buttons = list(
+                  list(extend = 'csv', filename =  "errors_summary", title = NULL, header = TRUE)
+                ),
+                exportOptions = list(
+                  modifiers = list(page = "all",selected=TRUE)
+                )
+              )
+            )%>%
+              formatStyle("type",target = 'row',backgroundColor = styleEqual(c("INFO","WARNING","ERROR"), c("#fcfdd0","#FDEBD0","#F2D7D5")))
+          }else{NULL}
+        })
+
+        #Status message
+        content<-tagList(
           br(),
+          box(title=HTML(status_text),status = status_box, solidHeader = TRUE,collapsible = T,collapsed = T,width = 12,
           fluidRow(
-            column(6,
-                   h3("VALIDITY SUMMARY"),
-                   fluidRow(column(8,offset=2,DTOutput(ns("gbSummary"))))
+            column(4,
+                   h3("SUMMARY"),
+                   fluidRow(column(10,offset=1,DTOutput(ns("gbSummary"))))
             ),
-            column(6,
+            column(8,
                    h3("DETAILS"),
                    if(nrow(out$errors)>0){
                      DTOutput(ns("gbErrors"))
@@ -570,41 +760,223 @@ data_validation_server <- function(id, parent.session, config, profile, componen
                      tags$span("No error detected",style = "color:green")
                    }
             )
-          ),
-          br(),
-          tagList(
-              if(transformation$data_rename|transformation$data_reformat){h3("DATA TRANSFORMATION")},
-              if(transformation$data_rename){p("Please notice that some columns of the data file used a no official name and have been automatically renamed")},
-              if(transformation$data_reformat){p("Please notice that the data file is in simplified format and have been automatically converted to generic format")}
-          ),
-          downloadButton(ns("gbreport"),"Download Report",icon=icon("download")),
-          if(out$valid){
-            #Next
-            actionButton(ns("goSpecValid"),"Next")
-          }else{
-            #Close
-            actionButton(ns("close1"),"Finish")
-          }
-        )
-        waiter_hide()
-        return(content)      
+          )
+          )
+      )
+        }
+        return(content)
       })
+      
+      output$dataCallValidReport<-renderUI({
+        
+        req(!is.null(dsOut()))
+        if(!dsOut()$valid){
+          #Box Message
+          status<-"NOT TESTED"
+          status_icon<-tags$span(shiny::icon("ban"))
+          status_box<-NULL
+          
+          status_text<-sprintf("3/3 %s <span><b> Consistancy with Data Call - %s</b></span>",status_icon,status)
+          content<-tagList(
+            br(),
+            box(title=HTML(status_text),status = status_box, solidHeader = TRUE,collapsible = T,collapsed = T,width = 12,
+                div(
+                  p("Consistancy with data call can't be tested because data strucure in not valid") 
+                )
+            )
+          )
+          waiter_hide()
+        }else{
+          req(!is.null(gbOut()))
+          if(!gbOut()$valid){
+          #Box Message
+          status<-"NOT TESTED"
+          status_icon<-tags$span(shiny::icon("ban"))
+          status_box<-NULL
+          
+          status_text<-sprintf("3/3 %s <span><b> Consistancy with Data Call - %s</b></span>",status_icon,status)
+          content<-tagList(
+            br(),
+            box(title=HTML(status_text),status = status_box, solidHeader = TRUE,collapsible = T,collapsed = T,width = 12,
+                div(
+                  p("Consistancy with data call can't be tested because data content in not valid") 
+                )
+            )
+          )
+
+          }else{
+            if(is.null(submission$data_call_id)){
+              status<-"NOT TESTED"
+              status_icon<-tags$span(shiny::icon("ban"))
+              status_box<-NULL
+              
+              status_text<-sprintf("3/3 %s <span><b> Consistancy with Data Call - %s</b></span>",status_icon,status)
+              content<-tagList(
+                br(),
+                box(title=HTML(status_text),status = status_box, solidHeader = TRUE,collapsible = T,collapsed = T,width = 12,
+                    div(
+                      p("Consistancy with data call can't be tested because no data call is open") 
+                    )
+                )
+              )
+
+            }else{
+
+              req(!is.null(dcOut()))    
+        out<-dcOut()
+        summary<-out$summary
+
+         status<-ifelse(any("FAILED"%in%summary$status),"FAILED",
+                        ifelse(any("PASSED WITH WARNING"%in%summary$status),"PASSED WITH WARNING","PASSED"))
+
+        status_icon<-switch (status,
+                             "NOT TESTED"=tags$span(shiny::icon("ban")),
+                             "PASSED"=tags$span(shiny::icon("check-circle")),
+                             "PASSED WITH WARNING"=tags$span(shiny::icon("exclamation-triangle")),
+                             "FAILED"=tags$span(shiny::icon("times-circle"))
+                             
+        )
+        status_box<-switch (status,
+                            "NOT TESTED"=NULL,
+                            "PASSED"="success",
+                            "PASSED WITH WARNING"="warning",
+                            "FAILED"="danger"
+                            
+        )
+        
+        status_text<-sprintf("3/3 %s <span><b> Consistancy with Data Call - %s</b></span>",status_icon,status)
+        
+        output$dcSummary<-DT::renderDT(server = FALSE, {
+          summary<-out$summary
+          summary$icon<-ifelse(summary$status=="PASSED",paste0(tags$span(shiny::icon("check-circle"), title = "Passed", style = "color:green;"), collapse=""),
+                               ifelse(summary$status=="PASSED WITH WARNING",paste0(tags$span(shiny::icon("exclamation-triangle"), title = "Passed with warning", style = "color:orange;"), collapse=""),
+                                      paste0(tags$span(shiny::icon("times-circle"), title = "Failed", style = "color:red;"), collapse="")))
+          
+          DT::datatable(
+            summary,
+            rownames = NULL,
+            escape = FALSE,
+            colnames = c('Column','Status',''),
+            options = list(dom = 't',
+                           ordering=F,
+                           pageLength=nrow(summary),
+                           columnDefs = list(list(className = 'dt-center', targets = 1:2))))%>%
+            formatStyle("status",target = 'row',backgroundColor = styleEqual(c("PASSED","PASSED WITH WARNING","FAILED"), c("#d3f4cc","#f5dfc0","#ffbfc1")))%>%
+            formatStyle("status", fontWeight = 'bold',color= styleEqual(c("PASSED","PASSED WITH WARNING","FAILED"), c("green","orange","red")))
+          
+        })
+        
+        #Table with details of errors
+        output$dcErrors<-DT::renderDT(server = FALSE, {
+          if(nrow(out$errors)>0){
+            DT::datatable(
+              out$errors[,c("type","rule","row","col","category","message")],
+              colnames = c("Type","Rule","Row","Column","Category","Message"),
+              extensions = c("Buttons"),
+              escape = FALSE,
+              filter = list(position = 'top',clear =FALSE),
+              options = list(
+                dom = 'Bfrtip',
+                scrollX=TRUE,
+                pageLength=5,
+                buttons = list(
+                  list(extend = 'csv', filename =  "errors_summary", title = NULL, header = TRUE)
+                ),
+                exportOptions = list(
+                  modifiers = list(page = "all",selected=TRUE)
+                )
+              )
+            )%>%
+              formatStyle("type",target = 'row',backgroundColor = styleEqual(c("INFO","WARNING","ERROR"), c("#fcfdd0","#FDEBD0","#F2D7D5")))
+          }else{NULL}
+        })
+        
+        content<-tagList(
+          br(),
+          box(title=HTML(status_text),status = status_box, solidHeader = TRUE,collapsible = T,collapsed = T,width = 12,
+              fluidRow(
+                 column(4,
+                        h3("SUMMARY"),
+                        fluidRow(column(10,offset=1,DTOutput(ns("dcSummary"))))
+                 ),
+                 column(8,
+                        h3("DETAILS"),
+                        if(nrow(out$errors)>0){
+                          DTOutput(ns("dcErrors"))
+                        }else{
+                          tags$span("No error detected",style = "color:green")
+                        }
+                 )
+              )
+              ),
+              if(out$valid){
+                #Next
+                actionButton(ns("goMetadata"),"Next")
+              }else{
+                #Close
+                actionButton(ns("close1"),"Finish")
+              }
+          )
+        }}}
+        return(content)
+      })
+      
+      observeEvent(goReport(),{
+        req(goReport()==TRUE)
+        ds_out<-dsOut()
+        gb_out<-gbOut()
+        dc_out<-dcOut()
+        #PDF Report
+        info<-list(task_id=input$task,
+                   date=Sys.Date(),
+                   task_name=taskProperties()$name,
+                   file=file_info$name,
+                   format=input$format,
+                   flagstate=input$reporting_entity)
+        
+        report_path<-file.path(tempdir(), sprintf("datacall-%s_task-%s_for_%s_report_validation.pdf",submission$data_call_id,input$task,input$reporting_entity))
+        valReportPath<-valReportPath(report_path)
+        print(report_path)
+        rmarkdown::render("assets/templates/report_validation_template.Rmd", output_file = report_path ,output_format = "pdf_document",output_options = list(keep_tex = TRUE), params = list(ds_out,gb_out,dc_out,info,config))
+        waiter_hide()
+        }
+      )
       
       #Download Pdf 
       output$gbreport <- downloadHandler(
         filename = function(){ 
-          gsub("pdf","zip",basename(gbReportPath())) },
+          gsub("pdf","zip",basename(valReportPath())) },
         content = function(file){
           list_files<-c()
           tmpdir <- tempdir()
           current_path<-getwd()
           setwd(tempdir())
-          list_files<-c(list_files,basename(gbReportPath()))
-          out<-gbOut()
-          if(nrow(out$errors)>0){
-            file_path<-gsub(".pdf","_errors_detail.csv",basename(gbReportPath()))
-            write.csv(out$errors,file_path,row.names = F)
-            list_files<-c(list_files,file_path)
+          list_files<-c(list_files,basename(valReportPath()))
+          ds_out<-dsOut()
+          if(!is.null(ds_out$errors)){
+            if(nrow(ds_out$errors)>0){
+              file_path<-gsub(".pdf","data_structure_errors_detail.csv",basename(valReportPath()))
+              write.csv(out$errors,file_path,row.names = F)
+              list_files<-c(list_files,file_path)
+            }
+          }
+
+          gb_out<-gbOut()
+          if(!is.null(gb_out$errors)){
+            if(nrow(gb_out$errors)>0){
+              file_path<-gsub(".pdf","data_content_errors_detail.csv",basename(valReportPath()))
+              write.csv(gb_out$errors,file_path,row.names = F)
+              list_files<-c(list_files,file_path)
+            }
+          }
+
+          dc_out<-dcOut()
+          if(!is.null(dc_out$errors)){
+            if(nrow(dc_out$errors)>0){
+              file_path<-gsub(".pdf","data_call_errors_detail.csv",basename(valReportPath()))
+              write.csv(odc_out$errors,file_path,row.names = F)
+              list_files<-c(list_files,file_path)
+            }
           }
           zip(zipfile=file,files=list_files)
           setwd(current_path)
@@ -658,126 +1030,13 @@ data_validation_server <- function(id, parent.session, config, profile, componen
 
       })
       
-      #TAB 4 REPORT ROUTINE
-      output$callValidReport<-renderUI({
-        shiny::req(!is.null(dcOut()))
-        out<-dcOut()
-        report_path<-file.path(tempdir(), sprintf("datacall-%s_task-%s_for_%s_report_datacall_consistency.pdf",submission$data_call_id,input$task,input$reporting_entity))
-        dcReportPath<-dcReportPath(report_path)
-        print(report_path)
-        rmarkdown::render("assets/templates/report_datacall_consistency_template.Rmd", output_file = report_path ,output_format = "pdf_document",output_options = list(keep_tex = TRUE), params = list(out,submission,config))
-        
-        #HTML Report
-        
-        output$dcSummary<-DT::renderDT(server = FALSE, {
-          test<-out$tests
-          
-          DT::datatable(
-            test, 
-            rownames = NULL,
-            escape = FALSE,
-            colnames = c('','',''), 
-            options = list(dom = 't',
-                           ordering=F,
-                           columnDefs = list(list(className = 'dt-center', targets = 1:2))))%>%
-            formatStyle("status",target = 'row',backgroundColor = styleEqual(c("PASSED","WARNING","FAILED","NOT TESTED"), c("#d3f4cc","#f5dfc0","#ffbfc1","#f0f0f0")))%>%
-            formatStyle("status", fontWeight = 'bold',color= styleEqual(c("PASSED","WARNING","FAILED","NOT TESTED"), c("green","orange","red","grey")))
-          
-        })
-        
-        output$dcErrors<-DT::renderDT(server = FALSE, {
-          if(nrow(out$errors)>0){
-            DT::datatable(
-              out$errors,
-              colnames = c("Type","Rule","Row","Column","Category","Message"), 
-              extensions = c("Buttons"),
-              escape = FALSE,
-              filter = list(position = 'top',clear =FALSE),
-              options = list(
-                dom = 'Bfrtip',
-                scrollX=TRUE,
-                pageLength=5,
-                buttons = list(
-                  list(extend = 'csv', filename =  "errors_summary", title = NULL, header = TRUE)
-                ),
-                exportOptions = list(
-                  modifiers = list(page = "all",selected=TRUE)
-                )
-              )
-            )%>%
-              formatStyle("type",target = 'row',backgroundColor = styleEqual(c("INFO","WARNING","ERROR"), c("#fcfdd0","#FDEBD0","#F2D7D5")))
-          }else{NULL}
-        })
-        
-        
-        content<-tagList(
-          if(out$valid){
-            tags$div(shiny::icon(c('check-circle')), "Data is ready to be submitted", style="margin-top:5px;color:green;font-size: 200%")
-          }else{
-            tags$div(shiny::icon(c('times-circle')), "Data is not consistent with the current data call", style="margin-top:5px;color:red;font-size: 200%")
-          },
-          br(),
-          if(out$valid){
-            p("Congratulations! Your data is consistent with the current data call. You can see below the data analysis details and click 'next'")
-          }else{
-            p("Oops somethink seems to be incorect in your data. Please see below the data analysis details and click 'finish' to return to home page and try again.")
-          },
-          fluidRow(
-            column(6,
-                   h3("VALIDITY SUMMARY"),
-                   fluidRow(column(8,offset=2,DTOutput(ns("dcSummary"))))
-            ),
-            column(6,
-                   h3("DETAILS"),
-                   if(nrow(out$errors)>0){
-                     fluidRow(column(8,offset=2,DTOutput(ns("dcErrors"))))
-                   }else{
-                     tags$span("No error detected",style = "color:green")
-                   }
-            )
-          ),
-          br(),
-          downloadButton(ns("dcreport"),"Download Report",icon=icon("download")),
-          if(out$valid){
-            #Next
-            actionButton(ns("goMetadata"),"Next")
-          }else{
-            #Close
-            actionButton(ns("close2"),"Finish")
-          }
-        )
-        waiter_hide()
-        return(content)
-      })
-      
-      #Download Pdf 
-      output$dcreport <- downloadHandler(
-        filename = function(){ 
-          gsub("pdf","zip",basename(dcReportPath())) },
-        content = function(file){
-          list_files<-c()
-          tmpdir <- tempdir()
-          current_path<-getwd()
-          setwd(tempdir())
-          list_files<-c(list_files,basename(dcReportPath()))
-          out<-dcOut()
-          if(nrow(out$errors)>0){
-            file_path<-gsub(".pdf","_errors_detail.csv",basename(dcReportPath()))
-            write.csv(out$errors,file_path,row.names = F)
-            list_files<-c(list_files,file_path)
-          }
-          zip(zipfile=file,files=list_files)
-          setwd(current_path)
-        },
-        contentType = "application/zip")
-      
-      #TAB 5 - SEND DATA
-      #TAB 5 MANAGER
+      #TAB 4 - SEND DATA
+      #TAB 4 MANAGER
       observeEvent(input$goMetadata,{
         appendTab(inputId = "wizard-tabs",
                   session = parent.session,
                   select=TRUE,
-                  tabPanel("5-Metadata", 
+                  tabPanel("4-Metadata", 
                            tabBox(id = "metadata",title=NULL,height="600px",width = "100%",
                                   tabPanel(title=tagList(icon("file-pen"),"Identification"),
                                            value="tab_desc",
@@ -901,9 +1160,8 @@ data_validation_server <- function(id, parent.session, config, profile, componen
         req(input$keyword_description!="")
         keyword_label<-paste0(input$keyword_type,":",input$keyword_description)
         keywords<-keywords(c(keywords(),if(startsWith(input$keyword_link,"http")){sprintf("<a href='%s' target='_blank'>%s</a>",input$keyword_link,keyword_label)}else{keyword_label}))
-        print(keywords())
+        #print(keywords())
         keywords_color<-keywords_color(c(keywords_color(),keycolor_list[input$keyword_type][[1]]))
-        keywords_url<-c(keywords_url(),input$keyword_link)
         
         new_keyword<-data.frame(
           type=input$keyword_type,
@@ -1086,6 +1344,7 @@ data_validation_server <- function(id, parent.session, config, profile, componen
         
         metadata_geoflow<-entity$asDataFrame()
         print(metadata_geoflow)
+        file_metadata<-file_metadata(metadata_geoflow)
         
         appendTab(inputId = "wizard-tabs",
                   session = parent.session,
@@ -1200,7 +1459,16 @@ data_validation_server <- function(id, parent.session, config, profile, componen
           unlink(data_filename)
         }
         
+        #metadata file
         if(!is.null(uploadedDataId)){
+          INFO("Successful upload for source file '%s'", file_info$datapath)
+          data_filename <- file.path(getwd(), paste0(dc_folder, "_metadata_geoflow.csv"))
+          readr::write_csv(file_metadata(), data_filename)
+          uploadedMetaDataId <- store$uploadFile(folderPath = file.path(config$dcf$user_workspace, dc_folder), file = data_filename, description ="Dataset metadata")
+          unlink(data_filename)
+        }
+        
+        if(!is.null(uploadedMetaDataId)){
           INFO("Successful upload for data submission file '%s'", data_filename)
           
           # progress$set(
@@ -1239,19 +1507,11 @@ data_validation_server <- function(id, parent.session, config, profile, componen
         }
         
         if(!is.null(uploadedDataId) && !is.null(uploadedMetadataId)){
-          if(!is.null(gbReportPath())){
-            report_standard_conformity_filename<-gbReportPath()
-            uploadedReportStandardConformityId <- store$uploadFile(folderPath = file.path(config$dcf$user_workspace, dc_folder), file = report_standard_conformity_filename, description ="Standard conformity report")
+          if(!is.null(valReportPath())){
+            report_standard_conformity_filename<-valReportPath()
+            uploadedReportStandardConformityId <- store$uploadFile(folderPath = file.path(config$dcf$user_workspace, dc_folder), file = report_standard_conformity_filename, description ="Validation report")
             if(!is.null(uploadedReportStandardConformityId)){
               INFO("Successful upload for standard conformity report file '%s'", report_standard_conformity_filename)
-            }
-            unlink(dc_entry_filename)
-          }
-          if(!is.null(dcReportPath())){
-            report_datacall_consistency_filename<-dcReportPath()
-            uploadedReportDatacallConsistencyId <- store$uploadFile(folderPath = file.path(config$dcf$user_workspace, dc_folder), file = report_datacall_consistency_filename, description ="Datacall consistancy report")
-            if(!is.null(uploadedReportDatacallConsistencyId)){
-              INFO("Successful upload for datacall consistancy report file '%s'", report_datacall_consistency_filename)
             }
             unlink(dc_entry_filename)
           }
@@ -1372,7 +1632,7 @@ data_validation_server <- function(id, parent.session, config, profile, componen
             easyClose = F,
             footer = tagList(
               actionButton(ns("update"),"Yes"),
-              actionButton(ns("close4"),"Cancel")
+              actionButton(ns("close3"),"Cancel")
             )
           ))
         }
@@ -1394,7 +1654,7 @@ data_validation_server <- function(id, parent.session, config, profile, componen
                              tagList(
                                p("Your data has been submitted, click to 'Finish' to return to the menu."),
                                #Close
-                               actionButton(ns("close3"),"Finish")
+                               actionButton(ns("close2"),"Finish")
                              )
                     )
           )
