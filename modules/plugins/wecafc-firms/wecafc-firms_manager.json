@@ -6,5 +6,5 @@
   "title": "RDB manager",
   "icon": "map",
   "restricted": true,
-  "roles": ["manager", "supervisor", "admin", "r-studio"]
+  "roles": ["submitter", "r-studio"]
 }
