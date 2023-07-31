@@ -216,10 +216,15 @@ data_availability_server <-function(id, parent.session, config, profile, compone
           names(df)[names(df) == i] <- "stat"
           df<-unique(df)
           
+          entity_list <- NULL
           if(isTRUE(input$limit_entities_s)){
             entity_list<-unique(df$flagstate)
           }else{
             entity_list<-reporting_entities
+          }
+          if("submitter" %in% profile$shiny_app_roles &
+             !any(c("admin", "manager", "superviser") %in% profile$shiny_app_roles)){
+            entity_list = entity_list[entity_list %in% profile$reporting_entities]
           }
           
           df<-df%>%
@@ -234,7 +239,7 @@ data_availability_server <-function(id, parent.session, config, profile, compone
           df<-df%>%
             select(-value)%>%
             pivot_wider(names_from = task,values_from = stat,names_sort=T)%>%
-            filter(flagstate!="")%>%
+            filter(flagstate %in% entity_list)%>%
             rename(` `=flagstate)
         
           addWorksheet(wb, i)
@@ -273,16 +278,22 @@ data_availability_server <-function(id, parent.session, config, profile, compone
         df<-unique(df)
         df$value<-1
         
+        entity_list <- NULL
         if(isTRUE(input$limit_entities)){
           entity_list<-unique(df$flagstate)
         }else{
           entity_list<-reporting_entities
+        }
+        if("submitter" %in% profile$shiny_app_roles &
+           !any(c("admin", "manager", "superviser") %in% profile$shiny_app_roles)){
+          entity_list = entity_list[entity_list %in% profile$reporting_entities]
         }
         
         df<-df%>%
           complete(nesting(time_end=full_seq(time_end, 1)),flagstate=entity_list,fill = list(value=0))%>%
           rename(year=time_end)%>%
           arrange(desc(flagstate),year)%>%
+          filter(flagstate %in% entity_list)%>%
           pivot_wider(names_from = year,values_from = value,names_sort=T)
         
         print(head(as.data.frame(df)))
@@ -340,16 +351,21 @@ data_availability_server <-function(id, parent.session, config, profile, compone
         max_value<-max(df$value,na.rm=T)
         
         print(max_value)
+        entity_list <- NULL
         if(isTRUE(input$limit_entities_s)){
           entity_list<-unique(df$flagstate)
         }else{
           entity_list<-reporting_entities
         }
+        if("submitter" %in% profile$shiny_app_roles &
+           !any(c("admin", "manager", "superviser") %in% profile$shiny_app_roles)){ 
+          entity_list = entity_list[entity_list %in% profile$reporting_entities]
+        }
         
         df<-df%>%
           complete(nesting(task),flagstate=entity_list,fill = list(value=0,stat="(no data)"))%>%
           arrange(desc(flagstate))%>%
-          filter(flagstate!="")
+          filter(flagstate %in% entity_list)
         
         text<-df%>%
           select(-value)

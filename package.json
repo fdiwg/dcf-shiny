@@ -1,7 +1,7 @@
 {
   "id": "dcf-shiny",
-  "version": "0.1.0",
-  "date": "2023-04-05",
+  "version": "0.1.20230731",
+  "date": "2023-07-31",
   "dependencies": [
     {"package": "R6", "version": "2.5.1", "repos": "https://cran.r-project.org"},
     {"package": "dotenv", "version": "1.0.3", "repos": "https://cran.r-project.org"},
@@ -45,6 +45,7 @@
     {"package": "openxlsx", "version": "4.2.5.1", "repos": "https://cran.r-project.org"},
     {"package": "rhandsontable", "version": "0.3.8", "repos": "https://cran.r-project.org"},
     {"package": "rclipboard", "version": "0.1.6", "repos": "https://cran.r-project.org"},
-    {"package": "shinyWidgets", "version": "0.7.0", "repos": "https://cran.r-project.org"}
+    {"package": "shinyWidgets", "version": "0.7.0", "repos": "https://cran.r-project.org"},
+    {"repo": "fdiwg/vrule", "from": "github", "dependencies": false}
   ]
 }
