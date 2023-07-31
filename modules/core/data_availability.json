@@ -5,6 +5,6 @@
   "name": "data_availability",
   "title": "Data availability",
   "restricted": true,
-  "roles": ["manager", "supervisor", "admin", "r-studio"]
+  "roles": ["submitter", "manager", "supervisor", "admin", "r-studio"]
 }
 
