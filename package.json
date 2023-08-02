@@ -41,6 +41,7 @@
     {"package": "plotly", "version": "4.10.0", "repos": "https://cran.r-project.org"},
     {"repo": "eblondel/atom4R", "from": "github", "dependencies": false},
     {"repo": "eblondel/geometa", "from": "github", "dependencies": false},
+    {"repo": "eblondel/geonode4R", "from": "github", "dependencies": false},
     {"repo": "r-geoflow/geoflow", "from": "github", "dependencies": false},
     {"package": "openxlsx", "version": "4.2.5.1", "repos": "https://cran.r-project.org"},
     {"package": "rhandsontable", "version": "0.3.8", "repos": "https://cran.r-project.org"},
