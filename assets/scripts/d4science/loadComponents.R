@@ -38,7 +38,7 @@ loadComponents <- function(profile, sdi = TRUE){
   if(httr::status_code(icproxy_req) == 200){
     sdi_resp <- content(sdi_req)
     
-    if(!is.null(sdi_resp$geoserverClusterConfiguration)){
+    if(length(sdi_resp$geoserverClusterConfiguration)>0){
       gs_url <- gsub("http://", "https://", sdi_resp$geoserverClusterConfiguration[[1]]$baseEndpoint)
       gs_creds <- sdi_resp$geoserverClusterConfiguration[[1]]$accessibleCredentials[[1]]
       components$GEOSERVER_CONFIG <- list(url = gs_url, user = gs_creds$username, pwd = gs_creds$password)
@@ -51,7 +51,7 @@ loadComponents <- function(profile, sdi = TRUE){
       class(components$GEOSERVER) <- "unavailable"
     }
     
-    if(!is.null(sdi_resp$geonetworkConfiguration)){
+    if(length(sdi_resp$geonetworkConfiguration)>0){
       gn_url <- gsub("http://", "https://", sdi_resp$geonetworkConfiguration[[1]]$baseEndpoint)
       gn_version <- paste(sdi_resp$geonetworkConfiguration[[1]]$version, collapse=".")
       gn_creds = sdi_resp$geonetworkConfiguration[[1]]$accessibleCredentials[[1]]
