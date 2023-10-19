@@ -1,4 +1,4 @@
-handle_contacts_rdb <- function(config, source){
+handle_contacts_rdb <- function(handler, source, config){
   
   
   nfi_url <- "http://www.fao.org/fishery"

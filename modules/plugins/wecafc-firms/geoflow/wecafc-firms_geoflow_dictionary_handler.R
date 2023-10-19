@@ -1,4 +1,4 @@
-handle_dictionary_rdb <- function(config, source = NULL){
+handle_dictionary_rdb <- function(handler, source, config){
  
   dict <- NULL
   

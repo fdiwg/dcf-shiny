@@ -1,4 +1,4 @@
-handle_entities_rdb <- function(config, source = NULL){
+handle_entities_rdb <- function(handler, source, config){
   
   entities = list()
   
