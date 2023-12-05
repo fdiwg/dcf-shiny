@@ -123,11 +123,11 @@ handle_entities_rdb <- function(handler, source, config){
             		raw.flagstate,
             		CASE '%aggregation_method%' WHEN 'none' THEN raw.species WHEN 'avg_by_year' THEN CAST(NULL as text) WHEN 'sum' THEN CAST(NULL as text) ELSE raw.species END as species, 
             		CASE '%aggregation_method%' WHEN 'none' THEN raw.year WHEN 'avg_by_year' THEN CAST(NULL as integer) WHEN 'sum' THEN CAST(NULL as integer) ELSE raw.year END as year,
-            		CASE '%aggregation_method%' WHEN 'none' THEN sum(raw.measurement_value) WHEN 'avg_by_year' THEN sum(raw.measurement_value)/(max(temporal_extent.time)-min(temporal_extent.time)+1) WHEN 'sum' THEN sum(raw.measurement_value) ELSE sum(raw.measurement_value) END as measurement_value
+            		CASE '%aggregation_method%' WHEN 'none' THEN sum(raw.measurement_value) WHEN 'avg_by_year' THEN sum(raw.measurement_value)/max(temporal_extent.duration) WHEN 'sum' THEN sum(raw.measurement_value) ELSE sum(raw.measurement_value) END as measurement_value
             		from 
             		(SELECT flagstate, species, CAST(EXTRACT(YEAR from time_end) as integer) as year, sum(measurement_value) as measurement_value 
             		 FROM task_i_2 as raw WHERE measurement_type = 'nominal' GROUP BY flagstate, species, year) as raw, 
-            		(select regexp_split_to_table(regexp_replace('%year%',' ', '+', 'g'),E'\\\\+')::numeric as time) as temporal_extent
+            		(select (max(years.year_value)-min(years.year_value)+1) as duration from (select regexp_split_to_table(regexp_replace('%year%',' ', '+', 'g'),E'\\\\+')::numeric as year_value) as years) as temporal_extent
             		WHERE 
             			raw.flagstate IN( select regexp_split_to_table(regexp_replace('%flagstate%',' ', '+', 'g'),E'\\\\+')) AND 
             			raw.species IN( select regexp_split_to_table(regexp_replace('%species%',' ', '+', 'g'),E'\\\\+'))AND 
