@@ -43,3 +43,6 @@ vignettes/*.pdf
 .env
 configs/prod
 configs/dev/rdb_wecafc-firms
+
+#doc
+doc/*.pptx
