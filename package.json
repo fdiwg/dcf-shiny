@@ -14,6 +14,7 @@
     {"package": "shinyjs", "version": "2.0.0", "repos": "https://cran.r-project.org"},
     {"package": "shinycssloaders", "version": "1.0.0", "repos": "https://cran.r-project.org"},
     {"package": "httr", "version": "1.4.2", "repos": "https://cran.r-project.org"},
+    {"package": "mime", "version": "0.12", "repos": "https://cran.r-project.org"},
     {"package": "jsonlite", "version": "1.8.0", "repos": "https://cran.r-project.org"},
     {"package": "XML", "version": "3.99-0.9", "repos": "https://cran.r-project.org"},
     {"package": "jose", "version": "1.2.0", "repos": "https://cran.r-project.org"},
