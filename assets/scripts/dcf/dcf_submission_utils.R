@@ -57,7 +57,8 @@ getSubmissions <- function(config,pool,profile, store, user_only = FALSE,data_ca
         }
         
         #fetch metadata
-        dcfile_item <- store$getWSItem(parentFolderID = user_item$id, itemPath = paste0(data_call_folder,".xml"))
+        file_items = store$listWSItems(parentFolderID = user_item$id)
+        dcfile_item <- file_items[file_items$name == paste0(data_call_folder,".xml"),]
         lastModified <- as.POSIXct(dcfile_item$lastModificationTime/1000, origin = "1970-01-01")
         dcfile <- store$downloadItem(item = dcfile_item, wd = tempdir())
         dc_entry <- atom4R::readDCEntry(dcfile)
@@ -154,7 +155,8 @@ acceptSubmission <- function(config,pool,profile, store, data_call_folder, data_
     return(accept)
   }
   
-  dcfile_item <- store$getWSItem(parentFolderID = data_submission_id, itemPath = paste0(data_call_folder,".xml"))
+  file_items = store$listWSItems(parentFolderID = data_submission_id)
+  dcfile_item <- file_items[file_items$name == paste0(data_call_folder,".xml"),]
   dcfile <- store$downloadItem(item = dcfile_item, wd = tempdir())
   dc_entry <- atom4R::readDCEntry(dcfile)
   dc_entry$dateAccepted <- list()
@@ -206,7 +208,8 @@ acceptSubmission <- function(config,pool,profile, store, data_call_folder, data_
 
 #rejectSubmission
 rejectSubmission <- function(config,pool,profile, store, data_call_folder, data_submission_id,task,usernames,end,comment=""){
-  dcfile_item <- store$getWSItem(parentFolderID = data_submission_id, itemPath = paste0(data_call_folder,".xml"))
+  file_items = store$listWSItems(parentFolderID = data_submission_id)
+  dcfile_item <- file_items[file_items$name == paste0(data_call_folder,".xml"),]
   dcfile <- store$downloadItem(item = dcfile_item, wd = tempdir())
   dc_entry <- atom4R::readDCEntry(dcfile)
   dc_entry$dateAccepted <- list()
@@ -314,7 +317,8 @@ copyItemsSubmission <- function(store, data_submission_id, wd=tempdir()){
   if(nrow(items)>0){
     items_info <- do.call("rbind", lapply(1:nrow(items), function(i){
       item <- items[i,]
-      dcfile_item <- store$getWSItem(parentFolderID = data_submission_id, itemPath = item$name)
+      file_items = store$listWSItems(parentFolderID = data_submission_id)
+      dcfile_item <- file_items[file_items$name == item$name,]
       dcfile <- store$downloadItem(item = dcfile_item, wd = wd)
       
       item_info <- data.frame(
