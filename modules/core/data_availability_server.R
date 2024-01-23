@@ -5,13 +5,37 @@ data_availability_server <-function(id, parent.session, config, profile, compone
       #-----------------------------------------------------------------------------------
       ns <- session$ns
       
-      SH <- components$STORAGEHUB
-      task_folders <- SH$listWSItems(config$dataspace_id)
+      #SH <- components$STORAGEHUB
+      pool <- components$POOL
+      
+      #getDataTaskTablename
+      getDataTaskTablename <- function(task_id){
+        table_id <- tolower(gsub("-", "_", gsub("\\.", "_", task_id)))
+        return(table_id)
+      }
+      
+      #getDataTaskDBData
+      getDataTaskDBData <- function(pool, task_id){
+        out <- NULL
+        table_id <- getDataTaskTablename(task_id)
+        hasData <- DBI::dbExistsTable(pool, table_id, schema = "public")
+        if(hasData){
+          out <- DBI::dbReadTable(pool, table_id, schema = "public")
+        }
+        return(out)
+      }
+      #task_folders <- SH$listWSItems(config$dataspace_id)
       reporting_entities<-config$dcf$reporting_entities$codelist_ref$code
+      
+      data_tasks<-lapply(setNames(getTasks(config,withId=TRUE),getTasks(config,withId=TRUE)),function(x){
+        file<-getDataTaskDBData(pool, x)
+      })
       
       data<-reactiveVal(NULL)
       data_s<-reactiveVal(NULL)
-      dataAvailable<-reactiveVal(ifelse(length(task_folders)==0,FALSE,TRUE))
+      #dataAvailable<-reactiveVal(ifelse(length(task_folders)==0,FALSE,TRUE))
+      dataAvailable<-reactiveVal(ifelse(length(data_tasks)==0,FALSE,TRUE))
+      #dataAvailable<-reactiveVal(TRUE)
       
       pretty_seq<-function(x){
         
@@ -50,12 +74,12 @@ data_availability_server <-function(id, parent.session, config, profile, compone
       output$summary_content<-renderUI({
         tagList(
           fluidRow(
-            div(
-              class = "col-md-2",
-              withBusyIndicatorUI(
-                actionButton(ns("summaryBtn"),"Compute summary")
-              )
-            ),
+            # div(
+            #   class = "col-md-2",
+            #   withBusyIndicatorUI(
+            #     actionButton(ns("summaryBtn"),"Compute summary")
+            #   )
+            # ),
             div(
               class = "col-md-2",
               uiOutput(ns("entities_selector_s"))
@@ -148,16 +172,25 @@ data_availability_server <-function(id, parent.session, config, profile, compone
         )
       })
       
-      observeEvent(input$summaryBtn,{
-        withBusyIndicatorServer(ns("summaryBtn"), {
+      #observeEvent(input$summaryBtn,{
+      observeEvent(data_tasks,{
+        #withBusyIndicatorServer(ns("summaryBtn"), {
           if(dataAvailable()){
-        summary<-do.call("rbind",lapply(getTasks(config,withId=TRUE),function(x){
-        items <- SH$listWSItems(parentFolderID = subset(task_folders,name==x)$id)
-        last_modification_time <- max(items$lastModificationTime)
-        items <- items[items$lastModificationTime == last_modification_time,]
-        items <- items [endsWith(items$name,"_db_new.csv"),]
-        item<-SH$downloadItem(item = items, wd = tempdir())
-        file<-readr::read_csv(item)
+            
+          tasks<-getTasks(config,withId=T) 
+            
+         summary<-do.call("rbind",lapply(getTasks(config,withId=TRUE),function(x){
+        # items <- SH$listWSItems(parentFolderID = subset(task_folders,name==x)$id)
+        # last_modification_time <- max(items$lastModificationTime)
+        # items <- items[items$lastModificationTime == last_modification_time,]
+        # items <- items [endsWith(items$name,"_db_new.csv"),]
+        # item<-SH$downloadItem(item = items, wd = tempdir())
+        # file<-readr::read_csv(item)
+           
+        #file<-getDataTaskDBData(pool, x)
+           
+           
+        file<-data_task<-data_tasks[[x]]
 
         file<-file%>%
           group_by(flagstate)%>%
@@ -169,9 +202,11 @@ data_availability_server <-function(id, parent.session, config, profile, compone
                     available_years=paste0(pretty_seq(sort(unique(year(time_end)))),collapse=";"))%>%
           arrange(desc(flagstate))%>%
           ungroup()%>%
-          mutate(task=x)
+          #mutate(task=x)
+          mutate(task=gsub(": ",":\n",names(tasks[tasks==x])))
         
-        })
+        }
+        )
         )
         }else{
           summary<-do.call("rbind",lapply(getTasks(config,withId=TRUE),function(x){
@@ -191,7 +226,7 @@ data_availability_server <-function(id, parent.session, config, profile, compone
             
         }
         data_s<-data_s(summary)
-        })
+        #})
       })
       
       output$download_wrapper<-renderUI({
@@ -259,12 +294,14 @@ data_availability_server <-function(id, parent.session, config, profile, compone
         req(input$task)
         if(!is.null(input$task)|input$task!=""){
           
-          items <- SH$listWSItems(parentFolderID = subset(task_folders,name==input$task)$id)
-          last_modification_time <- max(items$lastModificationTime)
-          items <- items[items$lastModificationTime == last_modification_time,]
-          items <- items [endsWith(items$name,"_db_new.csv"),]
-          item<-SH$downloadItem(item = items, wd = tempdir())
-          file<-readr::read_csv(item)
+          # items <- SH$listWSItems(parentFolderID = subset(task_folders,name==input$task)$id)
+          # last_modification_time <- max(items$lastModificationTime)
+          # items <- items[items$lastModificationTime == last_modification_time,]
+          # items <- items [endsWith(items$name,"_db_new.csv"),]
+          # item<-SH$downloadItem(item = items, wd = tempdir())
+          # file<-readr::read_csv(item)
+          #file<-getDataTaskDBData(pool, input$task)
+          file<-data_tasks[[input$task]]
           data<-data(file)
         }
       })
@@ -438,6 +475,8 @@ data_availability_server <-function(id, parent.session, config, profile, compone
       })
       
       output$heatmap_s_wrapper<-renderUI({
+        req(!is.null(dataAvailable()))
+        req(!is.null(input$limit_entities_s))
         if(!dataAvailable()&input$limit_entities_s){
           uiOutput(ns("nodata_s"))
         }else{
