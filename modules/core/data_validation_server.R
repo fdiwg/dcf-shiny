@@ -455,7 +455,7 @@ data_validation_server <- function(id, parent.session, config, profile, componen
             INFO("Selected format specification: '%s'", input$format)
             if(input$format=="simplified"){
               INFO("Transforming data from 'simplified' to 'generic' data structure (normalization)")
-              data <- simplifiedToGeneric(file=data, task_def = task_def)
+              data <- simplifiedToGeneric(file=data, format_spec = task_def$formats[[input$format]]$spec, measurements = task_def$measurement)
               INFO("Successful transformation from 'simplified' to 'generic'")
             }
 

@@ -347,17 +347,14 @@ standardizeNames<-function(file, task_def, format, exclude_unused = TRUE){
 }
 
 #simplifiedToGeneric
-simplifiedToGeneric <- function(file, task_def){
+simplifiedToGeneric <- function(file, format_spec, measurements){
   
-  #inherit vrule format_spec object from task definition
-  format_spec = task_def$formats$simplified$spec 
   format_spec_cols = sapply(format_spec$column_specs, function(x){x$name})
   
   #read data in case it's not already done
   data <- file
   if(!is.data.frame(file)) data <- readDataFile(file)
   
-  measurements = task_def$measurement
   newdata_all = do.call("rbind", lapply(measurements, function(measurement){
     
     attr_target_cols = colnames(data)[sapply(colnames(data), function(x){!any(sapply(measurements, function(m){startsWith(x,m)}))}) ]
