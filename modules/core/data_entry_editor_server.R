@@ -295,7 +295,7 @@ data_entry_editor_server <- function(id, parent.session, config, profile, compon
           }else{
             stop()
           }
-          if(all(names(data_to_load)==info$id)){
+          if(all(names(data_to_load)==info$name)){
             data_to_lead<-as.data.frame(data_to_load)
             if(any(!is.na(info$ref))){
               cols<-which(!is.na(info$ref))
@@ -344,35 +344,13 @@ data_entry_editor_server <- function(id, parent.session, config, profile, compon
           }
           req(reset==FALSE)
           withBusyIndicatorServer(ns("run"), {
-            task<-getTaskProperties(config,id=input$task)
+            task<-getTaskProfile(config,id=input$task)
             taskRules <- task$dsd_ref_url
-            taskDef<-readTaskColumnDefinitions(file = taskRules, format = input$format, config = config, reporting_entity = input$reporting_entity,force=T)
-            task_template<-do.call(rbind,lapply(taskDef, function(x){
-              id<-x$id
-              label<-if(!is.null(x$aliases[[1]])){x$aliases[[1]]}else{x$id}
-              mandatory<-!x$na_allowed
-              if(id=="year"){
-                default_value<-NA_character_
-                year_list<-as.character(rev(seq(1950,as.integer(substr(Sys.Date(),1,4)))))
-                ref<-list(tibble(code=year_list,label=year_list))
-                editable<-TRUE
-              }else if(!is.null(x$allowed_values)){
-                if(length(x$allowed_values)==1){
-                  default_value<-unlist(x$allowed_values)
-                  ref<-list(NA)
-                  editable<-FALSE
-                }else{
-                  default_value<-NA_character_
-                  ref<-list(tibble(code=unlist(x$allowed_values),label=unlist(x$allowed_values)))
-                  editable<-TRUE
-                }
-              }else{
-                default_value<-NA_character_
-                ref<-list(if(!is.null(x$ref)){readr::read_csv(x$ref)}else{NA})
-                editable<-TRUE
-              }
-              data<-tibble(id=id,label=label,mandatory=mandatory,default_value=default_value,ref=ref,editable=editable)
-            }))
+            taskDef<-readTaskDefinition(file = taskRules)
+            format_spec = taskDef$formats[[input$format]]$spec
+            
+            #TODO process reporting_entity in format_spec
+            task_template = buildTemplate(format_spec)
             
             template_info<-template_info(task_template)
             
@@ -407,36 +385,14 @@ data_entry_editor_server <- function(id, parent.session, config, profile, compon
         req(input$format)
         if(!is.null(input$task))if(input$task!="")if(!is.null(input$reporting_entity))if(input$reporting_entity!="")if(!is.null(input$format))if(input$format!=""){
           withBusyIndicatorServer(ns("run"), {
-            task<-getTaskProperties(config,id=input$task)
+            task<-getTaskProfile(config,id=input$task)
             taskRules <- task$dsd_ref_url
-            taskDef<-readTaskColumnDefinitions(file = taskRules, format = input$format, config = config, reporting_entity = input$reporting_entity,force=T)
-            task_template<-do.call(rbind,lapply(taskDef, function(x){
-              id<-x$id
-              label<-if(!is.null(x$aliases[[1]])){x$aliases[[1]]}else{x$id}
-              mandatory<-!x$na_allowed
-              if(id=="year"){
-                default_value<-NA
-                year_list<-as.character(rev(seq(1950,as.integer(substr(Sys.Date(),1,4)))))
-                ref<-list(tibble(code=year_list,label=year_list))
-                editable<-TRUE
-              }else if(!is.null(x$allowed_values)){
-                if(length(x$allowed_values)==1){
-                  default_value<-unlist(x$allowed_values)
-                  ref<-list(NA)
-                  editable<-FALSE
-                }else{
-                  default_value<-NA
-                  ref<-list(tibble(code=unlist(x$allowed_values),label=unlist(x$allowed_values)))
-                  editable<-TRUE
-                }
-              }else{
-                default_value<-NA
-                ref<-list(if(!is.null(x$ref)){readr::read_csv(x$ref)}else{NA})
-                editable<-TRUE
-              }
-              
-              data<-tibble(id=id,label=label,mandatory=mandatory,default_value=default_value,ref=ref,editable=editable)
-            }))
+            taskDef<-readTaskDefinition(file = taskRules)
+            format_spec = taskDef$formats[[input$format]]$spec
+            
+            #TODO process reporting_entity in format_spec
+            task_template = buildTemplate(format_spec)
+            
             template_info<-template_info(task_template)
             
             info<-template_info()
@@ -548,7 +504,7 @@ data_entry_editor_server <- function(id, parent.session, config, profile, compon
           data_to_save<-hot_to_r(input$table)
           data_to_save<-as.data.frame(data_to_save)
           info<-template_info()
-          names(data_to_save)<-info$id
+          names(data_to_save)<-info$name
           if(any(!is.na(info$ref))){
             cols<-which(!is.na(info$ref))
             correct_order<-names(data_to_save)
@@ -600,7 +556,6 @@ data_entry_editor_server <- function(id, parent.session, config, profile, compon
             editable_table <- hot_col(editable_table,col=col, type = "dropdown", source = ref_code)
           }
         }
-          
         
         return(editable_table)
         
