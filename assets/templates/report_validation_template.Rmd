@@ -37,18 +37,15 @@ header-includes:
 ```{r,results='asis', message=FALSE, warning=FALSE, comment=FALSE,echo=FALSE}
 
 valid<-FALSE
-if(!ds_out$valid){
-  valid<-FALSE
-}else{
-  if(is.null(gb_out$valid)){
+if(ds_out$valid){
+  valid <- TRUE
+  if(is.null(gb_out)){
     valid<-FALSE
   }else{
     if(!gb_out$valid){
       valid<-FALSE
     }else{
-      if(is.null(dc_out$valid)){
-        valid<-FALSE
-      }else{
+      if(!is.null(dc_out)){
         if(!dc_out$valid){
           valid<-FALSE
         }else{

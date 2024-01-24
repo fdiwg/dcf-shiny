@@ -20,9 +20,9 @@ data_validation_server <- function(id, parent.session, config, profile, componen
         valReportPath<<-reactiveVal(NULL)
         dcOut<<-reactiveVal(NULL)
         goReport<<-reactiveVal(FALSE)
-        taskProperties<<-reactiveVal(NULL)
+        taskProfile<<-reactiveVal(NULL)
         loadedData<<-reactiveVal(NULL)
-        metadata_geoflow<<-reactiveVal(NULL)
+        file_metadata<<-reactiveVal(NULL)
         file_info<<-reactiveValues(
           datapath = NULL,
           name = NULL
@@ -110,7 +110,6 @@ data_validation_server <- function(id, parent.session, config, profile, componen
       
       #Restart module content (Home page) if 'Finish' button is clicked
       #-----------------------------------------------------------------------------------
-
       
       #GO BACK TAB 1 FROM TAB 2
       observeEvent(input$goData,{
@@ -141,6 +140,7 @@ data_validation_server <- function(id, parent.session, config, profile, componen
       #Wizard panels routine
       #-----------------------------------------------------------------------------------
       #TAB 1 - SELECT YOUR DATA
+      #-----------------------------------------------------------------------------------
       #TAB 1 MANAGER
       observeEvent(input$start,{
         restart<-restart(FALSE)
@@ -302,15 +302,15 @@ data_validation_server <- function(id, parent.session, config, profile, componen
       observeEvent(input$task,{
         if(!is.null(input$task))if(input$task!=""){
         #Check Data call open
-        taskProfile<-getTaskProperties(config,id=input$task)
-        taskProperties<-taskProperties(taskProfile)
+        task_prof <- getTaskProfile(config,id=input$task)
+        taskProfile <- taskProfile(task_prof)
         datacall<-getDataCalls(pool,status="OPENED",tasks=input$task,period="IN")
           if(nrow(datacall)==1){
             Sys.setenv(DATA_CALL_YEAR = as.integer(format(datacall$creation_date, "%Y")))
             dataCall<-dataCall(TRUE)
             submission$data_call_id = datacall$id_data_call
             submission$task_id = datacall$task_id
-            submission$task_name =taskProperties()$name
+            submission$task_name =taskProfile()$name
             output$dataCallMessage<-renderUI({tags$span(shiny::icon(c('check-circle')), "A data call is currently open for this task", style="color:green;")})
           }
           
@@ -322,7 +322,9 @@ data_validation_server <- function(id, parent.session, config, profile, componen
         }
         })
       
+      #-----------------------------------------------------------------------------------
       #TAB 2 - PREVIEW
+      #-----------------------------------------------------------------------------------
       output$dataView<-DT::renderDT(server = FALSE, {
         req(input$file)
         if(!is.null(input$file)){
@@ -386,10 +388,12 @@ data_validation_server <- function(id, parent.session, config, profile, componen
         )
       })
       
-      #TAB 3 - RESPECT WITH STANDARD FORMAT
+      #-----------------------------------------------------------------------------------
+      #TAB 3 - VALIDATION VS. STANDARD FORMAT
+      #-----------------------------------------------------------------------------------
       #TAB 3 MANAGER
       observeEvent(input$goGlobValid,{
-        taskRules <- taskProperties()$dsd_ref_url
+        task_def_url <- taskProfile()$dsd_ref_url
         
         appendTab(inputId = "wizard-tabs",
                   session = parent.session,
@@ -426,63 +430,76 @@ data_validation_server <- function(id, parent.session, config, profile, componen
         
         waiter_show(html = waiting_screen, color = "#14141480")
         data<-loadedData()
-        INFO("Read Task '%s' column definitions", taskProperties()$name)
-        task_def <- readTaskColumnDefinitions(file = taskRules, format = input$format, config = config)
+        INFO("Read Task '%s' definition", taskProfile()$name)
+        task_def <- readTaskDefinition(file = task_def_url)
         hostess$set(5)
         
         #Validation of structure
-        
-        INFO("Validate data structure")
-        out<-validateDataStructure(file=data, task_def = task_def)
+        INFO("Validating data structure")
+        out<-validateDataStructure(file = data, task_def = task_def, format = input$format)
         dsOut<-dsOut(out)
         hostess$set(10)
         
         if(out$valid){
-          INFO("Validate data content")
-          out<-validateDataContent(file=data, task_def = task_def, config = config,hostess=hostess)
+          INFO("Validating data content")
+          out<-validateDataContent(file=data, task_def = task_def, format = input$format)
           gbOut<-gbOut(out)
           hostess$set(50)
           INFO("Successful data validation")
           if(out$valid){
             submission$reporting_entity <- input$reporting_entity
-            data<-standardizeNames(file=data,task_def = task_def)
-             hostess$set(80)
-             if(input$format=="simplified"){
-               data<-simplifiedToGeneric(file=data, taskRules)
-               
-             }
-             if(!is.null(submission$data_call_id)){
-               taskSupplRules<-taskProperties()$data_call_limited_on
-               task_def <- readDataCallRules(file = taskRules, format = "generic", config = config,reporting_entity = input$reporting_entity,data_call_limited_on=taskSupplRules)
-               out<-validateDataContent(file=data, task_def = task_def, config = config,hostess=hostess)
-               dcOut<-dcOut(out)
-               hostess$set(95)
-             }
+            INFO("Standardizing column names on functional terms")
+            data <- standardizeNames(file=data, task_def = task_def, format = input$format)
+            INFO("Successful data standardization on functional terms")
+            hostess$set(80)
+            INFO("Selected format specification: '%s'", input$format)
+            if(input$format=="simplified"){
+              INFO("Transforming data from 'simplified' to 'generic' data structure (normalization)")
+              data <- simplifiedToGeneric(file=data, task_def = task_def)
+              INFO("Successful transformation from 'simplified' to 'generic'")
+            }
 
-             loadedData<-loadedData(data)
+            if(!is.null(submission$data_call_id)){
+              INFO("Existing target data call, check compliance with data call")
+              taskSupplRules<-taskProfile()$data_call_limited_on
+              INFO("Build format specification for data call rules")
+              dc_task_def <- readDataCallRules(task_def = task_def, format = input$format, config = config,reporting_entity = input$reporting_entity, data_call_limited_on=taskSupplRules)
+              INFO("Data call format specification ready to use, validating data vs. data call spec...")
+              out<-validateDataContent(file=data, task_def = dc_task_def, format = "generic")
+              INFO("Succesful data validation")
+              dcOut<-dcOut(out)
+              hostess$set(95)
+            }else{
+              INFO("No existing target data call, skip validation based on data call rules")
+            }
+            loadedData<-loadedData(data)
           }
           hostess$set(99)
         }
         
+        print("=> structure")
+        print(dsOut())
+        print("=> content")
+        print(gbOut())
+        print("=> data call")
+        print(dcOut())
+        print("DONE")
         goReport<-goReport(TRUE)
         #print(names(loadedData()))
-
+        
       })
       
-      
       #TAB 3 REPORT ROUTINE
-
       output$dataInfoValidReport<-renderUI({
         req(!is.null(dsOut()))
         out<-dsOut()
         #PDF Report
         info<-list(task_id=input$task,
                    date=Sys.Date(),
-                   task_name=taskProperties()$name,
+                   task_name=taskProfile()$name,
                    file=file_info$name,
                    format=input$format,
                    flagstate=input$reporting_entity)      
-        
         valid<-FALSE
         if(dsOut()$valid){
           valid<-TRUE
@@ -490,12 +507,14 @@ data_validation_server <- function(id, parent.session, config, profile, componen
             valid<-FALSE
           }else{
             if(!gbOut()$valid){
-            valid<-FALSE
+              valid<-FALSE
             }else{
-              if(!dcOut()$valid){
-                valid<-FALSE
-              }else{
-                valid<-TRUE
+              if(!is.null(dcOut())){
+                if(!dcOut()$valid){
+                  valid<-FALSE
+                }else{
+                  valid<-TRUE
+                }
               }
             }
           }
@@ -511,7 +530,7 @@ data_validation_server <- function(id, parent.session, config, profile, componen
                        p(strong("Date of Report : "),Sys.Date())
                 ),
                 column(6,style = "border: 1px solid black;",
-                       p(strong("Task Name: "),taskProperties()$name),
+                       p(strong("Task Name: "),taskProfile()$name),
                        p(strong("File : "),file_info$name)
                 ),
                 column(3,style = "border: 1px solid black;",
@@ -545,11 +564,13 @@ data_validation_server <- function(id, parent.session, config, profile, componen
       })
       
       output$dataStructureValidReport<-renderUI({
+        WARN("render UI for data struture validation report")
         req(!is.null(dsOut()))
         out<-dsOut()
         
         #Box Text
         summary<-out$summary
+        print(summary)
         summary$status<-ifelse(summary$status=="EXISTING","PASSED",ifelse(summary$type=="OPTIONAL","PASSED WITH WARNING","FAILED"))
         status<-ifelse(any("FAILED"%in%summary$status),"FAILED",
                        ifelse(any("PASSED WITH WARNING"%in%summary$status),"PASSED WITH WARNING","PASSED"))
@@ -643,6 +664,7 @@ data_validation_server <- function(id, parent.session, config, profile, componen
       })
       
       output$dataContentValidReport<-renderUI({
+        WARN("render UI for data content validation report")
         req(!is.null(dsOut()))
         if(!dsOut()$valid){
           #Box Message
@@ -768,7 +790,7 @@ data_validation_server <- function(id, parent.session, config, profile, componen
       })
       
       output$dataCallValidReport<-renderUI({
-        
+        WARN("render UI for data call validation report")
         req(!is.null(dsOut()))
         if(!dsOut()$valid){
           #Box Message
@@ -929,18 +951,16 @@ data_validation_server <- function(id, parent.session, config, profile, componen
         #PDF Report
         info<-list(task_id=input$task,
                    date=Sys.Date(),
-                   task_name=taskProperties()$name,
+                   task_name=taskProfile()$name,
                    file=file_info$name,
                    format=input$format,
                    flagstate=input$reporting_entity)
         
-        report_path<-file.path(tempdir(), sprintf("datacall-%s_task-%s_for_%s_report_validation.pdf",submission$data_call_id,input$task,input$reporting_entity))
+        report_path<-file.path(tempdir(), sprintf("validation_report_%s_task-%s_for_%s.pdf",if(!is.null(submission$data_call_id)) paste0("dc-",submission$data_call_id) else "ndc" ,input$task,input$reporting_entity))
         valReportPath<-valReportPath(report_path)
-        print(report_path)
         rmarkdown::render("assets/templates/report_validation_template.Rmd", output_file = report_path ,output_format = "pdf_document",output_options = list(keep_tex = TRUE), params = list(ds_out,gb_out,dc_out,info,config))
         waiter_hide()
-        }
-      )
+      })
       
       #Download Pdf 
       output$gbreport <- downloadHandler(
@@ -955,8 +975,8 @@ data_validation_server <- function(id, parent.session, config, profile, componen
           ds_out<-dsOut()
           if(!is.null(ds_out$errors)){
             if(nrow(ds_out$errors)>0){
-              file_path<-gsub(".pdf","data_structure_errors_detail.csv",basename(valReportPath()))
-              write.csv(out$errors,file_path,row.names = F)
+              file_path<-gsub(".pdf","_data_structure_errors_detail.csv",basename(valReportPath()))
+              write.csv(ds_out$errors,file_path,row.names = F)
               list_files<-c(list_files,file_path)
             }
           }
@@ -964,7 +984,7 @@ data_validation_server <- function(id, parent.session, config, profile, componen
           gb_out<-gbOut()
           if(!is.null(gb_out$errors)){
             if(nrow(gb_out$errors)>0){
-              file_path<-gsub(".pdf","data_content_errors_detail.csv",basename(valReportPath()))
+              file_path<-gsub(".pdf","_data_content_errors_detail.csv",basename(valReportPath()))
               write.csv(gb_out$errors,file_path,row.names = F)
               list_files<-c(list_files,file_path)
             }
@@ -973,8 +993,8 @@ data_validation_server <- function(id, parent.session, config, profile, componen
           dc_out<-dcOut()
           if(!is.null(dc_out$errors)){
             if(nrow(dc_out$errors)>0){
-              file_path<-gsub(".pdf","data_call_errors_detail.csv",basename(valReportPath()))
-              write.csv(odc_out$errors,file_path,row.names = F)
+              file_path<-gsub(".pdf","_data_call_errors_detail.csv",basename(valReportPath()))
+              write.csv(dc_out$errors,file_path,row.names = F)
               list_files<-c(list_files,file_path)
             }
           }
@@ -983,54 +1003,9 @@ data_validation_server <- function(id, parent.session, config, profile, componen
           },
           contentType = "application/zip")
 
-      #TAB 4 - CONSISTENCY WITH DATA CALL
-      #TAB 4 MANAGER
-      #TODO call validateCallRules once we added the tab
-      
-      observeEvent(input$goSpecValid,{
-        
-        hostess <- Hostess$new()
-        hostess$set_loader(
-          hostess_loader(
-            preset = "circle", 
-            text_color = "white",
-            class = "label-center",
-            style="margin:0 auto;",
-            center_page = TRUE
-          ))
-        
-        Sys.sleep(1)
-        
-        waiting_screen<-tagList(
-          h3("Check consistency with the ongoing data call"),
-          #spin_flower(),
-          hostess$get_loader(),
-          h4("Please wait, your dataset is currently checked vs. the ongoing data call ...")
-        )
-        
-        waiter_show(html = waiting_screen, color = "#14141480")
-
-        taskSupplRules<-taskProperties()$data_call_limited_on
-        taskSupplRules$reporting_entity<-input$reporting_entity
-        data<-loadedData()
-
-        out<-validateCallRules(file = data,rules = taskSupplRules,hostess=hostess)
-        dcOut<-dcOut(out)
-        hostess$set(95)
-        appendTab(inputId = "wizard-tabs",
-                  session = parent.session,
-                  select=TRUE,
-                  tabPanel(title="4-Consistency with data Call", 
-                           value="specific_validation",
-                           tagList(
-                             uiOutput(ns("callValidReport"))
-                           )
-                  )
-        )
-
-      })
-      
-      #TAB 4 - SEND DATA
+      #-----------------------------------------------------------------------------------
+      #TAB 4 - METADATA
+      #-----------------------------------------------------------------------------------
       #TAB 4 MANAGER
       observeEvent(input$goMetadata,{
         appendTab(inputId = "wizard-tabs",
@@ -1343,7 +1318,6 @@ data_validation_server <- function(id, parent.session, config, profile, componen
         #TODO
         
         metadata_geoflow<-entity$asDataFrame()
-        print(metadata_geoflow)
         file_metadata<-file_metadata(metadata_geoflow)
         
         appendTab(inputId = "wizard-tabs",
@@ -1361,8 +1335,8 @@ data_validation_server <- function(id, parent.session, config, profile, componen
         )
       })
       
-      #TAB 7 - THANK YOU
-      #TAB 7 MANAGER
+      #TAB 5 - THANK YOU
+      #TAB 5 MANAGER
       
       submitData<- function(new=TRUE,session,dc_folder,submission,pool,profile,store,config,input){
         

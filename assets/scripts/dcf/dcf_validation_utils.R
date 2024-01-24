@@ -12,8 +12,8 @@ getTasks <- function(config,withId=FALSE){
   return(task_list)
 }
 
-#getTaskProperties
-getTaskProperties <- function(config,id){
+#getTaskProfile
+getTaskProfile <- function(config,id){
   task <- config$dcf$tasks[[id]]
   return(task)
 }
@@ -95,115 +95,95 @@ dateFormating<- function(date,period="start"){
   return(dates)
 }
 
-# #readTaskColumnDefinitions
-# readTaskColumnDefinitions<- function(file, format, config = NULL, reporting_entity = NULL,force=F){
-#   task_def<-jsonlite::read_json(file)
-#   task_def <- task_def$formats[[format]]$columns
-#   if(!is.null(config$dcf$reporting_entities)) if(config$dcf$reporting_entities$validation|force){
-#     if(!is.null(task_def[[config$dcf$reporting_entities$name]]$ref)) task_def[[config$dcf$reporting_entities$name]]$ref <- NULL
-#     task_def[[config$dcf$reporting_entities$name]]$allowed_values <- reporting_entity
-#     task_def[[config$dcf$reporting_entities$name]]$rule_type <- "reporting_entity"
-#   }
-#   return(task_def)
-# }
-
-#readTaskColumnDefinitions
-readTaskColumnDefinitions<- function(file, format, config = NULL){
+#readTaskDefinition
+#@note new, refactoring with vrule
+readTaskDefinition <- function(file){
+  task_def <-jsonlite::read_json(file)
   
-  task_def<-jsonlite::read_json(file)
+  #mandatory properties
+  mandatory_properties = c("task_id", "task_name", "formats")
+  diff = setdiff(mandatory_properties, names(task_def))
+  if(length(diff)>0){
+    stop(sprintf("Task definition | missing mandatory properties: %s", paste0(diff, collapse=",")))
+  }
   
-  task_def <- task_def$formats[[format]]$columns
-  
-  if(is.null(task_def$column_specs)){
-    if(!is.null(task_def$ref)){
-      task_def<-jsonlite::read_json(task_def$ref)
-    }else{
-      stop()
+  #conditional properties
+  if("simplified" %in% names(task_def$formats)){
+    #in case a simplified format definition is set, the measurement is mandatory
+    if(!"measurement" %in% names(task_def)){
+      stop("Task definition |  At least one 'measurement' declaration is required with a simplified format specification")
     }
   }
   
-  # if(!is.null(config$dcf$reporting_entities)) if(limit_reporting_entities){
-  #   
-  #   reporting_entity_col_spec_idx<-which(sapply(task_def$column_specs, function(x) any(which(x$name == config$dcf$reporting_entities$name))))
-  #   
-  #   target_rule_idx<-which(sapply(task_def$column_specs[[reporting_entity_col_spec_idx]]$rules, function(x) any(which(x$vrule == "codelist"))))
-  #   
-  #   if(!is.null(target_rule_idx)){
-  #     task_def$column_specs[[reporting_entity_col_spec_idx]]$rules[[target_rule_idx]]$args<-NULL
-  #     task_def$column_specs[[reporting_entity_col_spec_idx]]$rules[[target_rule_idx]]$args$ref_values<-list(reporting_entity)
-  #   }
-  #   
-  # }
-  
+  #formats
+  mandatory_format_properties = c("id", "name", "ref")
+  for(format in names(task_def$formats)){
+    diff = setdiff(mandatory_format_properties, names(task_def$formats[[format]]))
+    if(length(diff)>0){
+      stop(sprintf("Task definition | At least one format with missing properties: %s", paste(diff, collapse=",")))
+    }
+    task_def$formats[[format]]$spec <- vrule::format_spec$new(json = jsonlite::read_json(task_def$formats[[format]]$ref))
+  }
   return(task_def)
-  
 }
 
 #readDataCallRules
-readDataCallRules<- function(file, format, config = NULL,reporting_entity=NULL,data_call_limited_on=NULL){
-  
-  task_def<-jsonlite::read_json(file)
-  
-  task_def <- task_def$formats[[format]]$columns
-  
-  if(is.null(task_def$column_specs)){
-    if(!is.null(task_def$ref)){
-      task_def<-jsonlite::read_json(task_def$ref)
-    }else{
-      stop()
-    }
-  }
-  
-  dc_task_def<-task_def
-  
-  dc_task_def$column_specs<-NULL
-  
-  if(!is.null(config$dcf$reporting_entities)){
-    
-    reporting_entity_col_spec_idx<-which(sapply(task_def$column_specs, function(x) any(which(x$name == config$dcf$reporting_entities$name))))
-    reporting_entity_col_spec<-task_def$column_specs[[reporting_entity_col_spec_idx]]
-    reporting_entity_col_spec$rules<-NULL
-    reporting_entity_col_spec$rules[[1]]<-list(vrule="codelist",
-                                       args=list(ref_values=list(reporting_entity)))
+readDataCallRules<- function(task_def, format, config = NULL,reporting_entity=NULL,data_call_limited_on=NULL){
 
-    
-    dc_task_def$column_specs[[length(dc_task_def$column_specs) + 1]] <- reporting_entity_col_spec
-    
+  #inherit vrule format_spec object from task definition
+  format_spec = task_def$formats[[format]]$spec 
+  
+  #we create a deep clone (copy) of the format_spec
+  dc_format_spec = format_spec$clone(deep = TRUE)
+  dc_format_spec$column_specs = list()
+  
+  #REPORTING ENTITY data call rule
+  if(!is.null(config$dcf$reporting_entities)){
+    #we alter the vrule associated to the reporting entity target column 
+    #to limit it to the reporting entity selected by the data submitter
+    reporting_entity_col_spec <- format_spec$getColumnSpecByName(config$dcf$reporting_entities$name)$clone(deep = TRUE)
+    reporting_entity_col_spec$rules[[1]]$ref_values = list(reporting_entity)
+    dc_format_spec$addColumnSpec(reporting_entity_col_spec)
   }
   
+  #TEMPORAL EXTENT data call limitations
   if(!is.null(data_call_limited_on)){
     
     #TIME DATA CALL CONSISTANCY
     if("time_start" %in% names(data_call_limited_on)){
-      
-      threshold<-eval_variable_expression(data_call_limited_on[["time_start"]])
-      
-      time_start_col_spec_idx<-which(sapply(task_def$column_specs, function(x) any(which(x$name == "time_start"))))
-      time_start_col_spec<-task_def$column_specs[[time_start_col_spec_idx]]
-      time_start_col_spec$rules<-NULL
-      time_start_col_spec$rules[[1]]<-list(vrule="date_min",
-                                      args=list(minValue=threshold))
-      
-      
-      dc_task_def$column_specs[[length(dc_task_def$column_specs) + 1]] <- time_start_col_spec
-
-  }
+      threshold <- eval_variable_expression(data_call_limited_on[["time_start"]])
+      time_start_col_spec <- format_spec$getColumnSpecByName("time_start") #in case time_start is part of format_spec (ie if format is generic)
+      if(is.null(time_start_col_spec)){
+        time_start_col_spec <- vrule::column_spec$new()
+        time_start_col_spec$setName("time_start")
+      }
+      time_start_col_spec$rules = list()
+      time_start_col_spec$addRule(vrule::vrule_date_min$new(minValue = threshold))
+      dc_format_spec$addColumnSpec(time_start_col_spec)
+    }
   
     if("time_end" %in% names(data_call_limited_on)){
-      
-      threshold<-eval_variable_expression(data_call_limited_on[["time_end"]])
-      
-      time_end_col_spec_idx<-which(sapply(task_def$column_specs, function(x) any(which(x$name == "time_end"))))
-      time_end_col_spec<-task_def$column_specs[[time_end_col_spec_idx]]
-      time_end_col_spec$rules<-NULL
-      time_end_col_spec$rules[[1]]<-list(vrule="date_max",
-                                           args=list(maxValue=threshold))
-      
-      
-      dc_task_def$column_specs[[length(dc_task_def$column_specs) + 1]] <- time_end_col_spec
-
+      threshold <- eval_variable_expression(data_call_limited_on[["time_end"]])
+      time_end_col_spec <- format_spec$getColumnSpecByName("time_end") #in case time_end is part of format_spec (ie if format is generic)
+      if(is.null(time_end_col_spec)){
+        time_end_col_spec <- vrule::column_spec$new()
+        time_end_col_spec$setName("time_end")
+      }
+      time_end_col_spec$rules = list()
+      time_end_col_spec$addRule(vrule::vrule_date_max$new(maxValue = threshold))
+      dc_format_spec$addColumnSpec(time_end_col_spec)
     }
   }
+  
+  #we copy the task_def and associate the generic format spec tailored to the data call specific validation
+  dc_task_def = task_def
+  dc_task_def$formats = list(
+    generic = list(
+      id = "dc",
+      name = "data call consistancy format",
+      spec = dc_format_spec
+    )
+  )
   
   return(dc_task_def)
   
@@ -211,38 +191,46 @@ readDataCallRules<- function(file, format, config = NULL,reporting_entity=NULL,d
 
 #getTaskFormats
 getTaskFormats<- function(config,id){
-task<-getTaskProperties(config,id)
-taskRules <- task$dsd_ref_url
-task_def<-jsonlite::read_json(taskRules)
-task_def <- task_def$formats
-formats<-setNames(unlist(lapply(task_def, function(x){x$id})),unlist(lapply(task_def, function(x){x$name})))
-return(formats)
+  task<-getTaskProfile(config,id)
+  taskRules <- task$dsd_ref_url
+  task_def<-jsonlite::read_json(taskRules)
+  task_def <- task_def$formats
+  formats<-setNames(unlist(lapply(task_def, function(x){x$id})),unlist(lapply(task_def, function(x){x$name})))
+  return(formats)
 }
 
-validateDataStructure<-function(file,task_def){
-  
-  error_report=vrule::format_spec$new(json=task_def)
-  
-  task_cols<-sapply(task_def$column_specs, function(x){x$name})
-  
-  if(is.data.frame(file)){
-    data<-file
-  }else{
-    if(any(endsWith(file,c("xls","xlsx")))){
-      data<-read_excel(file,col_types = "text")
-    }else if(any(endsWith(file,"csv"))){
-      data<-readr::read_csv(file,col_types = readr::cols(.default = "c"))
-    }else{
-      print("ERROR")
-    }
+#readDataFile
+readDataFile <- function(file){
+  #@eblondel this should be done elsewhere I guess
+  data = switch(mime::guess_type(file),
+                "application/vnd.ms-excel" = readxl::read_xls(file, col_types = "text"),
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" = readxl::read_xlsx(file, col_types = "text"),
+                "text/csv" = readr::read_csv(file,col_types = readr::cols(.default = "c")),
+                NULL
+  )
+  if(is.null(data)){
+    stop(sprintf("No data reader supported in dcf-shiny for mime type '%s'", mime::guess_type(file)))
   }
+  data = as.data.frame(data)
+  return(data)
+}
+
+#validateDataStructure
+validateDataStructure <- function(file, task_def, format){
   
-  data<-as.data.frame(data)
+  #inherit vrule format_spec object from task definition
+  format_spec = task_def$formats[[format]]$spec 
+  format_spec_cols = sapply(format_spec$column_specs, function(x){x$name})
   
-  errors<-error_report$validateStructure(data)
+  #read data in case it's not already done
+  data <- file
+  if(!is.data.frame(file)) data <- readDataFile(file)
+  
+  #structural validation (delegated to vrule package)
+  errors <- format_spec$validateStructure(data)
   
   report<-errors[,c("col","type")]
-  columns_info<-do.call("rbind",lapply(task_def$column_specs, function(x){data.frame(name=x$name,required=x$required)}))
+  columns_info<-do.call("rbind",lapply(format_spec$column_specs, function(x){data.frame(name=x$name,required=x$required)}))
   
   summary<-merge(columns_info,report,by.x="name",by.y="col",all.x=T,all.y=F,sort=F)
   
@@ -250,7 +238,7 @@ validateDataStructure<-function(file,task_def){
     rowwise()%>%
     mutate(required=ifelse(required==TRUE,"MANDATORY","OPTIONAL"))%>%
     mutate(type=ifelse(is.na(type),"EXISTING","MISSING"))%>%
-    mutate(name=factor(name,levels=task_cols))%>%
+    mutate(name=factor(name,levels=format_spec_cols))%>%
     ungroup()%>%
     arrange(name)%>%
     mutate(name=as.character(name))
@@ -269,90 +257,78 @@ validateDataStructure<-function(file,task_def){
     summary=summary,
     valid=valid
   )
+}
+
+#validateDataContent
+validateDataContent<-function(file, task_def, format, prettify = FALSE){
   
+  #inherit vrule format_spec object from task definition
+  format_spec = task_def$formats[[format]]$spec 
+  format_spec_cols = sapply(format_spec$column_specs, function(x){x$name})
+    
+  #read data in case it's not already done
+  data <- file
+  if(!is.data.frame(file)) data <- readDataFile(file)
+
+  #prettify for display as handsontable
+  if(prettify){
+    errors<-format_spec$validate_and_display_as_handsontable(data)
+  }else{
+    errors<-format_spec$validateContent(data)
   }
-
-validateDataContent<-function(file,task_def,config =NULL,hostess=NULL,prettify=FALSE){
   
-    error_report=vrule::format_spec$new(json=task_def)
-    
-    task_cols<-sapply(task_def$column_specs, function(x){x$name})
-    
-    if(is.data.frame(file)){
-      data<-file
-    }else{
-      if(any(endsWith(file,c("xls","xlsx")))){
-        data<-read_excel(file,col_types = "text")
-      }else if(any(endsWith(file,"csv"))){
-        data<-readr::read_csv(file,col_types = readr::cols(.default = "c"))
-      }else{
-        print("ERROR")
-      }
-    }
-    
-    data<-as.data.frame(data)
-    
-    if(prettify){
-      errors<-error_report$validate_and_display_as_handsontable(data)
-    }else{
-      errors<-error_report$validateContent(data)
-    }
-    
-    errors<-subset(errors,category!="Data structure")
-    
-    report<-unique(errors[,c("col","type")])
-    columns_info<-do.call("rbind",lapply(task_def$column_specs, function(x){data.frame(name=x$name)}))
-    if(nrow(report>0)){
-      summary<-merge(columns_info,report,by.x="name",by.y="col",all.x=T,all.y=F,sort=F)
-    }else{
-      summary<-columns_info
-      summary$type<-NA
-    }
-    summary<-summary%>%
-      rowwise()%>%
-      mutate(type=ifelse(is.na(type),"SUCCESS",type))%>%
-      group_by(name)%>%
-      summarise(status=ifelse(any("ERROR"%in%type),"FAILED",
-                        ifelse(any("WARNING"%in%type),"PASSED WITH WARNING","PASSED")))%>%
-      ungroup()%>%
-      mutate(name=factor(name,levels=task_cols))%>%
-      arrange(name)%>%
-      mutate(name=as.character(name))
+  errors<-subset(errors,category!="Data structure")
+  
+  report<-unique(errors[,c("col","type")])
+  columns_info<-do.call("rbind",lapply(format_spec$column_specs, function(x){data.frame(name=x$name)}))
+  if(nrow(report>0)){
+    summary<-merge(columns_info,report,by.x="name",by.y="col",all.x=T,all.y=F,sort=F)
+  }else{
+    summary<-columns_info
+    summary$type<-NA
+  }
+  summary<-summary%>%
+    rowwise()%>%
+    mutate(type=ifelse(is.na(type),"SUCCESS",type))%>%
+    group_by(name)%>%
+    summarise(status=ifelse(any("ERROR"%in%type),"FAILED",
+                      ifelse(any("WARNING"%in%type),"PASSED WITH WARNING","PASSED")))%>%
+    ungroup()%>%
+    mutate(name=factor(name,levels=format_spec_cols))%>%
+    arrange(name)%>%
+    mutate(name=as.character(name))
 
-    names(summary)<-c("column","status")
-    
-    if(nrow(subset(errors,type=="ERROR"))>0){
-           valid<-FALSE
-         }else{
-           valid<-TRUE
-       }
-         out = list(
-           errors = errors,
-           summary = summary, 
-           valid = valid
-         )
-    
-    return(out)
+  names(summary)<-c("column","status")
+  
+  if(nrow(subset(errors,type=="ERROR"))>0){
+    valid<-FALSE
+  }else{
+    valid<-TRUE
+  }
+  out = list(
+    errors = errors,
+    summary = summary, 
+    valid = valid
+  )
+  
+  return(out)
 }
 
 #standardizeNames
-standardizeNames<-function(file,task_def,exclude_unused=T){
+standardizeNames<-function(file, task_def, format, exclude_unused = TRUE){
   
-  if(is.data.frame(file)){
-    data<-file
-  }else{
-    if(any(endsWith(file,c("xls","xlsx")))){
-      data<-read_excel(file,col_types = "text")
-    }else if(any(endsWith(file,"csv"))){
-      data<-readr::read_csv(file,col_types = readr::cols(.default = "c"))
-    }else{}
-  }
+  #inherit vrule format_spec object from task definition
+  format_spec = task_def$formats[[format]]$spec 
+  format_spec_cols = sapply(format_spec$column_specs, function(x){x$name})
   
-  task_cols<-sapply(task_def$column_specs, function(x){x$name})
+  #read data in case it's not already done
+  data <- file
+  if(!is.data.frame(file)) data <- readDataFile(file)
+  
   data_names<-names(data)
   
-  for (i in 1:length(task_def$column_specs)){
-    target<-task_def$column_specs[[i]]
+  for (i in 1:length(format_spec$column_specs)){
+    target<-format_spec$column_specs[[i]]
     std_name<-target$name
     alt_names<-unlist(target$aliases)
     if(std_name%in%data_names){}else{
@@ -364,74 +340,63 @@ standardizeNames<-function(file,task_def,exclude_unused=T){
   }
   
   if(exclude_unused){
-    data<-data[intersect(task_cols,names(data))]
+    data<-data[intersect(format_spec_cols,names(data))]
   }
   
   return(data)
 }
 
 #simplifiedToGeneric
-simplifiedToGeneric<-function(file,rules){
+simplifiedToGeneric <- function(file, task_def){
   
-  rules<-jsonlite::read_json(rules)
+  #inherit vrule format_spec object from task definition
+  format_spec = task_def$formats$simplified$spec 
+  format_spec_cols = sapply(format_spec$column_specs, function(x){x$name})
   
-  task_def <- rules$formats[["generic"]]$columns
+  #read data in case it's not already done
+  data <- file
+  if(!is.data.frame(file)) data <- readDataFile(file)
   
-  if(is.null(task_def$column_specs)){
-    if(!is.null(task_def$ref)){
-      task_def<-jsonlite::read_json(task_def$ref)
-    }else{
-      stop()
-    }
-  }
-  
-  type=rules$measurement
-  
-  if(is.data.frame(file)){
-    data<-file
-  }else{
-    if(any(endsWith(file,c("xls","xlsx")))){
-      data<-read_excel(file,col_types = "text")
-    }else if(any(endsWith(file,"csv"))){
-      data<-readr::read_csv(file,col_types = readr::cols(.default = "c"))
-    }else{}
-  }
-  
-  names(data)<-gsub("_unit","__measurement_unit",names(data))
-  
-  measurement_type<-paste0(type,"_",unlist(task_def$column_specs[[which(sapply(task_def$column_specs, function(x) any(which(x$name == "measurement_type"))))]]$rules[[1]]$args$ref_values))
-  
-  names(data)[names(data) %in% measurement_type]<-paste0(names(data)[names(data) %in% measurement_type],"__measurement_value")
-  
-  names(data)[grepl("__measurement",names(data),fixed = T)]<-gsub(paste0(type,"_"),"",names(data)[grepl("__measurement",names(data),fixed = T)])
-  
-  newdata<-data%>%
-    pivot_longer(names(data)[grepl("__measurement",names(data),fixed = T)],names_to = c("measurement_type", ".value"), 
-                 names_sep="__" )%>%
-    mutate(measurement=type)%>%
-    rowwise()%>%
-    mutate(date=ifelse("period"%in%names(data),paste0(year,"-",period),paste0(year,"-NA")))%>%
-    ungroup()%>%
-    mutate(time_start=dateFormating(date,"start"),
-           time_end=dateFormating(date,"end"),
-           time=paste0(time_start,"/",time_end))
-  
-  if("measurement_obs"%in%sapply(task_def$column_specs, function(x){x$name})){
-    if(any(endsWith(names(newdata),"_obs"))){
-      names(newdata)[endsWith(names(newdata),"_obs",names(newdata))] <- "measurement_obs" 
-    }else{
-      newdata$measurement_obs<-NA
-    }
+  measurements = task_def$measurement
+  newdata_all = do.call("rbind", lapply(measurements, function(measurement){
     
-  }
+    attr_target_cols = colnames(data)[sapply(colnames(data), function(x){!any(sapply(measurements, function(m){startsWith(x,m)}))}) ]
+    measurement_target_cols = colnames(data)[sapply(colnames(data), function(x){startsWith(x, paste0(measurement, "_"))})]
+    target_cols = c(attr_target_cols, measurement_target_cols)
+    
+    mdata = data[,target_cols]
+    names(mdata)<-gsub("_unit","__measurement_unit",names(mdata))
+    names(mdata)<-gsub("_status","__measurement_status",names(mdata))
+    measurement_types = gsub("_unit", "", measurement_target_cols) %>% unique()
+    names(mdata)[names(mdata) %in% measurement_types]<-paste0(names(mdata)[names(mdata) %in% measurement_types],"__measurement_value")
+    names(mdata)[grepl("__measurement",names(mdata),fixed = T)]<-gsub(paste0(measurement,"_"),"",names(mdata)[grepl("__measurement",names(mdata),fixed = T)])
+    
+    #in case we have quarter/month definitions we harmonize it to 'period' for later transformation
+    if("quarter" %in% names(mdata)) names(mdata)[names(data)=="quarter"] = "period"
+    if("month" %in% names(mdata)) names(mdata)[names(data)=="month"] = "period"
+    
+    newdata<-mdata%>%
+      tidyr::pivot_longer(names(mdata)[grepl("__measurement",names(mdata),fixed = T)],names_to = c("measurement_type", ".value"), 
+                   names_sep="__" )%>%
+      mutate(measurement = measurement)%>%
+      rowwise()%>%
+      mutate(date=ifelse("period"%in%names(mdata),paste0(year,"-",period),paste0(year,"-NA")))%>%
+      ungroup()%>%
+      mutate(time_start=dateFormating(date,"start"),
+             time_end=dateFormating(date,"end"),
+             time=paste0(time_start,"/",time_end))
+    measurement_block_cols = c("measurement", "measurement_type", "measurement_value", "measurement_unit", "measurement_status")
+    mdata_measurement_block_cols = measurement_block_cols[measurement_block_cols %in% colnames(newdata)[startsWith(colnames(newdata),"measurement")]]
+    newdata = newdata[,c(colnames(newdata)[!sapply(colnames(newdata), function(x){x %in% mdata_measurement_block_cols})], mdata_measurement_block_cols)]
+    
+    return(newdata)
+  }))
   
-  newdata<-newdata[sapply(task_def$column_specs, function(x){x$name})]
-  
-  return(newdata)
+  return(newdata_all)
 }
 
 #validateCallRules
-validateCallRules <- function(file, rules,hostess=NULL){
+validateCallRules <- function(file, rules, hostess=NULL){
   
   errors<-data.frame(
     type=character(),
@@ -451,15 +416,10 @@ validateCallRules <- function(file, rules,hostess=NULL){
     icon=rep(paste0(tags$span(shiny::icon("ban"), title = "Not tested", style = "color:grey;"), collapse=""),4)
   )
   
-  if(is.data.frame(file)){
-    data<-file
-  }else{
-    if(any(endsWith(file,c("xls","xlsx")))){
-      data <- readxl::read_excel(file,col_types = "text")
-    }else if(any(endsWith(file,"csv"))){
-      data<-readr::read_csv(file,col_types = readr::cols(.default = "c"))
-    }else{}
-  }
+  #read data in case it's not already done
+  data <- file
+  if(!is.data.frame(file)) data <- readDataFile(file)
+  
   if(!is.null(hostess)) hostess$set(5)
   #TIME DATA CALL CONSISTANCY
   if("time_start" %in% names(rules)){
