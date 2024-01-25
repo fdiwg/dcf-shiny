@@ -1232,6 +1232,8 @@ data_validation_server <- function(id, parent.session, config, profile, componen
 
       #TAB 6
       observeEvent(input$goSend,{
+        
+        INFO("Producing geoflow metadata")
         #entities = list()
         entity <- geoflow::geoflow_entity$new()
         #identifier
@@ -1316,8 +1318,10 @@ data_validation_server <- function(id, parent.session, config, profile, componen
         
         #data
         #TODO
-        
+        INFO("Successfuly produced geoflow metadata")
+        INFO("Exporting geoflow metadata to data.frame")
         metadata_geoflow<-entity$asDataFrame()
+        INFO("Successfuly exported geoflow metadata data.frame")
         file_metadata<-file_metadata(metadata_geoflow)
         
         appendTab(inputId = "wizard-tabs",
@@ -1454,6 +1458,7 @@ data_validation_server <- function(id, parent.session, config, profile, componen
           hostess$set(50)
           
           #metadata
+          INFO("Producing DublinCore metadata")
           dc_entry_filename <- file.path(getwd(), paste0(dc_folder, ".xml"))
           dc_entry <- atom4R::DCEntry$new()
           dc_entry$addDCDateSubmitted(dc_entry$updated)
@@ -1464,14 +1469,17 @@ data_validation_server <- function(id, parent.session, config, profile, componen
           dc_entry$addDCConformsTo("FIRMS data exchange format specifications")
           dc_entry$addDCConformsTo("CWP Standards for fishery purpose")
           dc_entry$addDCCoverage(paste0(config$dcf$reporting_entities$name,":",submission$reporting_entity))
-          dc_entry$addDCSource(store$getPublicFileLink(path = file.path(config$dcf$user_workspace, dc_folder, basename(data_filename))))
+          source = store$getPublicFileLink(path = file.path(config$dcf$user_workspace, dc_folder, basename(data_filename)))
+          dc_entry$addDCSource(source)
           dc_entry$addDCFormat("text/csv")
           
           start <- min(as.Date(loadedData()$time_start))
           end <- max(as.Date(loadedData()$time_end))
           dc_entry$addDCTemporal(paste(start,end,sep="/"))
-          
+          INFO("Succesfuly produced DublinCore metadata")
+          INFO("Exporting metadata as DublinCore XML")
           dc_entry$save(dc_entry_filename)
+          INFO("Successfuly exported DublinCore XML metadata")
           uploadedMetadataId <- store$uploadFile(folderPath = file.path(config$dcf$user_workspace, dc_folder), file = dc_entry_filename, description = "Metadata")
           
           if(!is.null(uploadedMetadataId) ){
