@@ -18,7 +18,7 @@
     {"package": "jsonlite", "version": "1.8.0", "repos": "https://cran.r-project.org"},
     {"package": "XML", "version": "3.99-0.9", "repos": "https://cran.r-project.org"},
     {"package": "jose", "version": "1.2.0", "repos": "https://cran.r-project.org"},
-    {"package": "zip", "version": "2.2.0", "repos": "https://cran.r-project.org"},
+    {"package": "zip", "version": "2.3.0", "repos": "https://cran.r-project.org"},
     {"package": "DBI", "version": "1.1.2", "repos": "https://cran.r-project.org"},
     {"package": "pool", "version": "0.1.6", "repos": "https://cran.r-project.org"},
     {"package": "RPostgres", "version": "1.2.0", "repos": "https://cran.r-project.org"},
