@@ -61,12 +61,11 @@ qtodate<- function(date,period="start"){
 
 #ymtodate
 ymtodate<- function(date,period="start"){
-  start_date<-paste0(date,"-01")
-  end_date<-as.character(ceiling_date(ymd(start_date),unit= "month") -1)
-  if(period=="start")return(start_date)
-  if(period=="end")return(end_date)
-  if(period=="start+end")return(paste0(start_date,"/",end_date))
-  
+  start_date<-ymd(paste0(date,"-01"))
+  end_date<-ceiling_date(start_date,unit= "month") -1
+  if(period=="start")return(as.character(start_date))
+  if(period=="end")return(as.character(end_date))
+  if(period=="start+end")return(paste0(as.character(start_date),"/",as.character(end_date)))
 }
 
 #ytodate
@@ -85,6 +84,8 @@ dateFormating<- function(date,period="start"){
   for(i in c(1:length(date))){
     if(startsWith(unlist(strsplit(date[i],"-"))[2],"Q")){
       x<-qtodate(date[i],period=period)
+    }else if(startsWith(unlist(strsplit(date[i],"-"))[2],"M")){
+      x<-ymtodate(gsub("M","",date[i]), period=period)
     }else if(unlist(strsplit(date[i],"-"))[2]=="NA"){
       x<-ytodate(date[i],period=period)
     }else{
