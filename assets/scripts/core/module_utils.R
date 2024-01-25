@@ -343,7 +343,7 @@ sidebarMenuFromModules <- function(config = NULL, profile){
         })
       ))
     }else{
-      menuItem(text = menu_item$title, tabName = menu_item_name)
+      if(menu_item$name != "plugins") menuItem(text = menu_item$title, tabName = menu_item_name)
     }
   })))
 }
