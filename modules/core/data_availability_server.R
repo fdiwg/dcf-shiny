@@ -34,7 +34,7 @@ data_availability_server <-function(id, parent.session, config, profile, compone
       data<-reactiveVal(NULL)
       data_s<-reactiveVal(NULL)
       #dataAvailable<-reactiveVal(ifelse(length(task_folders)==0,FALSE,TRUE))
-      dataAvailable<-reactiveVal(ifelse(length(data_tasks)==0,FALSE,TRUE))
+      dataAvailable<-reactiveVal(ifelse(all(sapply(data_tasks, is.null)),FALSE,TRUE))
       #dataAvailable<-reactiveVal(TRUE)
       
       pretty_seq<-function(x){
