@@ -1,0 +1,10 @@
+{
+  "parent": "db",
+  "type": "subitem",
+  "rank": 2,
+  "name": "db_manager",
+  "title": "Database management",
+  "restricted": true,
+  "icon": "database",
+  "roles": ["manager", "admin", "r-studio"]
+}
