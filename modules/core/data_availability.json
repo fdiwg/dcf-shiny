@@ -5,6 +5,7 @@
   "name": "data_availability",
   "title": "Data availability",
   "restricted": true,
+  "icon": "database",
   "roles": ["submitter", "manager", "supervisor", "admin", "r-studio"]
 }
 
