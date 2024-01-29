@@ -70,6 +70,9 @@ data_validation_server <- function(id, parent.session, config, profile, componen
         keywords<<-reactiveVal(NULL)
         keywords_color<<-reactiveVal(NULL)
         
+        ongoingValidation<<-reactiveVal(FALSE)
+        computedSteps<<-reactiveVal(c("start"))
+        
       }
       #Initialize reactive values
       #-----------------------------------------------------------------------------------
@@ -89,7 +92,7 @@ data_validation_server <- function(id, parent.session, config, profile, componen
               tags$div(class = "connecting-line"),
               tabsetPanel(id = "wizard-tabs",
                       type="pills",
-                      tabPanel(title="Home",
+                      tabPanel(title=span(icon("home"),"Home"),
                                value="home",
                                h2("Welcome to the Data validation and Submission module"),
                                p("Within this module you you will be able to:"),
@@ -112,29 +115,112 @@ data_validation_server <- function(id, parent.session, config, profile, componen
       #-----------------------------------------------------------------------------------
       
       #GO BACK TAB 1 FROM TAB 2
-      observeEvent(input$goData,{
-        removeTab(inputId = "wizard-tabs", 
-                  session = parent.session,
-                  target = "preview")
+      observeEvent(input$goBackData,{
+        # removeTab(inputId = "wizard-tabs",
+        #           session = parent.session,
+        #           target = "preview")
         updateTabsetPanel(inputId = "wizard-tabs", 
                           session = parent.session,
                           selected = "select_data")
       })
-      #GO BACK HOME FROM TAB 3
-      observeEvent(input$close1,{
+      
+      #GO BACK TAB 2 FROM TAB 3
+      observeEvent(input$goBackPreview,{
+        # removeTab(inputId = "wizard-tabs",
+        #           session = parent.session,
+        #           target = "standard_validation")
+        updateTabsetPanel(inputId = "wizard-tabs", 
+                          session = parent.session,
+                          selected = "preview")
+      })
+      
+      #GO BACK TAB 3 FROM TAB 4
+      observeEvent(input$goBackGlobValid,{
+        # removeTab(inputId = "wizard-tabs",
+        #           session = parent.session,
+        #           target = "metadata")
+        updateTabsetPanel(inputId = "wizard-tabs", 
+                          session = parent.session,
+                          selected = "standard_validation")
+      })
+      
+      #GO BACK TAB 4 FROM TAB 5
+      observeEvent(input$goBackMetadata,{
+        # removeTab(inputId = "wizard-tabs",
+        #           session = parent.session,
+        #           target = "send_data")
+        updateTabsetPanel(inputId = "wizard-tabs", 
+                          session = parent.session,
+                          selected = "metadata")
+      })
+      
+      
+      observeEvent(input$goHome1,{
         restartProcess()
         restart<-restart(TRUE)
       })
-      #GO BACK HOME FROM TAB 5
-      observeEvent(input$close2,{
+      
+      observeEvent(input$goHome2,{
         restartProcess()
         restart<-restart(TRUE)
       })
+      
+      observeEvent(input$goHome3,{
+        restartProcess()
+        restart<-restart(TRUE)
+      })
+      
+      observeEvent(input$goHome4,{
+        restartProcess()
+        restart<-restart(TRUE)
+      })
+      
+      observeEvent(input$goHome5,{
+        restartProcess()
+        restart<-restart(TRUE)
+      })
+      
+      observeEvent(input$goHome6,{
+        restartProcess()
+        restart<-restart(TRUE)
+      })
+      
       #GO BACK HOME FROM TAB 5 MODAL
-      observeEvent(input$close3,{
+      observeEvent(input$goHomeModal,{
         restartProcess()
         restart<-restart(TRUE)
         removeModal()
+      })
+      
+      
+      observeEvent(c(input$task,input$reporting_entity,input$format,input$file),{
+        print("TEST1")
+        req(!is.null(input$task))
+        req(!is.null(input$reporting_entity))
+        req(!is.null(input$format))
+        req(!is.null(input$file))
+        req(computedSteps())
+        req(ongoingValidation())
+        print("TEST2")
+        if(ongoingValidation()){
+
+toRemove<-rev(setdiff(computedSteps(),c("start","select_data")))
+print("START")
+print(toRemove)
+print("END")
+for(i in toRemove){
+   removeTab(inputId = "wizard-tabs",
+             session = parent.session,
+             target = i)
+  updateTabsetPanel(inputId = "wizard-tabs",
+                    session = parent.session,
+                    selected = "select_data")
+}
+
+          ongoingValidataion<-ongoingValidation(FALSE)
+          computedSteps<-computedSteps(c("start","select_data"))
+
+        }
       })
       
       #Wizard panels routine
@@ -143,6 +229,9 @@ data_validation_server <- function(id, parent.session, config, profile, componen
       #-----------------------------------------------------------------------------------
       #TAB 1 MANAGER
       observeEvent(input$start,{
+        
+        if(!"select_data"%in%computedSteps())computedSteps<-computedSteps(c(computedSteps(),"select_data"))
+        
         restart<-restart(FALSE)
         appendTab(inputId = "wizard-tabs",
                   session = parent.session,
@@ -292,9 +381,12 @@ data_validation_server <- function(id, parent.session, config, profile, componen
       #TAB 1 BUTTONS
       output$goPreview_wrapper<-renderUI({
         if(!is.null(input$file)){
-          actionButton(ns("goPreview"),"Next")
+          tagList(
+          actionButton(ns("goHome1"),label =span(icon("home"),"Home")),
+          actionButton(ns("goPreview"),label =span("Next",icon("angles-right")))
+          )
         }else{
-          NULL
+          actionButton(ns("goHome1"),label =span(icon("home"),"Home"))
         }
       })
       
@@ -370,6 +462,13 @@ data_validation_server <- function(id, parent.session, config, profile, componen
       })
       #TAB 2 MANAGER
       observeEvent(input$goPreview,{
+        
+        ongoingValidation<-ongoingValidation(TRUE)
+        
+        if(!"preview"%in%computedSteps()){
+        
+        computedSteps<-computedSteps(c(computedSteps(),"preview"))
+          
         appendTab(inputId = "wizard-tabs",
                   session = parent.session,
                   select=TRUE,
@@ -380,12 +479,18 @@ data_validation_server <- function(id, parent.session, config, profile, componen
                              p("Please verify if data displayed correspond to the data to send. If it is, please click 'Next' to submit this file, otherwise click 'Previous' to select a new file."),
                              DTOutput(ns("dataView")),
                              #Previous
-                             actionButton(ns("goData"),"Previous"),
+                             actionButton(ns("goBackData"),label =span(icon("angles-left"),"Previous")),
+                             actionButton(ns("goHome2"),label =span(icon("home"),"Home")),
                              #Next
-                             actionButton(ns("goGlobValid"),"Next")
+                             actionButton(ns("goGlobValid"),label =span("Next",icon("angles-right")))
                            )
                   )
         )
+        }else{
+          updateTabsetPanel(inputId = "wizard-tabs", 
+                            session = parent.session,
+                            selected = "preview")
+        }
       })
       
       #-----------------------------------------------------------------------------------
@@ -393,6 +498,11 @@ data_validation_server <- function(id, parent.session, config, profile, componen
       #-----------------------------------------------------------------------------------
       #TAB 3 MANAGER
       observeEvent(input$goGlobValid,{
+        goReport<-goReport(FALSE)
+        if(!"standard_validation"%in%computedSteps()){
+          
+          computedSteps<-computedSteps(c(computedSteps(),"standard_validation"))
+        
         task_def_url <- taskProfile()$dsd_ref_url
         
         appendTab(inputId = "wizard-tabs",
@@ -486,7 +596,11 @@ data_validation_server <- function(id, parent.session, config, profile, componen
         print("DONE")
         goReport<-goReport(TRUE)
         #print(names(loadedData()))
-        
+        }else{
+          updateTabsetPanel(inputId = "wizard-tabs", 
+                            session = parent.session,
+                            selected = "standard_validation")
+        }
       })
       
       #TAB 3 REPORT ROUTINE
@@ -805,6 +919,10 @@ data_validation_server <- function(id, parent.session, config, profile, componen
                 div(
                   p("Consistancy with data call can't be tested because data strucure in not valid") 
                 )
+            ),
+            fluidRow(
+              actionButton(ns("goBackPreview"),label =span(icon("angles-left"),"Previous")),
+              actionButton(ns("goHome3"),label =span(icon("home"),"Home"))
             )
           )
           waiter_hide()
@@ -823,6 +941,10 @@ data_validation_server <- function(id, parent.session, config, profile, componen
                 div(
                   p("Consistancy with data call can't be tested because data content in not valid") 
                 )
+            ),
+            fluidRow(
+              actionButton(ns("goBackPreview"),label =span(icon("angles-left"),"Previous")),
+              actionButton(ns("goHome3"),label =span(icon("home"),"Home"))
             )
           )
 
@@ -839,6 +961,10 @@ data_validation_server <- function(id, parent.session, config, profile, componen
                     div(
                       p("Consistancy with data call can't be tested because no data call is open") 
                     )
+                ),
+                fluidRow(
+                  actionButton(ns("goBackPreview"),label =span(icon("angles-left"),"Previous")),
+                  actionButton(ns("goHome3"),label =span(icon("home"),"Home"))
                 )
               )
 
@@ -932,11 +1058,21 @@ data_validation_server <- function(id, parent.session, config, profile, componen
               )
               ),
               if(out$valid){
+                fluidRow(
+                         actionButton(ns("goBackPreview"),label =span(icon("angles-left"),"Previous")),
+                         actionButton(ns("goHome3"),label =span(icon("home"),"Home")),
+                         actionButton(ns("goMetadata"),label =span("Next",icon("angles-right"))),
+                         
+                )
+                  
                 #Next
-                actionButton(ns("goMetadata"),"Next")
+                
               }else{
                 #Close
-                actionButton(ns("close1"),"Finish")
+                fluidRow(
+                actionButton(ns("goBackPreview"),label =span(icon("angles-left"),"Previous")),
+                actionButton(ns("goHome3"),label =span(icon("home"),"Home"))
+                )
               }
           )
         }}}
@@ -944,10 +1080,12 @@ data_validation_server <- function(id, parent.session, config, profile, componen
       })
       
       observeEvent(goReport(),{
+
         req(goReport()==TRUE)
         ds_out<-dsOut()
         gb_out<-gbOut()
         dc_out<-dcOut()
+
         #PDF Report
         info<-list(task_id=input$task,
                    date=Sys.Date(),
@@ -1008,10 +1146,16 @@ data_validation_server <- function(id, parent.session, config, profile, componen
       #-----------------------------------------------------------------------------------
       #TAB 4 MANAGER
       observeEvent(input$goMetadata,{
+        
+        if(!"metadata"%in%computedSteps()){
+          
+          computedSteps<-computedSteps(c(computedSteps(),"metadata"))
+        
         appendTab(inputId = "wizard-tabs",
                   session = parent.session,
                   select=TRUE,
                   tabPanel("4-Metadata", 
+                           value="metadata",
                            tabBox(id = "metadata",title=NULL,height="600px",width = "100%",
                                   tabPanel(title=tagList(icon("file-pen"),"Identification"),
                                            value="tab_desc",
@@ -1083,10 +1227,17 @@ data_validation_server <- function(id, parent.session, config, profile, componen
                                            )
                                   )
                            ),
-                           actionButton(ns("goSend"),"Next")
+                           actionButton(ns("goBackGlobValid"),label =span(icon("angles-left"),"Previous")),
+                           actionButton(ns("goHome4"),label =span(icon("home"),"Home")),
+                           actionButton(ns("goSend"),label =span("Next",icon("angles-right")))
 
                   )
         )
+        }else{
+          updateTabsetPanel(inputId = "wizard-tabs", 
+                            session = parent.session,
+                            selected = "metadata")
+        }
       })
       
       observeEvent(input$add_relation, {
@@ -1233,7 +1384,12 @@ data_validation_server <- function(id, parent.session, config, profile, componen
       #TAB 6
       observeEvent(input$goSend,{
         
+        if(!"send_data"%in%computedSteps()){
+          
+          computedSteps<-computedSteps(c(computedSteps(),"send_data"))
+        
         INFO("Producing geoflow metadata")
+
         #entities = list()
         entity <- geoflow::geoflow_entity$new()
         #identifier
@@ -1327,16 +1483,24 @@ data_validation_server <- function(id, parent.session, config, profile, componen
         appendTab(inputId = "wizard-tabs",
                   session = parent.session,
                   select=TRUE,
-                  tabPanel("6-Send Data",
+                  tabPanel("5-Send Data",
+                          value="send_data",
                      tagList(
                        p("You are going to send your data to the manager."),
                        p("Validity reports (conformity with standards, consistency with data call) will be attached to the submission"),
                        p("You may also add notes to the submission here below. Once ready, click on 'Send' to proceed with the submission"),
                        shiny::textAreaInput(ns("message"), value = submission$notes, label = "Submission notes", placeholder = "Add submission notes"),br(),
-                       actionButton(ns("send"),"Send")
+                       actionButton(ns("goBackMetadata"),label =span(icon("angles-left"),"Previous")),
+                       actionButton(ns("goHome5"),label =span(icon("home"),"Home")),
+                       actionButton(ns("send"),label =span(icon("paper-plane"),"Send"))
                      )
                   )
         )
+        }else{
+          updateTabsetPanel(inputId = "wizard-tabs", 
+                            session = parent.session,
+                            selected = "send_data")
+        }
       })
       
       #TAB 5 - THANK YOU
@@ -1614,7 +1778,7 @@ data_validation_server <- function(id, parent.session, config, profile, componen
             easyClose = F,
             footer = tagList(
               actionButton(ns("update"),"Yes"),
-              actionButton(ns("close3"),"Cancel")
+              actionButton(ns("goHomeModal"),"Cancel")
             )
           ))
         }
@@ -1636,7 +1800,7 @@ data_validation_server <- function(id, parent.session, config, profile, componen
                              tagList(
                                p("Your data has been submitted, click to 'Finish' to return to the menu."),
                                #Close
-                               actionButton(ns("close2"),"Finish")
+                               actionButton(ns("goHome6"),label =span(icon("home"),"Home"))
                              )
                     )
           )
