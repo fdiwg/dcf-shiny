@@ -1,10 +1,10 @@
 {
-  "parent": "admin",
+  "parent": "db",
   "type": "subitem",
   "rank": 2,
-  "name": "data_call",
-  "title": "Data calls management",
-  "icon": "bullhorn",
+  "name": "db_manager",
+  "title": "Database management",
   "restricted": true,
+  "icon": "database",
   "roles": ["manager", "admin", "r-studio"]
 }

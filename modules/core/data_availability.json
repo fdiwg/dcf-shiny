@@ -1,10 +1,11 @@
 {
-  "parent": "data",
+  "parent": "db",
   "type": "subitem",
-  "rank": 5,
+  "rank": 1,
   "name": "data_availability",
   "title": "Data availability",
   "restricted": true,
+  "icon": "database",
   "roles": ["submitter", "manager", "supervisor", "admin", "r-studio"]
 }
 

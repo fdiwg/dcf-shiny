@@ -3,5 +3,6 @@
   "rank": 1,
   "name": "dashboard",
   "title": "Dashboard",
+  "icon": "dashboard",
   "restricted": false
 }
