@@ -7,5 +7,5 @@
   "rank": 1,
   "restricted": true,
   "roles": ["manager", "admin", "r-studio"],
-  "linked_modules": []
+  "linked_modules": ["data_validation"]
 }
