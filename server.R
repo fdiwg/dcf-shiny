@@ -120,10 +120,23 @@ server <- function(input, output, session) {
     ))
   })
   
-  #load module servers
-  loadModuleServers(parent.session = session, config = CONFIG, profile = PROFILE, components = COMPONENTS)
-  loadPluginServers(parent.session = session, config = CONFIG, profile = PROFILE, components = COMPONENTS)
+  reloader<-reactiveVal(NULL)
+  initialized<-reactiveVal(FALSE)
+
+  observeEvent(reloader(),{
+    req(!is.null(initialized()))
   
-  waiter_hide()
+    if(!initialized()){
+      loadModuleServers(parent.session = session, config = CONFIG, profile = PROFILE, components = COMPONENTS,reloader)
+      loadPluginServers(parent.session = session, config = CONFIG, profile = PROFILE, components = COMPONENTS)
+      initialized<-initialized(TRUE)
+      waiter_hide()
+    }else{
+    req(!is.null(reloader()))
+    #load module servers
+    loadModuleServers(parent.session = session, config = CONFIG, profile = PROFILE, components = COMPONENTS,reloader)
+    reloader<-reloader(NULL)
+    }
+  },ignoreNULL = F)
   
 }

@@ -1,4 +1,4 @@
-dashboard_server <- function(id, parent.session, config, profile, components){
+dashboard_server <- function(id, parent.session, config, profile, components,reloader){
   moduleServer(
     id,
     function(input, output, session) {

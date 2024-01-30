@@ -1,4 +1,4 @@
-data_validation_server <- function(id, parent.session, config, profile, components){
+data_validation_server <- function(id, parent.session, config, profile, components,reloader){
   moduleServer(
     id,
     function(input, output, session) {
@@ -191,6 +191,7 @@ data_validation_server <- function(id, parent.session, config, profile, componen
         restart<-restart(TRUE)
         removeModal()
       })
+      
       
       
       observeEvent(c(input$task,input$reporting_entity,input$format,input$file),{

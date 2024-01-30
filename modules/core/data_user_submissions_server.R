@@ -1,4 +1,4 @@
-data_user_submissions_server <- function(id, parent.session, config, profile, components){
+data_user_submissions_server <- function(id, parent.session, config, profile, components,reloader){
   moduleServer(
     id,
     function(input, output, session) {

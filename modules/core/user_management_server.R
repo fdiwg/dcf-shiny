@@ -1,4 +1,4 @@
-user_management_server <- function(id, parent.session, config, profile, components){
+user_management_server <- function(id, parent.session, config, profile, components,reloader){
   moduleServer(
     id,
     function(input, output, session) {

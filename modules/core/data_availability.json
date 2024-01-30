@@ -5,6 +5,7 @@
   "name": "data_availability",
   "title": "Data availability",
   "restricted": true,
-  "roles": ["submitter", "manager", "supervisor", "admin", "r-studio"]
+  "roles": ["submitter", "manager", "supervisor", "admin", "r-studio"],
+  "linked_modules": []
 }
 

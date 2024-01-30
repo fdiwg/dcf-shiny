@@ -5,5 +5,6 @@
   "name": "data_admin_submissions",
   "title": "All submissions",
   "restricted": true,
-  "roles": ["manager", "admin", "r-studio"]
+  "roles": ["manager", "admin", "r-studio"],
+  "linked_modules": []
 }
