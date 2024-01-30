@@ -5,6 +5,7 @@
   "name": "data_user_submissions",
   "title": "My submissions",
   "restricted": true,
+  "icon": "list",
   "roles": ["submitter", "manager", "admin", "r-studio"],
   "linked_modules": []
 }

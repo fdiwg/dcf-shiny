@@ -337,6 +337,8 @@ sidebarMenuFromModules <- function(config = NULL, profile){
     menu_item <- structure_menu_items[[menu_item_name]]
     menu_item_enabled <- menu_item$enabled
 
+    the_menu_item = NULL
+    
     #profiles of subitem modules associated to this menu item
     menu_subitem_profiles <- module_profiles[sapply(module_profiles, function(x){x$type == "subitem"})]
     if(length(menu_subitem_profiles)>0) menu_subitem_profiles <- menu_subitem_profiles[sapply(menu_subitem_profiles, function(x){
@@ -348,8 +350,8 @@ sidebarMenuFromModules <- function(config = NULL, profile){
     #ui for menu item
     if(length(menu_subitem_profiles)>0){
       INFO("Loading shiny menu sub-items for '%s'...", menu_item_name)
-      do.call("menuItem", c(
-        text = menu_item$title, tabName = menu_item_name,
+      the_menu_item = do.call(menuItem, c(
+        text = shiny::tagList(tags$span(icon(menu_item$icon), menu_item$title)), tabName = menu_item_name,
         lapply(menu_subitem_profiles, function(item_profile){
           INFO("Loading shiny menu sub-item '%s'...", item_profile$module)
           if(!item_profile$enabled) return(NULL)
@@ -358,7 +360,8 @@ sidebarMenuFromModules <- function(config = NULL, profile){
         })
       ))
     }else{
-      if(menu_item$name != "plugins") menuItem(text = menu_item$title, tabName = menu_item_name)
+      if(menu_item$name != "plugins" & menu_item$enabled) the_menu_item = menuItem(text = menu_item$title, tabName = menu_item_name, icon = shiny::icon("dashboard"))
     }
+    the_menu_item
   })))
 }

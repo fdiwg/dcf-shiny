@@ -4,7 +4,7 @@
   "rank": 2,
   "name": "data_call",
   "title": "Data calls management",
-  "icon": "database",
+  "icon": "bullhorn",
   "restricted": true,
   "roles": ["manager", "admin", "r-studio"],
   "linked_modules": ["data_user_submissions","data_admin_submissions","data_validation"]
