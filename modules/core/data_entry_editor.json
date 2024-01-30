@@ -6,5 +6,6 @@
   "title": "Data entry",
   "restricted": true,
   "icon": "pencil",
-  "roles": ["submitter", "manager", "admin", "r-studio"]
+  "roles": ["submitter", "manager", "admin", "r-studio"],
+  "linked_modules": []
 }

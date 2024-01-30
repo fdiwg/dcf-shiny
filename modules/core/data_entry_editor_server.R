@@ -1,4 +1,4 @@
-data_entry_editor_server <- function(id, parent.session, config, profile, components){
+data_entry_editor_server <- function(id, parent.session, config, profile, components,reloader){
   moduleServer(
     id,
     function(input, output, session) {

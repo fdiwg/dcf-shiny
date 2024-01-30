@@ -1,4 +1,4 @@
-monitor_server <- function(id, parent.session, config, profile, components){
+monitor_server <- function(id, parent.session, config, profile, components,reloader){
   moduleServer(
     id,
     function(input, output, session) {

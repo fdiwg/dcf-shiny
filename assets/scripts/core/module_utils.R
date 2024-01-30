@@ -54,7 +54,7 @@ loadModuleScripts <- function(config = NULL){
 
 #check_module_server_formals
 check_module_server_formals <- function(module, server_fun){
-  std_module_args <- c("id", "parent.session", "config", "profile", "components")
+  std_module_args <- c("id", "parent.session", "config", "profile", "components","reloader")
   if(!all(names(formals(server_fun)) == std_module_args )){
     stop(sprintf("Module '%s', server function arguments do not match module requirements. Mandatory arguments: %s", 
                  module, paste(std_module_args, collapse=","))) 
@@ -71,9 +71,19 @@ check_module_ui_formals <- function(module, ui_fun){
 }
 
 #loadModuleServers
-loadModuleServers <- function(parent.session, config, profile, components){
+loadModuleServers <- function(parent.session, config, profile, components,reloader){
   INFO("=> Loading Module Servers")
   default_module_profiles <- listModuleProfiles(config)
+  if(!is.null(reloader())){
+    reloader_profile<-loadModuleProfile(paste0("./modules/core/",reloader(),".json"))
+    modules_to_reload<-reloader_profile$linked_modules
+    if(length(modules_to_reload)>0){
+      INFO("Module '%s' has triggered reloading event. The following modules are going to be reload: %s",reloader(),paste0(modules_to_reload,collapse =", "))
+      default_module_profiles<-paste0("./modules/core/",modules_to_reload,".json")
+    }else{
+      return(NULL)
+    }
+  }
   for(module_profile in default_module_profiles){
     module <- unlist(strsplit(unlist(strsplit(module_profile, paste0(dirname(module_profile),"/")))[2], ".json"))[1]
     outp <- loadModuleProfile(module_profile)
@@ -94,7 +104,7 @@ loadModuleServers <- function(parent.session, config, profile, components){
       has_config = !is.null(module_config)
       if(has_config) if(!is.null(module_config$enabled)) enabled = module_config$enabled
       if(enabled){
-        INFO("Loading shiny module '%s' server functions...", module)
+        INFO("%s shiny module '%s' server functions...",ifelse(!is.null(reloader()),"Reloading","Loading"),module)
         server_fun_name <- paste0(module, "_server")
         server_fun <- try(eval(expr = parse(text = server_fun_name)), silent = TRUE)
         if(!is.null(server_fun)){
@@ -102,9 +112,14 @@ loadModuleServers <- function(parent.session, config, profile, components){
             #check formals
             check_module_server_formals(module, server_fun)
             #call server function
-            called <- try(server_fun(module, parent.session = parent.session, config = config, profile = profile, components = components), silent = TRUE)
+            
+            called <- try(server_fun(module, parent.session = parent.session, config = config, profile = profile, components = components, reloader = reloader), silent = TRUE)
             if(is(called, "try-error")){
               ERROR("Error while calling shiny module '%s'", module)
+            }else{
+              if(!is.null(called)){
+                  
+                }
             }
           }else{
             ERROR("Error while evaluating server function '%s'", server_fun_name)

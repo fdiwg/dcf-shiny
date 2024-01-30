@@ -1,4 +1,4 @@
-db_manager_server <- function(id, parent.session, config, profile, components){
+db_manager_server <- function(id, parent.session, config, profile, components,reloader){
   moduleServer(
     id,
     function(input, output, session) {
