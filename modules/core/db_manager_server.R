@@ -321,6 +321,7 @@ db_manager_server <- function(id, parent.session, config, profile, components,re
       
       observeEvent(input$go_finish,{
         restart(TRUE)
+        reloader <- reloader(id)
         removeTab(inputId = "db-wizard-tabs", session = parent.session, target = "db_merge_data")
         removeTab(inputId = "db-wizard-tabs", session = parent.session, target = "db_previewandpersist")
         removeTab(inputId = "db-wizard-tabs", session = parent.session, target = "db_services")

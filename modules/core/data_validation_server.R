@@ -1,4 +1,4 @@
-data_validation_server <- function(id, parent.session, config, profile, components,reloader){
+data_validation_server <- function(id, parent.session, config, profile, components, reloader){
   moduleServer(
     id,
     function(input, output, session) {
@@ -28,6 +28,7 @@ data_validation_server <- function(id, parent.session, config, profile, componen
             datapath = NULL,
             name = NULL
           )
+          upload_state<<-reactiveVal('reset')
           transformation<<-reactiveValues(
             data_reformat = FALSE,
             data_rename = FALSE
@@ -80,7 +81,7 @@ data_validation_server <- function(id, parent.session, config, profile, componen
           file_metadata<-file_metadata(NULL)
           file_info$datapath = NULL
           file_info$name = NULL
-
+          upload_state<-upload_state('reset')
           transformation$data_reformat = FALSE
           transformation$data_rename = FALSE
 
@@ -132,6 +133,11 @@ data_validation_server <- function(id, parent.session, config, profile, componen
       #Initialize module content (Home page)
       #-----------------------------------------------------------------------------------
       #HOME
+      observeEvent(reloader(),{
+        req(!is.null(reloader()))
+        restartProcess()
+        restart<-restart(TRUE)
+      })
       observeEvent(restart(),{
         print("CLICKED ON FINISH")
         req(isTRUE(restart()))
@@ -243,7 +249,10 @@ data_validation_server <- function(id, parent.session, config, profile, componen
         removeModal()
       })
       
-      
+      observeEvent(input$file,{
+        req(!is.null(input$file))
+        upload_state = upload_state('upload')
+      })
       
       observeEvent(c(input$task,input$reporting_entity,input$format,input$file),{
         print("TEST1")
@@ -432,7 +441,7 @@ for(i in toRemove){
       })
       #TAB 1 BUTTONS
       output$goPreview_wrapper<-renderUI({
-        if(!is.null(input$file)){
+        if(upload_state()=='upload'){
           tagList(
             actionButton(ns("goHome1"),label =span(icon("home"),"Home")),
             actionButton(ns("goPreview"),label =span("Next",icon("angles-right")))
