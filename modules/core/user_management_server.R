@@ -1,4 +1,4 @@
-user_management_server <- function(id, parent.session, config, profile, components,reloader){
+user_management_server <- function(id, parent.session, config, profile, components, reloader){
   moduleServer(
     id,
     function(input, output, session) {
@@ -270,6 +270,7 @@ user_management_server <- function(id, parent.session, config, profile, componen
           model$error <- NULL
           removeModal()
           renderUsers(pool,profile)
+          reloader <- reloader(id)
           waiter_hide()
         }else{
           model$error <- attr(updated, "error")
