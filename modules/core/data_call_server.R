@@ -299,12 +299,12 @@ data_call_server <- function(id, parent.session, config, profile, components, re
           config=config,
           profile=profile,
           id_data_call = model$data_call_to_delete
-
         )
         if(deleted){
           model$error <- NULL
           removeModal()
           renderDataCalls(getDataCalls(pool,tasks=input$task,status=onlyOpened()))
+          reloader <- reloader(id)
           waiter_hide()
         }else{
           model$error <- attr(deleted, "error")
