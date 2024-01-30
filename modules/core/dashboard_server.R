@@ -53,7 +53,7 @@ dashboard_server <- function(id, parent.session, config, profile, components,rel
           arrange(task_id)
         
         current_datacalls<-current_datacalls(datacalls)
-        req(!is.null(current_datacalls()))
+        req(nrow(current_datacalls())>0)
         boxes<-list()
           for(i in 1:nrow(current_datacalls())){
             datacall<-current_datacalls()[i,]
