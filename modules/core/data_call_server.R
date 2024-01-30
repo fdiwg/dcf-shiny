@@ -272,7 +272,7 @@ data_call_server <- function(id, parent.session, config, profile, components, re
           model$error <- NULL
           removeModal()
           renderDataCalls(getDataCalls(pool,tasks=input$task,status=onlyOpened()))
-          reloader<-reloader("data_call")
+          reloader <- reloader(id)
           waiter_hide()
         }else{
           model$error <- attr(updated, "error")
