@@ -139,7 +139,7 @@ data_validation_server <- function(id, parent.session, config, profile, componen
         restart<-restart(TRUE)
       })
       observeEvent(restart(),{
-        print("CLICKED ON FINISH")
+        INFO("Restart triggered!")
         req(isTRUE(restart()))
         output$wizard<-renderUI({
           
@@ -255,28 +255,23 @@ data_validation_server <- function(id, parent.session, config, profile, componen
       })
       
       observeEvent(c(input$task,input$reporting_entity,input$format,input$file),{
-        print("TEST1")
         req(!is.null(input$task))
         req(!is.null(input$reporting_entity))
         req(!is.null(input$format))
         req(!is.null(input$file))
         req(computedSteps())
         req(ongoingValidation())
-        print("TEST2")
         if(ongoingValidation()){
 
-toRemove<-rev(setdiff(computedSteps(),c("start","select_data")))
-print("START")
-print(toRemove)
-print("END")
-for(i in toRemove){
-   removeTab(inputId = "wizard-tabs",
-             session = parent.session,
-             target = i)
-  updateTabsetPanel(inputId = "wizard-tabs",
-                    session = parent.session,
-                    selected = "select_data")
-}
+          toRemove<-rev(setdiff(computedSteps(),c("start","select_data")))
+          for(i in toRemove){
+             removeTab(inputId = "wizard-tabs",
+                       session = parent.session,
+                       target = i)
+            updateTabsetPanel(inputId = "wizard-tabs",
+                              session = parent.session,
+                              selected = "select_data")
+          }
 
           ongoingValidataion<-ongoingValidation(FALSE)
           computedSteps<-computedSteps(c("start","select_data"))
@@ -489,7 +484,6 @@ for(i in toRemove){
             data<-readr::read_csv(input$file$datapath,col_types = readr::cols(.default = "c"))
             file_info$datapath<-input$file$datapath
             file_info$name<-input$file$name
-            print(file_info$name)
           }else if(any(endsWith(input$file$datapath,"zip"))){
             files<-zip_list(input$file$datapath)
             unzip(input$file$datapath,files=c(files$filename[1]),exdir = dirname(input$file$datapath))
@@ -503,7 +497,6 @@ for(i in toRemove){
             }
             file_info$datapath<-target_file
             file_info$name<-basename(target_file)
-            print(file_info$name)
           }else{
             stop()
           }
@@ -648,15 +641,14 @@ for(i in toRemove){
           hostess$set(99)
         }
         
-        print("=> structure")
+        INFO("=> data structure validation report")
         print(dsOut())
-        print("=> content")
+        INFO("=> data content validation report")
         print(gbOut())
-        print("=> data call")
+        INFO("=> data call validation report")
         print(dcOut())
-        print("DONE")
+        INFO("Validation is done")
         goReport<-goReport(TRUE)
-        #print(names(loadedData()))
         }else{
           updateTabsetPanel(inputId = "wizard-tabs", 
                             session = parent.session,
@@ -745,7 +737,6 @@ for(i in toRemove){
         
         #Box Text
         summary<-out$summary
-        print(summary)
         summary$status<-ifelse(summary$status=="EXISTING","PASSED",ifelse(summary$type=="OPTIONAL","PASSED WITH WARNING","FAILED"))
         status<-ifelse(any("FAILED"%in%summary$status),"FAILED",
                        ifelse(any("PASSED WITH WARNING"%in%summary$status),"PASSED WITH WARNING","PASSED"))
@@ -1341,7 +1332,6 @@ for(i in toRemove){
         req(input$keyword_description!="")
         keyword_label<-paste0(input$keyword_type,":",input$keyword_description)
         keywords<-keywords(c(keywords(),if(startsWith(input$keyword_link,"http")){sprintf("<a href='%s' target='_blank'>%s</a>",input$keyword_link,keyword_label)}else{keyword_label}))
-        #print(keywords())
         keywords_color<-keywords_color(c(keywords_color(),keycolor_list[input$keyword_type][[1]]))
         
         new_keyword<-data.frame(
@@ -1402,7 +1392,6 @@ for(i in toRemove){
           link=input$process_link
         )
         table_process<-table_process(rbind(table_process(),new_process))
-        print(table_process())
         updateTextInput(session, "process_name",value = "")
         updateTextInput(session, "process_description",value = "")
         updateTextInput(session, "process_link",value = "")
