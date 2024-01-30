@@ -14,65 +14,116 @@ data_validation_server <- function(id, parent.session, config, profile, componen
       
       #RESTART FUNCTION
       restartProcess<-function(initialize=F){
-        dataCall<<-reactiveVal(FALSE)
-        dsOut<<-reactiveVal(NULL)
-        gbOut<<-reactiveVal(NULL)
-        valReportPath<<-reactiveVal(NULL)
-        dcOut<<-reactiveVal(NULL)
-        goReport<<-reactiveVal(FALSE)
-        taskProfile<<-reactiveVal(NULL)
-        loadedData<<-reactiveVal(NULL)
-        file_metadata<<-reactiveVal(NULL)
-        file_info<<-reactiveValues(
-          datapath = NULL,
-          name = NULL
-        )
-        transformation<<-reactiveValues(
-          data_reformat = FALSE,
-          data_rename = FALSE
-        )
-        submission <<- reactiveValues(
-          data_call_id = NULL,
-          task_id = NULL,
-          task_name =NULL,
-          reporting_entity = NULL,
-          notes = "-"
-        )
-        submitted<<-reactiveVal(NULL)
-        if(!initialize){
+        if(initialize){
+          dataCall<<-reactiveVal(FALSE)
+          dsOut<<-reactiveVal(NULL)
+          gbOut<<-reactiveVal(NULL)
+          valReportPath<<-reactiveVal(NULL)
+          dcOut<<-reactiveVal(NULL)
+          goReport<<-reactiveVal(FALSE)
+          taskProfile<<-reactiveVal(NULL)
+          loadedData<<-reactiveVal(NULL)
+          file_metadata<<-reactiveVal(NULL)
+          file_info<<-reactiveValues(
+            datapath = NULL,
+            name = NULL
+          )
+          transformation<<-reactiveValues(
+            data_reformat = FALSE,
+            data_rename = FALSE
+          )
+          submission <<- reactiveValues(
+            data_call_id = NULL,
+            task_id = NULL,
+            task_name =NULL,
+            reporting_entity = NULL,
+            notes = "-"
+          )
+          submitted<<-reactiveVal(NULL)
+          
+          table_relation<<-reactiveVal(
+            data.frame(
+              type=character(0),
+              description=character(0),
+              link=character(0)
+            ))
+          
+          table_keyword<<-reactiveVal(
+            data.frame(
+              type=character(0),
+              description=character(0),
+              link=character(0)
+            ))
+          
+          table_process<<-reactiveVal(
+            data.frame(
+              id=character(0),
+              name=character(0),
+              description=character(0),
+              link=character(0)
+            ))
+          keywords<<-reactiveVal(NULL)
+          keywords_color<<-reactiveVal(NULL)
+          
+          ongoingValidation<<-reactiveVal(FALSE)
+          computedSteps<<-reactiveVal(c("start"))
+        }else{
+          
+          dataCall<-dataCall(FALSE)
+          dsOut<-dsOut(NULL)
+          gbOut<-gbOut(NULL)
+          valReportPath<-valReportPath(NULL)
+          dcOut<-dcOut(NULL)
+          goReport<-goReport(FALSE)
+          taskProfile<-taskProfile(NULL)
+          loadedData<-loadedData(NULL)
+          file_metadata<-file_metadata(NULL)
+          file_info$datapath = NULL
+          file_info$name = NULL
+
+          transformation$data_reformat = FALSE
+          transformation$data_rename = FALSE
+
+          submission$data_call_id = NULL
+          submission$task_id = NULL
+          submission$task_name =NULL
+          submission$reporting_entity = NULL
+          submission$notes = "-"
+          
+          submitted<-submitted(NULL)
+          
+          table_relation<-table_relation(
+            data.frame(
+              type=character(0),
+              description=character(0),
+              link=character(0)
+            ))
+          
+          table_keyword<-table_keyword(
+            data.frame(
+              type=character(0),
+              description=character(0),
+              link=character(0)
+            ))
+          
+          table_process<-table_process(
+            data.frame(
+              id=character(0),
+              name=character(0),
+              description=character(0),
+              link=character(0)
+            ))
+          keywords<-keywords(NULL)
+          keywords_color<-keywords_color(NULL)
+          
+          ongoingValidation<-ongoingValidation(FALSE)
+          computedSteps<-computedSteps(c("start"))
+          
           Sys.unsetenv("DATA_CALL_YEAR")
-         # output$globalValidReport<<-renderUI({NULL})
+          # output$globalValidReport<<-renderUI({NULL})
           #output$callValidReport<<-renderUI({NULL})
           output$dataCallMessage<<-renderUI({NULL})
         }
-        
-        table_relation<<-reactiveVal(
-          data.frame(
-            type=character(0),
-            description=character(0),
-            link=character(0)
-          ))
-        
-        table_keyword<<-reactiveVal(
-          data.frame(
-            type=character(0),
-            description=character(0),
-            link=character(0)
-          ))
-        
-        table_process<<-reactiveVal(
-          data.frame(
-            id=character(0),
-            name=character(0),
-            description=character(0),
-            link=character(0)
-          ))
-        keywords<<-reactiveVal(NULL)
-        keywords_color<<-reactiveVal(NULL)
-        
-        ongoingValidation<<-reactiveVal(FALSE)
-        computedSteps<<-reactiveVal(c("start"))
-        
       }
       #Initialize reactive values
       #-----------------------------------------------------------------------------------
@@ -383,8 +434,8 @@ for(i in toRemove){
       output$goPreview_wrapper<-renderUI({
         if(!is.null(input$file)){
           tagList(
-          actionButton(ns("goHome1"),label =span(icon("home"),"Home")),
-          actionButton(ns("goPreview"),label =span("Next",icon("angles-right")))
+            actionButton(ns("goHome1"),label =span(icon("home"),"Home")),
+            actionButton(ns("goPreview"),label =span("Next",icon("angles-right")))
           )
         }else{
           actionButton(ns("goHome1"),label =span(icon("home"),"Home"))
@@ -921,10 +972,8 @@ for(i in toRemove){
                   p("Consistancy with data call can't be tested because data strucure in not valid") 
                 )
             ),
-            fluidRow(
-              actionButton(ns("goBackPreview"),label =span(icon("angles-left"),"Previous")),
-              actionButton(ns("goHome3"),label =span(icon("home"),"Home"))
-            )
+            actionButton(ns("goBackPreview"),label =span(icon("angles-left"),"Previous")),
+            actionButton(ns("goHome3"),label =span(icon("home"),"Home"))
           )
           waiter_hide()
         }else{
@@ -943,10 +992,8 @@ for(i in toRemove){
                   p("Consistancy with data call can't be tested because data content in not valid") 
                 )
             ),
-            fluidRow(
-              actionButton(ns("goBackPreview"),label =span(icon("angles-left"),"Previous")),
-              actionButton(ns("goHome3"),label =span(icon("home"),"Home"))
-            )
+            actionButton(ns("goBackPreview"),label =span(icon("angles-left"),"Previous")),
+            actionButton(ns("goHome3"),label =span(icon("home"),"Home"))
           )
 
           }else{
@@ -963,10 +1010,8 @@ for(i in toRemove){
                       p("Consistancy with data call can't be tested because no data call is open") 
                     )
                 ),
-                fluidRow(
-                  actionButton(ns("goBackPreview"),label =span(icon("angles-left"),"Previous")),
-                  actionButton(ns("goHome3"),label =span(icon("home"),"Home"))
-                )
+                actionButton(ns("goBackPreview"),label =span(icon("angles-left"),"Previous")),
+                actionButton(ns("goHome3"),label =span(icon("home"),"Home"))
               )
 
             }else{
@@ -1059,7 +1104,7 @@ for(i in toRemove){
               )
               ),
               if(out$valid){
-                fluidRow(
+                shiny::tagList(
                          actionButton(ns("goBackPreview"),label =span(icon("angles-left"),"Previous")),
                          actionButton(ns("goHome3"),label =span(icon("home"),"Home")),
                          actionButton(ns("goMetadata"),label =span("Next",icon("angles-right"))),
@@ -1070,9 +1115,9 @@ for(i in toRemove){
                 
               }else{
                 #Close
-                fluidRow(
-                actionButton(ns("goBackPreview"),label =span(icon("angles-left"),"Previous")),
-                actionButton(ns("goHome3"),label =span(icon("home"),"Home"))
+                shiny::tagList(
+                  actionButton(ns("goBackPreview"),label =span(icon("angles-left"),"Previous")),
+                  actionButton(ns("goHome3"),label =span(icon("home"),"Home"))
                 )
               }
           )
