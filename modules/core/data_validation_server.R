@@ -613,8 +613,11 @@ data_validation_server <- function(id, parent.session, config, profile, componen
           if(out$valid){
             submission$reporting_entity <- input$reporting_entity
             INFO("Standardizing column names on functional terms")
-            data <- standardizeNames(file=data, task_def = task_def, format = input$format)
+            format_spec = task_def$formats[[input$format]]$spec
+            data <- format_spec$standardizeStructure(data)
             INFO("Successful data standardization on functional terms")
+            data <- format_spec$standardizeContent(data)
+            INFO("Successful data standardization on content (management of codelist code/labels)")
             hostess$set(80)
             INFO("Selected format specification: '%s'", input$format)
             if(input$format=="simplified"){
