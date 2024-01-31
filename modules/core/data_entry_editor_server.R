@@ -12,11 +12,13 @@ data_entry_editor_server <- function(id, parent.session, config, profile, compon
       data_spec<-reactiveVal(NULL)
       template_info<-reactiveVal(NULL)
       empty_row<-reactiveVal(NULL)
-      current_data<-reactiveVal(NULL)
+      
+      cache_data<-reactiveVal(NULL)
+      cache_report <- reactiveVal(NULL)
+      target_row <- reactiveVal(NULL)
+      
       ready<-reactiveVal(FALSE)
       menu_tabs<-reactiveVal(c())
-      
-      target_row_report <- reactiveVal(list())
       
       output$menu<-renderUI({
 
@@ -253,7 +255,7 @@ data_entry_editor_server <- function(id, parent.session, config, profile, compon
         req(input$reporting_entity)
         req(input$format)
         req(ready())
-        req(!is.null(current_data()))
+        req(!is.null(cache_data()))
         if(!is.null(input$task))if(input$task!="")if(!is.null(input$reporting_entity))if(input$reporting_entity!="")if(!is.null(input$format))if(input$format!=""){
           downloadButton(ns("save_data"),title="Save your data",label="Save data",icon=shiny::icon("save"),class = "btn-success")
         }
@@ -274,8 +276,7 @@ data_entry_editor_server <- function(id, parent.session, config, profile, compon
               easyClose = TRUE, footer = NULL,size="s" 
             )
           )
-              
-          })
+        })
       
       observeEvent(input$file,{
         req(input$file)
@@ -306,7 +307,7 @@ data_entry_editor_server <- function(id, parent.session, config, profile, compon
             data_to_load<-as.data.frame(data_to_load)
             data_to_load<-data_spec()$standardizeContent(data_to_load)
             names(data_to_load)<-info$label
-            current_data<-current_data(data_to_load)
+            cache_data<-cache_data(data_to_load)
             ready<-ready(TRUE)
           }else{
             stop("NOT CORRECT COLUMNS DEFINITIONS")
@@ -361,7 +362,7 @@ data_entry_editor_server <- function(id, parent.session, config, profile, compon
             data_template[1,]<-values_type
             
             empty_row<-empty_row(data_template)
-            current_data<-current_data(data_template[rep(seq_len(nrow(data_template)), 10), ])
+            cache_data<-cache_data(data_template[rep(seq_len(nrow(data_template)), 10), ])
           })
         }
       })
@@ -376,6 +377,11 @@ data_entry_editor_server <- function(id, parent.session, config, profile, compon
         req(input$reporting_entity)
         req(input$format)
         if(!is.null(input$task))if(input$task!="")if(!is.null(input$reporting_entity))if(input$reporting_entity!="")if(!is.null(input$format))if(input$format!=""){
+          
+          cache_data<-cache_data(NULL)
+          cache_report<-cache_report(NULL)
+          target_row<-target_row(NULL)
+          
           withBusyIndicatorServer(ns("run"), {
             task<-getTaskProfile(config,id=input$task)
             taskRules <- task$dsd_ref_url
@@ -402,7 +408,7 @@ data_entry_editor_server <- function(id, parent.session, config, profile, compon
             data_template[1,]<-values_type
             
             empty_row<-empty_row(data_template)
-            current_data<-current_data(data_template[rep(seq_len(nrow(data_template)), 10), ])
+            cache_data<-cache_data(data_template[rep(seq_len(nrow(data_template)), 10), ])
           })
         }
       })
@@ -437,7 +443,6 @@ data_entry_editor_server <- function(id, parent.session, config, profile, compon
               list_files<-c(list_files,ref_file_path)
             }
           }
-          print(list_files)
           zip(zipfile=filename,files=list_files)
         },
         contentType = "application/zip")
@@ -499,28 +504,62 @@ data_entry_editor_server <- function(id, parent.session, config, profile, compon
           write.csv(data_to_save, filename,row.names = F)
         })
       
-      
-      observeEvent(current_data(),{
-       output$table<-renderRHandsontable({
-        req(!is.null(current_data()))
+      output$table<-renderRHandsontable({
+        req(!is.null(cache_data()))
         req(ready())
-        data<-current_data()
-        row.names(data)<-1:nrow(data)
-        info<-template_info()
+
+        data = cache_data()
         
-        system.time(report <- data_spec()$validate(data))
-        report = report[report$category != "Data structure",]
-        read_only = TRUE
+        #validation
+        report <- NULL
+        if(is.null(target_row())){
+          INFO("Data editor: Initialize full data")
+          time1 = Sys.time()
+          report <- data_spec()$validate(data)
+          report = report[report$category != "Data structure",]
+          time2 = Sys.time()
+          INFO("Full (table) validation time = %s s", as(time2-time1, "numeric"))
+        }else{
+          INFO("Data editor: Update data")
+          time1 = Sys.time()
+          print(target_row()$data)
+          target_row_report <- data_spec()$validate(target_row()$data)
+          if(nrow(target_row_report)>0){
+            target_row_report$i <- target_row()$i
+            target_row_report$row <- paste("Row", target_row()$i)
+          }
+          print(target_row_report)
+          time2 = Sys.time()
+          INFO("Partial (row) validation time = %s s", as(time2-time1, "numeric"))
+          
+          old_report = cache_report()
+          old_report = old_report[old_report$i != target_row()$i,]
+          report = rbind(old_report, target_row_report)
+          report = report[
+            with(report, order(i, j)),
+          ]
+        }
+        
+        #we save the validation report in cache for later validation
+        cache_report<-cache_report(report)
+        
+        #display
         editable_table<-data_spec()$display_as_handsontable(data, report, read_only = FALSE) %>%
-               hot_context_menu(allowRowEdit = T, allowColEdit = F)
+          hot_context_menu(
+           allowRowEdit = T, allowColEdit = F,
+           customOpts = list()
+          )
         
-         if(any(!info$editable)){
+        #column that should not be editable --> put them as readonly
+        info<-template_info()  
+        if(any(!info$editable)){
            cols<-which(info$editable==FALSE)
            for(col in cols){
              editable_table <- hot_col(editable_table, col = col, readOnly = TRUE)
            }
-         }
+        }
         
+        #enable dropdown list for codelist columns
         if(any(!is.na(info$ref))){
           cols<-which(!is.na(info$ref))
           for(col in cols){
@@ -531,56 +570,38 @@ data_entry_editor_server <- function(id, parent.session, config, profile, compon
           }
         }
         
-        #change_hook = "function(el,x,data){
-        #  console.log(data);
-        #  //if(data.errors.length > 0){
-        #  //  for(var j=0;j<data.dim;j++){
-        #  //    var col_errors = data.errors.filter(function(item){if(item.j-1 == j) return item;});
-        #  //    if(col_errors.length > 0){
-        #  //      for(var i=0;i<col_errors.length;i++){
-        #  //        var error = col_errors[i];
-        #  //        console.log(error);
-        #  //      }
-        #  //    }
-        #  //  }
-        # //}
-        #}"
-        #htmlwidgets::onRender(editable_table, change_hook, list(dim = dim(current_data()), errors = target_row_report()))
-        print("EDITABLE TABLE")
-        print(class(editable_table))
         return(editable_table)
-       })
       })
+
       
-      #observe changes on handsontable
-      observeEvent(input$table$changes$changes,{
-        WARN("Triggered handsontable cell event on render")
-        target_cell_row = input$table$changes$changes[[1]][[1]]+1
-        target_cell_col = input$table$changes$changes[[1]][[2]]+1
-        target_cell_value_old = input$table$changes$changes[[1]][[3]]
-        target_cell_value_new = input$table$changes$changes[[1]][[4]]
-        WARN("Changed row = %s", target_cell_row)
-        WARN("Changed col = %s", target_cell_col)
-        WARN("Value '%s' changed by '%s'", target_cell_value_old, target_cell_value_new)
-        updated_hst = hot_to_r(input$table) %>% as.data.frame()
-        #current_data <- current_data(updated_hst)
-        row_report = updated_hst[target_cell_row,] %>% data_spec()$validate()
-        row_report = row_report[row_report$category != "Data structure",]
-        if(nrow(row_report)>0){
-          row_report$i = target_cell_row
-          target_row_report = target_row_report(lapply(1:nrow(row_report), function(i){as.list(row_report[i,])}))
-          
-          #TODO work on 
-          print("INPUT TABLE")
-          print(class(input$table))
-          
-        }
-        #TODO update cell in hst
-        #TODO apply validation UI
-      })
+       #observe changes on handsontable
+       observeEvent(input$table$changes$changes,{
+         WARN("Triggered handsontable cell event on render")
+         target_cell_row = input$table$changes$changes[[1]][[1]]+1
+         target_cell_col = input$table$changes$changes[[1]][[2]]+1
+         target_cell_value_old = input$table$changes$changes[[1]][[3]]
+         if(is.null(target_cell_value_old)) target_cell_value_old = ""
+         target_cell_value_new = input$table$changes$changes[[1]][[4]]
+         if(is.null(target_cell_value_new)) target_cell_value_new = ""
+         if(target_cell_value_old != target_cell_value_new){
+           WARN("Changed row = %s", target_cell_row)
+           WARN("Changed col = %s", target_cell_col)
+           WARN("Value '%s' changed by '%s'", target_cell_value_old, target_cell_value_new)
+           updated_hst = hot_to_r(input$table) %>% as.data.frame()
+           
+           WARN("Caching data...")
+           WARN("Old data cell content:")
+           print(cache_data()[target_cell_row, target_cell_col])
+           cache_data <- cache_data(updated_hst)
+           WARN("New data cell content:")
+           print(cache_data()[target_cell_row, target_cell_col])
+           
+           target_row<-target_row(list(i = target_cell_row, j = target_cell_col, data = updated_hst[target_cell_row,]))
+         }
+       })
       
       output$table_wrapper<-renderUI({
-        req(!is.null(current_data()))
+        req(!is.null(cache_data()))
         req(ready())
         info<-template_info()
         div(
@@ -634,21 +655,20 @@ data_entry_editor_server <- function(id, parent.session, config, profile, compon
       })
       
       observeEvent(input$add_row, {
-        
         new_row<-empty_row()
-        
         for (i in 1 : input$nb_add_row){
-          
           if(i==1){
             last_data <- hot_to_r(input$table)
           }else {
             last_data <- new_data
           }
           new_data <- rbind(last_data,new_row)
-          }
-          
-          current_data<-current_data(new_data)
+        }
+        cache_data<-cache_data(new_data)
         
+        #if we add rows, we redo the full validation (for now!)
+        cache_report<-cache_report(NULL)
+        target_row<-target_row(NULL)
       })
 
       
