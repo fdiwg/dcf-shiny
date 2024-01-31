@@ -143,8 +143,12 @@ readDataCallRules<- function(task_def, format, config = NULL,reporting_entity=NU
     #we alter the vrule associated to the reporting entity target column 
     #to limit it to the reporting entity selected by the data submitter
     reporting_entity_col_spec <- format_spec$getColumnSpecByName(config$dcf$reporting_entities$name)$clone(deep = TRUE)
-    reporting_entity_col_spec$rules[[1]]$ref_values = list(reporting_entity)
-    dc_format_spec$addColumnSpec(reporting_entity_col_spec)
+    entity_col_spec = vrule::column_spec$new()
+    entity_col_spec$setName(reporting_entity_col_spec$name)
+    entity_col_spec$rules = list()
+    cl_rule = vrule::vrule_raw_codelist$new(ref_values = list(reporting_entity))
+    entity_col_spec$addRule(cl_rule)
+    dc_format_spec$addColumnSpec(entity_col_spec)
   }
   
   #TEMPORAL EXTENT data call limitations
@@ -269,6 +273,7 @@ validateDataContent<-function(file, task_def, format, prettify = FALSE){
     
   #read data in case it's not already done
   data <- file
+  if(is.tibble(data)) data <- as.data.frame(data)
   if(!is.data.frame(file)) data <- readDataFile(file)
 
   #prettify for display as handsontable
@@ -315,39 +320,8 @@ validateDataContent<-function(file, task_def, format, prettify = FALSE){
   return(out)
 }
 
-#standardizeNames
-standardizeNames<-function(file, task_def, format, exclude_unused = TRUE){
-  
-  #inherit vrule format_spec object from task definition
-  format_spec = task_def$formats[[format]]$spec 
-  format_spec_cols = sapply(format_spec$column_specs, function(x){x$name})
-  
-  #read data in case it's not already done
-  data <- file
-  if(!is.data.frame(file)) data <- readDataFile(file)
-  
-  data_names<-names(data)
-  
-  for (i in 1:length(format_spec$column_specs)){
-    target<-format_spec$column_specs[[i]]
-    std_name<-target$name
-    alt_names<-unlist(target$aliases)
-    if(std_name%in%data_names){}else{
-      if(any(alt_names%in%data_names)){
-        usedName<-alt_names[alt_names%in%data_names]
-        names(data)[names(data) == usedName] <- std_name
-      }
-    }
-  }
-  
-  if(exclude_unused){
-    data<-data[intersect(format_spec_cols,names(data))]
-  }
-  
-  return(data)
-}
-
 #validateCallRules
+#@deprecated
 validateCallRules <- function(file, rules, hostess=NULL){
   
   errors<-data.frame(
@@ -577,6 +551,7 @@ validateCallRules <- function(file, rules, hostess=NULL){
 }
 
 #completeWithMissingEntities
+#@deprecated
 completeWithMissingEntities<-function(config,pool,profile,data,user_only=FALSE){
   if(user_only){
     reporting_entities<-data.frame(code=getDBUserReportingEntities(pool,profile))
@@ -587,9 +562,7 @@ completeWithMissingEntities<-function(config,pool,profile,data,user_only=FALSE){
   if(nrow(data)>0){
     missing_entities<-subset(reporting_entities,!code%in%data$reporting_entity)$code
     if(length(missing_entities>0)){
-      
-      print(missing_entities)
-      print(length(missing_entities))
+
       missing <- data.frame(
         id = rep("",length(missing_entities)),
         data_call_id = rep(data$data_call_id[1],length(missing_entities)),
