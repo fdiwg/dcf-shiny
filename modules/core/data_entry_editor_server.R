@@ -9,11 +9,14 @@ data_entry_editor_server <- function(id, parent.session, config, profile, compon
       
       ns <- session$ns
       
+      data_spec<-reactiveVal(NULL)
       template_info<-reactiveVal(NULL)
       empty_row<-reactiveVal(NULL)
       current_data<-reactiveVal(NULL)
       ready<-reactiveVal(FALSE)
       menu_tabs<-reactiveVal(c())
+      
+      target_row_report <- reactiveVal(list())
       
       output$menu<-renderUI({
 
@@ -295,25 +298,13 @@ data_entry_editor_server <- function(id, parent.session, config, profile, compon
           }else{
             stop()
           }
+          
+          #standardize content
+          data_to_load = data_spec()$standardizeStructure(data_to_load)
+          
           if(all(names(data_to_load)==info$name)){
-            data_to_lead<-as.data.frame(data_to_load)
-            if(any(!is.na(info$ref))){
-              cols<-which(!is.na(info$ref))
-              correct_order<-names(data_to_load)
-              data_to_load$row_order<-1:nrow(data_to_load)
-              for(col in cols){
-                ref<-info[col,]$ref[[1]]
-                ref<-as.data.frame(ref)
-                ref<-unique(subset(ref,code%in%unique(data_to_load[,col]),select=c(code,label)))
-                
-                data_to_load<-merge(data_to_load,ref,by.x=names(data_to_load[col]),by.y="code",all.x=T,sort=F)
-                data_to_load<-data_to_load[,-1]
-                names(data_to_load)[ncol(data_to_load)]<-correct_order[col]
-                data_to_load<-subset(data_to_load,select=c(correct_order,"row_order"))
-              }
-              data_to_load <- data_to_load[order(data_to_load$row_order), ]
-              data_to_load <-subset(data_to_load,select=-c(row_order))
-            }
+            data_to_load<-as.data.frame(data_to_load)
+            data_to_load<-data_spec()$standardizeContent(data_to_load)
             names(data_to_load)<-info$label
             current_data<-current_data(data_to_load)
             ready<-ready(TRUE)
@@ -348,6 +339,7 @@ data_entry_editor_server <- function(id, parent.session, config, profile, compon
             taskRules <- task$dsd_ref_url
             taskDef<-readTaskDefinition(file = taskRules)
             format_spec = taskDef$formats[[input$format]]$spec
+            data_spec = data_spec(format_spec)
             
             #TODO process reporting_entity in format_spec
             task_template = buildTemplate(format_spec)
@@ -503,39 +495,23 @@ data_entry_editor_server <- function(id, parent.session, config, profile, compon
         content = function(filename) {
           data_to_save<-hot_to_r(input$table)
           data_to_save<-as.data.frame(data_to_save)
-          info<-template_info()
-          names(data_to_save)<-info$name
-          if(any(!is.na(info$ref))){
-            cols<-which(!is.na(info$ref))
-            correct_order<-names(data_to_save)
-            data_to_save$row_order<-1:nrow(data_to_save)
-            for(col in cols){
-              ref<-info[col,]$ref[[1]]
-              ref<-as.data.frame(ref)
-              ref<-unique(subset(ref,label%in%unique(data_to_save[,col]),select=c(code,label)))
-              
-              data_to_save<-merge(data_to_save,ref,by.x=names(data_to_save[col]),by.y="label",all.x=T,sort=F)
-              data_to_save<-data_to_save[,-1]
-              names(data_to_save)[ncol(data_to_save)]<-c(correct_order[col])
-              data_to_save<-subset(data_to_save,select=c(correct_order,"row_order"))
-              
-            }
-            data_to_save <- data_to_save[order(data_to_save$row_order), ]
-            data_to_save <-subset(data_to_save,select=-c(row_order))
-          }
-          
+          data_to_load<-data_spec()$standardizeContent(data_to_save)
           write.csv(data_to_save, filename,row.names = F)
         })
       
       
       observeEvent(current_data(),{
-      output$table<-renderRHandsontable({
+       output$table<-renderRHandsontable({
         req(!is.null(current_data()))
         req(ready())
         data<-current_data()
         row.names(data)<-1:nrow(data)
         info<-template_info()
-        editable_table<-rhandsontable(data) %>%
+        
+        system.time(report <- data_spec()$validate(data))
+        report = report[report$category != "Data structure",]
+        read_only = TRUE
+        editable_table<-data_spec()$display_as_handsontable(data, report, read_only = FALSE) %>%
                hot_context_menu(allowRowEdit = T, allowColEdit = F)
         
          if(any(!info$editable)){
@@ -551,16 +527,56 @@ data_entry_editor_server <- function(id, parent.session, config, profile, compon
             withref<-info[col,]
             ref<-withref$ref[[1]]
             ref_code<-ref$label
-
-            print(head(ref_code))
             editable_table <- hot_col(editable_table,col=col, type = "dropdown", source = ref_code)
           }
         }
         
+        #change_hook = "function(el,x,data){
+        #  console.log(data);
+        #  //if(data.errors.length > 0){
+        #  //  for(var j=0;j<data.dim;j++){
+        #  //    var col_errors = data.errors.filter(function(item){if(item.j-1 == j) return item;});
+        #  //    if(col_errors.length > 0){
+        #  //      for(var i=0;i<col_errors.length;i++){
+        #  //        var error = col_errors[i];
+        #  //        console.log(error);
+        #  //      }
+        #  //    }
+        #  //  }
+        # //}
+        #}"
+        #htmlwidgets::onRender(editable_table, change_hook, list(dim = dim(current_data()), errors = target_row_report()))
+        print("EDITABLE TABLE")
+        print(class(editable_table))
         return(editable_table)
-        
-      
+       })
       })
+      
+      #observe changes on handsontable
+      observeEvent(input$table$changes$changes,{
+        WARN("Triggered handsontable cell event on render")
+        target_cell_row = input$table$changes$changes[[1]][[1]]+1
+        target_cell_col = input$table$changes$changes[[1]][[2]]+1
+        target_cell_value_old = input$table$changes$changes[[1]][[3]]
+        target_cell_value_new = input$table$changes$changes[[1]][[4]]
+        WARN("Changed row = %s", target_cell_row)
+        WARN("Changed col = %s", target_cell_col)
+        WARN("Value '%s' changed by '%s'", target_cell_value_old, target_cell_value_new)
+        updated_hst = hot_to_r(input$table) %>% as.data.frame()
+        #current_data <- current_data(updated_hst)
+        row_report = updated_hst[target_cell_row,] %>% data_spec()$validate()
+        row_report = row_report[row_report$category != "Data structure",]
+        if(nrow(row_report)>0){
+          row_report$i = target_cell_row
+          target_row_report = target_row_report(lapply(1:nrow(row_report), function(i){as.list(row_report[i,])}))
+          
+          #TODO work on 
+          print("INPUT TABLE")
+          print(class(input$table))
+          
+        }
+        #TODO update cell in hst
+        #TODO apply validation UI
       })
       
       output$table_wrapper<-renderUI({
