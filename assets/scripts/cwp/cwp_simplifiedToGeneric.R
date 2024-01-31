@@ -21,8 +21,8 @@ simplifiedToGeneric <- function(file, format_spec, measurements){
     names(mdata)[grepl("__measurement",names(mdata),fixed = T)]<-gsub(paste0(measurement,"_"),"",names(mdata)[grepl("__measurement",names(mdata),fixed = T)])
     
     #in case we have quarter/month definitions we harmonize it to 'period' for later transformation
-    if("quarter" %in% names(mdata)) names(mdata)[names(data)=="quarter"] = "period"
-    if("month" %in% names(mdata)) names(mdata)[names(data)=="month"] = "period"
+    if("quarter" %in% names(mdata)) names(mdata)[names(mdata)=="quarter"] = "period"
+    if("month" %in% names(mdata)) names(mdata)[names(mdata)=="month"] = "period"
     
     newdata<-mdata%>%
       tidyr::pivot_longer(names(mdata)[grepl("__measurement",names(mdata),fixed = T)],names_to = c("measurement_type", ".value"), 
