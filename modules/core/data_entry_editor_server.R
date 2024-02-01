@@ -528,10 +528,8 @@ data_entry_editor_server <- function(id, parent.session, config, profile, compon
             target_row_report$i <- target_row()$i
             target_row_report$row <- paste("Row", target_row()$i)
           }
-          print(target_row_report)
           time2 = Sys.time()
           INFO("Partial (row) validation time = %s s", as(time2-time1, "numeric"))
-          
           old_report = cache_report()
           old_report = old_report[old_report$i != target_row()$i,]
           report = rbind(old_report, target_row_report)
@@ -545,10 +543,7 @@ data_entry_editor_server <- function(id, parent.session, config, profile, compon
         
         #display
         editable_table<-data_spec()$display_as_handsontable(data, report, read_only = FALSE) %>%
-          hot_context_menu(
-           allowRowEdit = T, allowColEdit = F,
-           customOpts = list()
-          )
+          hot_context_menu(allowRowEdit = T, allowColEdit = F)
         
         #column that should not be editable --> put them as readonly
         info<-template_info()  
