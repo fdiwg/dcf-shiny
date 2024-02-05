@@ -505,13 +505,15 @@ data_availability_server <-function(id, parent.session, config, profile, compone
       #nodata wrapper for bytask view
       output$nodata<-renderUI({
         req(is.null(data()))
+        req(!is.null(input$task))
+        req(input$task!="")
        p("(No data available)")
       })
       
       output$heatmap_wrapper<-renderUI({
-        req(!is.null(dataAvailable()))
         req(!is.null(input$task))
-        if(is.null(data()) & !is.null(input$task)){
+        req(input$task!="")
+        if(is.null(data())){
           uiOutput(ns("nodata"))
         }else{
           fluidRow(
