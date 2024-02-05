@@ -8,7 +8,7 @@ simplifiedToGeneric <- function(file, format_spec, measurements){
   if(!is.data.frame(file)) data <- readDataFile(file)
   
   newdata_all = do.call("rbind", lapply(measurements, function(measurement){
-    
+
     attr_target_cols = colnames(data)[sapply(colnames(data), function(x){!any(sapply(measurements, function(m){startsWith(x,m)}))}) ]
     measurement_target_cols = colnames(data)[sapply(colnames(data), function(x){startsWith(x, paste0(measurement, "_"))})]
     target_cols = c(attr_target_cols, measurement_target_cols)
@@ -38,6 +38,10 @@ simplifiedToGeneric <- function(file, format_spec, measurements){
     mdata_measurement_block_cols = measurement_block_cols[measurement_block_cols %in% colnames(newdata)[startsWith(colnames(newdata),"measurement")]]
     newdata = newdata[,c(colnames(newdata)[!sapply(colnames(newdata), function(x){x %in% mdata_measurement_block_cols})], mdata_measurement_block_cols)]
     
+    #check if measurement_unit / measurement_status are available if not initialize them
+    if(!"measurement_unit" %in% colnames(newdata)) newdata$measurement_unit <- NA
+    if(!"measurement_status" %in% colnames(newdata)) newdata$measurement_status <- NA
+
     return(newdata)
   }))
   
