@@ -40,7 +40,7 @@
     {"package": "rdflib", "version": "0.2.5", "repos": "https://cran.r-project.org", "dependencies": false},
     {"package": "waiter", "version": "0.2.5", "repos": "https://cran.r-project.org"},
     {"package": "plotly", "version": "4.10.0", "repos": "https://cran.r-project.org"},
-    {"repo": "eblondel/atom4R", "from": "github", "dependencies": false},
+    {"package": "atom4R", "version": "0.3-3", "repos": "https://cran.r-project.org"},
     {"repo": "eblondel/geometa", "from": "github", "dependencies": false},
     {"repo": "eblondel/geonode4R", "from": "github", "dependencies": false},
     {"repo": "r-geoflow/geoflow", "from": "github", "dependencies": false},
