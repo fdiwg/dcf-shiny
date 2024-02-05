@@ -1,7 +1,7 @@
 {
   "id": "dcf-shiny",
   "version": "0.3.0",
-  "date": "2024-01-31",
+  "date": "2024-02-05",
   "dependencies": [
     {"package": "R6", "version": "2.5.1", "repos": "https://cran.r-project.org"},
     {"package": "dotenv", "version": "1.0.3", "repos": "https://cran.r-project.org"},
@@ -41,13 +41,13 @@
     {"package": "waiter", "version": "0.2.5", "repos": "https://cran.r-project.org"},
     {"package": "plotly", "version": "4.10.0", "repos": "https://cran.r-project.org"},
     {"package": "atom4R", "version": "0.3-3", "repos": "https://cran.r-project.org"},
-    {"repo": "eblondel/geometa", "from": "github", "dependencies": false},
-    {"repo": "eblondel/geonode4R", "from": "github", "dependencies": false},
-    {"repo": "r-geoflow/geoflow", "from": "github", "dependencies": false},
     {"package": "openxlsx", "version": "4.2.5.1", "repos": "https://cran.r-project.org"},
     {"package": "rhandsontable", "version": "0.3.8", "repos": "https://cran.r-project.org"},
     {"package": "rclipboard", "version": "0.1.6", "repos": "https://cran.r-project.org"},
     {"package": "shinyWidgets", "version": "0.7.0", "repos": "https://cran.r-project.org"},
+    {"repo": "eblondel/geometa", "from": "github", "dependencies": false},
+    {"repo": "eblondel/geonode4R", "from": "github", "dependencies": false},
+    {"repo": "r-geoflow/geoflow", "from": "github", "dependencies": false},
     {"repo": "fdiwg/vrule", "from": "github", "dependencies": false}
   ]
 }
