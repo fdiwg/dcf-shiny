@@ -109,6 +109,10 @@ data_availability_server <-function(id, parent.session, config, profile, compone
               div(
                 class = "col-md-2",
                 uiOutput(ns("entities_selector"))
+              ),
+              div(
+                class = "col-md-2",
+                uiOutput(ns("download_task_wrapper"))
               )
             ),
             fluidRow(
@@ -235,6 +239,24 @@ data_availability_server <-function(id, parent.session, config, profile, compone
         downloadButton(ns("download"),label="Download summary",icon=shiny::icon("file-excel"),style = "padding: 5px 20px; margin: 2px 8px;")
         }
       })
+      
+      output$download_task_wrapper<-renderUI({
+        req(data())
+        req(req(input$task))
+        if(nrow(data())>0){
+          downloadButton(ns("download_task"),label="Download data",icon=shiny::icon("download"),style = "padding: 5px 20px; margin: 2px 8px;")
+        }
+      })
+      
+      output$download_task <- downloadHandler(
+        filename = function() { 
+          sprintf("data_%s_%s.csv",input$task,Sys.Date())
+        },
+        content = function(filename) {
+          req(nrow(data())>0)
+          write.csv(data(),filename,row.names = F)
+        })
+      
       
       output$download <- downloadHandler(
         filename = function() { 
