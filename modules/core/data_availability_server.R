@@ -28,7 +28,7 @@ data_availability_server <-function(id, parent.session, config, profile, compone
       reporting_entities<-config$dcf$reporting_entities$codelist_ref$code
       
       data_tasks<-lapply(setNames(getTasks(config,withId=TRUE),getTasks(config,withId=TRUE)),function(x){
-        file<-getDataTaskDBData(pool, x)
+        getDataTaskDBData(pool, x)
       })
       
       data<-reactiveVal(NULL)
@@ -115,11 +115,9 @@ data_availability_server <-function(id, parent.session, config, profile, compone
                 uiOutput(ns("download_task_wrapper"))
               )
             ),
-            fluidRow(
-              withSpinner(plotlyOutput(ns("heatmap")),type=4)
-            )
+            uiOutput(ns("heatmap_wrapper"))
           )}else{
-            p("(no data available)")
+            p("(No data available)")
           }
       })
       
@@ -181,37 +179,49 @@ data_availability_server <-function(id, parent.session, config, profile, compone
         #withBusyIndicatorServer(ns("summaryBtn"), {
           if(dataAvailable()){
             
-          tasks<-getTasks(config,withId=T) 
+            tasks<-getTasks(config,withId=T) 
+              
+            summary<-do.call("rbind",lapply(getTasks(config,withId=TRUE),function(x){
+            # items <- SH$listWSItems(parentFolderID = subset(task_folders,name==x)$id)
+            # last_modification_time <- max(items$lastModificationTime)
+            # items <- items[items$lastModificationTime == last_modification_time,]
+            # items <- items [endsWith(items$name,"_db_new.csv"),]
+            # item<-SH$downloadItem(item = items, wd = tempdir())
+            # file<-readr::read_csv(item)
+               
+            #file<-getDataTaskDBData(pool, x)
+               
+               
+            file<-data_task<-data_tasks[[x]]
+            if(!is.null(file)){
+              file<-file%>%
+                group_by(flagstate)%>%
+                summarise(period=paste0("first:",year(min(time_end,na.rm=T)),"- last:",year(max(time_end,na.rm=T))),
+                          min_year=as.character(year(min(time_end,na.rm=T))),
+                          max_year=as.character(year(max(time_end,na.rm=T))),
+                          nb_year=as.character(length(unique(year(time_end)))),
+                          nb_record=as.character(length(flagstate)),
+                          available_years=paste0(pretty_seq(sort(unique(year(time_end)))),collapse=";"))%>%
+                arrange(desc(flagstate))%>%
+                ungroup()%>%
+                #mutate(task=x)
+                mutate(task=gsub(": ",":\n",names(tasks[tasks==x])))
+            }else{
+              WARN("No data available for task '%s'", x)
+              # file<-data.frame(flagstate=config$dcf$reporting_entities$codelist_ref$code,
+              #                  period="(no data)",
+              #                  min_year="(no data)",
+              #                  max_year="(no data)",
+              #                  nb_year="0",
+              #                  nb_record="0",
+              #                  available_years="(no data)",
+              #                  task=x)%>%
+              #   arrange(desc(flagstate))%>%
+              #   ungroup()
+            }
+            return(file)
+          }))
             
-         summary<-do.call("rbind",lapply(getTasks(config,withId=TRUE),function(x){
-        # items <- SH$listWSItems(parentFolderID = subset(task_folders,name==x)$id)
-        # last_modification_time <- max(items$lastModificationTime)
-        # items <- items[items$lastModificationTime == last_modification_time,]
-        # items <- items [endsWith(items$name,"_db_new.csv"),]
-        # item<-SH$downloadItem(item = items, wd = tempdir())
-        # file<-readr::read_csv(item)
-           
-        #file<-getDataTaskDBData(pool, x)
-           
-           
-        file<-data_task<-data_tasks[[x]]
-
-        file<-file%>%
-          group_by(flagstate)%>%
-          summarise(period=paste0("first:",year(min(time_end,na.rm=T)),"- last:",year(max(time_end,na.rm=T))),
-                    min_year=as.character(year(min(time_end,na.rm=T))),
-                    max_year=as.character(year(max(time_end,na.rm=T))),
-                    nb_year=as.character(length(unique(year(time_end)))),
-                    nb_record=as.character(length(flagstate)),
-                    available_years=paste0(pretty_seq(sort(unique(year(time_end)))),collapse=";"))%>%
-          arrange(desc(flagstate))%>%
-          ungroup()%>%
-          #mutate(task=x)
-          mutate(task=gsub(": ",":\n",names(tasks[tasks==x])))
-        
-        }
-        )
-        )
         }else{
           summary<-do.call("rbind",lapply(getTasks(config,withId=TRUE),function(x){
             
@@ -328,6 +338,7 @@ data_availability_server <-function(id, parent.session, config, profile, compone
         }
       })
       
+      #heatmap by task
       output$heatmap<-renderPlotly({
         req(!is.null(data()))
         req(!is.null(input$limit_entities))
@@ -389,6 +400,7 @@ data_availability_server <-function(id, parent.session, config, profile, compone
         return(fig)
       })
       
+      #heatmap summary
       output$heatmap_s<-renderPlotly({
         req(!is.null(data_s()))
         req(!is.null(input$limit_entities_s))
@@ -422,7 +434,7 @@ data_availability_server <-function(id, parent.session, config, profile, compone
         }
         
         df<-df%>%
-          complete(nesting(task),flagstate=entity_list,fill = list(value=0,stat="(no data)"))%>%
+          complete(task = names(getTasks(config,withId=TRUE)),flagstate=entity_list,fill = list(value=0,stat="(no data)"))%>%
           arrange(desc(flagstate))%>%
           filter(flagstate %in% entity_list)
         
@@ -489,11 +501,31 @@ data_availability_server <-function(id, parent.session, config, profile, compone
         )%>% add_annotations(x = text$task, y = text$flagstate, text = text$stat, xref = 'x', yref = 'y', showarrow = FALSE, font=list(color='black'))
         return(fig)
       })
+      
+      #nodata wrapper for bytask view
+      output$nodata<-renderUI({
+        req(is.null(data()))
+       p("(No data available)")
+      })
+      
+      output$heatmap_wrapper<-renderUI({
+        req(!is.null(dataAvailable()))
+        req(!is.null(input$task))
+        if(is.null(data()) & !is.null(input$task)){
+          uiOutput(ns("nodata"))
+        }else{
+          fluidRow(
+            withSpinner(plotlyOutput(ns("heatmap")),type=4)
+          )
+        }
+      })
+      
+       #nodata wrapper for summary
       output$nodata_s<-renderUI({
         req(!is.null(data_s()))
         req(!is.null(input$limit_entities_s))
         req(!dataAvailable()&input$limit_entities_s)
-       p("(no data available)")
+       p("(No data available)")
       })
       
       output$heatmap_s_wrapper<-renderUI({
