@@ -1,4 +1,4 @@
-function(id, parent.session, config, profile, components){
+function(id, parent.session, config, profile, components, reloader){
   moduleServer(
     id,
     function(input, output, session) {
