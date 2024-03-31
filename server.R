@@ -64,6 +64,13 @@ server <- function(input, output, session) {
     spin_flower()
   ))
   
+  #VRULE config options
+  #---------------------------------------------------------------------------------------
+  if(!is.null(CONFIG$vrule)){
+    if(!is.null(CONFIG$vrule$parallel)) vrule::setVruleOptions(parallel = CONFIG$vrule$parallel)
+    if(!is.null(CONFIG$vrule$cores)) vrule::setVruleOptions(cores = CONFIG$vrule$cores)
+  }
+  
   #DBI component to add
   #---------------------------------------------------------------------------------------
   pool <- loadDBI(config = CONFIG)
