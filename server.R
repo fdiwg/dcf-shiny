@@ -68,7 +68,7 @@ server <- function(input, output, session) {
   #---------------------------------------------------------------------------------------
   if(!is.null(CONFIG$vrule)){
     if(!is.null(CONFIG$vrule$parallel)) vrule::setVruleOptions(parallel = CONFIG$vrule$parallel)
-    if(!is.null(CONFIG$vrule$cores)) vrule::setVruleOptions(cores = CONFIG$vrule$cores)
+    if(!is.null(CONFIG$vrule$cores)) vrule::setVruleOptions(cores = min(CONFIG$vrule$cores, parallel::detectCores()))
   }
   
   #DBI component to add
