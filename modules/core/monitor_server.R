@@ -5,11 +5,42 @@ monitor_server <- function(id, parent.session, config, profile, components,reloa
       #-----------------------------------------------------------------------------------
       ns <- session$ns
       
+      #machine
+      output$machine_resources <- renderDataTable({
+        
+        cpu = benchmarkme::get_cpu()
+        ram = benchmarkme::get_ram()
+        
+        machine_df = as.data.frame(Sys.info())
+        machine_df = data.frame(
+          Property = row.names(machine_df),
+          Value = machine_df$`Sys.info()`
+        )
+        machine_df = do.call("rbind", list(
+          machine_df,
+          data.frame(
+            Property = paste0("cpu_", names(cpu)), 
+            Value = unlist(cpu)
+          ),
+          data.frame(
+            Property = "ram",
+            Value = paste(round(as(ram, "numeric")/1e9, 1), "GB")
+          ),
+          data.frame(
+            Property = "cores",
+            Value = parallel::detectCores()
+          )
+        ))
+        row.names(machine_df) = 1:nrow(machine_df)
+        machine_df
+      })
+      
+      
       #D4science resources
       resources <- names(components)
       resources <- resources[!endsWith(resources,"_CONFIG")]
       
-      output$resources <- renderDataTable(
+      output$software_resources <- renderDataTable(
         do.call("rbind", lapply(resources, function(resource_name){
           resource <- components[[resource_name]]
           data.frame(
@@ -38,12 +69,17 @@ monitor_server <- function(id, parent.session, config, profile, components,reloa
           tags$span(shiny::icon(c('check-circle')), "Token is valid", style="color:green;")
         }
       })
-
-      output$ressources_wrapper <- renderUI({
-        
-          box(title=HTML("<b>Ressources</b>"),collapsible = T,width=12,
-                DT::dataTableOutput(ns("resources")),
+      
+      output$machine_resources_wrapper <- renderUI({
+          box(title=HTML("<b>Machine Resources</b>"),collapsible = T,width=12,
+                DT::dataTableOutput(ns("machine_resources"))
           )
+      })
+      
+      output$software_resources_wrapper <- renderUI({
+        box(title=HTML("<b>Software Resources</b>"),collapsible = T,width=12,
+            DT::dataTableOutput(ns("software_resources"))
+        )
       })
             
       output$token_wrapper <- renderUI({

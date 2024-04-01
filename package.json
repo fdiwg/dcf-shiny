@@ -1,7 +1,7 @@
 {
   "id": "dcf-shiny",
-  "version": "0.3.1",
-  "date": "2024-02-06",
+  "version": "0.4",
+  "date": "2024-04-01",
   "dependencies": [
     {"package": "R6", "version": "2.5.1", "repos": "https://cran.r-project.org"},
     {"package": "dotenv", "version": "1.0.3", "repos": "https://cran.r-project.org"},
@@ -18,6 +18,7 @@
     {"package": "jsonlite", "version": "1.8.0", "repos": "https://cran.r-project.org"},
     {"package": "XML", "version": "3.99-0.9", "repos": "https://cran.r-project.org"},
     {"package": "jose", "version": "1.2.0", "repos": "https://cran.r-project.org"},
+    {"package": "benchmarkme", "version": "1.0.8", "repos": "https://cran.r-project.org"},
     {"package": "zip", "version": "2.3.0", "repos": "https://cran.r-project.org"},
     {"package": "DBI", "version": "1.1.2", "repos": "https://cran.r-project.org"},
     {"package": "pool", "version": "0.1.6", "repos": "https://cran.r-project.org"},
