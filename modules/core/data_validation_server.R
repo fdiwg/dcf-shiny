@@ -606,7 +606,8 @@ data_validation_server <- function(id, parent.session, config, profile, componen
         
         if(out$valid){
           INFO("Validating data content")
-          out<-validateDataContent(file=data, task_def = task_def, format = input$format)
+          out<-validateDataContent(file=data, task_def = task_def, format = input$format, 
+                                   parallel = vrule::getVruleOption("parallel"))
           gbOut<-gbOut(out)
           hostess$set(50)
           INFO("Successful data validation")
@@ -632,7 +633,8 @@ data_validation_server <- function(id, parent.session, config, profile, componen
               INFO("Build format specification for data call rules")
               dc_task_def <- readDataCallRules(task_def = task_def, format = input$format, config = config,reporting_entity = input$reporting_entity, data_call_limited_on=taskSupplRules)
               INFO("Data call format specification ready to use, validating data vs. data call spec...")
-              out<-validateDataContent(file=data, task_def = dc_task_def, format = "generic")
+              out<-validateDataContent(file=data, task_def = dc_task_def, format = "generic",
+                                       parallel = vrule::getVruleOption("parallel"))
               INFO("Succesful data validation")
               dcOut<-dcOut(out)
               hostess$set(95)

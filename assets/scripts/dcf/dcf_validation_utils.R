@@ -265,7 +265,7 @@ validateDataStructure <- function(file, task_def, format){
 }
 
 #validateDataContent
-validateDataContent<-function(file, task_def, format, prettify = FALSE){
+validateDataContent<-function(file, task_def, format, parallel = FALSE, prettify = FALSE){
   
   #inherit vrule format_spec object from task definition
   format_spec = task_def$formats[[format]]$spec 
@@ -278,9 +278,9 @@ validateDataContent<-function(file, task_def, format, prettify = FALSE){
 
   #prettify for display as handsontable
   if(prettify){
-    errors<-format_spec$validate_and_display_as_handsontable(data)
+    errors<-format_spec$validate_and_display_as_handsontable(data, parallel = parallel)
   }else{
-    errors<-format_spec$validateContent(data)
+    errors<-format_spec$validateContent(data, parallel = parallel)
   }
   
   errors<-subset(errors,category!="Data structure")
