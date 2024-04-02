@@ -16,6 +16,7 @@ monitor_server <- function(id, parent.session, config, profile, components,reloa
           Property = row.names(machine_df),
           Value = machine_df$`Sys.info()`
         )
+        machine_df = machine_df[!machine_df$Property %in% c("login", "user", "effective_user"),]
         machine_df = do.call("rbind", list(
           machine_df,
           data.frame(
