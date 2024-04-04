@@ -371,7 +371,7 @@ data_availability_server <-function(id, parent.session, config, profile, compone
             }
             out
           }))
-
+          INFO("Successful data export!")
           readr::write_csv(target_data,file = filename)
         })
       
