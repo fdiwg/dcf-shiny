@@ -111,7 +111,7 @@ data_availability_server <-function(id, parent.session, config, profile, compone
                 uiOutput(ns("entities_selector"))
               ),
               div(
-                class = "col-md-2",
+                class = "col-md-8",
                 uiOutput(ns("download_task_wrapper"))
               )
             ),
@@ -253,8 +253,39 @@ data_availability_server <-function(id, parent.session, config, profile, compone
       output$download_task_wrapper<-renderUI({
         req(data())
         req(req(input$task))
+        
+        choices<-getTaskFormats(config,id=input$task)
+        
         if(nrow(data())>0){
+          box(
+            title="Download dataset",
+          div(
+            if(length(choices)>1){
+              selectizeInput(ns("format"),
+                             label="Export format",
+                             multiple = F,
+                             choices = choices ,
+                             selected=1,
+                             options = list(
+                               placeholder = "Please select an export format",
+                               onInitialize = I('function() { this.setValue(""); }')
+                             )
+              )
+            }else{
+              disabled(
+                selectizeInput(ns("format"),
+                               label="Export format",
+                               multiple = F,
+                               choices = choices,
+                               selected=1
+                )
+              )
+            },
+          checkboxInput(ns("with_values_label"), "enrich with value codelists labels", value = FALSE),
+          checkboxInput(ns("with_cols_label"), "use column aliases names", value = FALSE),
           downloadButton(ns("download_task"),label="Download data",icon=shiny::icon("download"),style = "padding: 5px 20px; margin: 2px 8px;")
+          )
+          )
         }
       })
       
@@ -264,7 +295,53 @@ data_availability_server <-function(id, parent.session, config, profile, compone
         },
         content = function(filename) {
           req(nrow(data())>0)
-          write.csv(data(),filename,row.names = F)
+          req(!is.null(input$with_values_label))
+          req(!is.null(input$with_cols_label))
+          req(!is.null(input$format))
+          
+          target_data<-data()
+          
+          target_data<-target_data[ , !names(target_data) %in% c("year","period","date")]
+          
+          task_def_url<-getTaskProfile(config,id=input$task)
+          task_def_url<-task_def_url$dsd_ref_url
+          task_def <- readTaskDefinition(file = task_def_url)
+          format_spec = task_def$formats[[input$format]]$spec
+          task_template = buildTemplate(format_spec)
+          
+          if(input$format!="generic"){
+            target_data<-genericToSimplified(target_data)
+          }
+          
+          if(input$with_values_label){
+            for(col in  names(target_data)){
+              if(col %in% task_template$name){
+                print(col)
+                ref<-subset(task_template,name==col)$ref
+                aliases<-col
+                if(!is.na(ref[[1]])){
+                  print(ref)
+                  ref<-subset(ref[[1]],select=c(code,label))
+                  if(input$with_cols_label){
+                    aliases<-subset(task_template,name==col)$label
+                  }
+  
+                  names(ref)<-c(sprintf("%s [code]",aliases),sprintf("%s [label]",aliases))
+                  names(target_data)[names(target_data) == col] <-sprintf("%s [code]",aliases)
+                  target_data<-merge(target_data,ref,all.x=T,all.y=F)
+                  print(head(target_data))
+                }else{
+                  if(input$with_cols_label){
+                    aliases<-subset(task_template,name==col)$label
+                    print(aliases)
+                    names(target_data)[names(target_data) == col] <- aliases
+                  }
+                }
+              }
+            }
+          }
+          
+          write.csv(target_data,filename,row.names = F)
         })
       
       
