@@ -334,9 +334,17 @@ data_availability_server <-function(id, parent.session, config, profile, compone
                   if(input$with_cols_label){
                     aliases<-subset(task_template,name==col)$label
                     print(aliases)
-                    names(target_data)[names(target_data) == col] <- aliases
+                    if(length(aliases)>0)names(target_data)[names(target_data) == col] <- aliases
                   }
                 }
+              }
+            }
+          }else{
+            if(input$with_cols_label){
+              for(col in  names(target_data)){
+                aliases<-subset(task_template,name==col)$label
+                print(aliases)
+                if(length(aliases)>0)names(target_data)[names(target_data) == col] <- aliases
               }
             }
           }
