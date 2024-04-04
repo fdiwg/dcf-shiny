@@ -281,9 +281,9 @@ data_availability_server <-function(id, parent.session, config, profile, compone
                 )
               )
             },
-          checkboxInput(ns("with_values_label"), "enrich with value codelists labels", value = FALSE),
-          checkboxInput(ns("with_cols_label"), "use column aliases names", value = FALSE),
-          downloadButton(ns("download_task"),label="Download data",icon=shiny::icon("download"),style = "padding: 5px 20px; margin: 2px 8px;")
+            checkboxInput(ns("with_codelist_labels"), "Enrich with codelists labels", value = FALSE),
+            checkboxInput(ns("with_col_aliases"), "Use column aliases names", value = FALSE),
+            downloadButton(ns("download_task"),label="Download data",icon=shiny::icon("download"),style = "padding: 5px 20px; margin: 2px 8px;")
           )
           )
         }
@@ -295,53 +295,84 @@ data_availability_server <-function(id, parent.session, config, profile, compone
         },
         content = function(filename) {
           req(nrow(data())>0)
-          req(!is.null(input$with_values_label))
-          req(!is.null(input$with_cols_label))
+          req(!is.null(input$with_col_aliases))
+          req(!is.null(input$with_codelist_labels))
           req(!is.null(input$format))
           
+          INFO("Export task %s data", input$task)
+          INFO("Export options:")
+          INFO("* Format: %s", input$format)
+          INFO("* Column aliases: %s", input$with_col_aliases)
+          INFO("* Codelist labels: %s", input$with_codelist_labels)
+          
+          #inherit dataset
           target_data<-data()
           
-          target_data<-target_data[ , !names(target_data) %in% c("year","period","date")]
-          
+          #inherit format 
           task_def_url<-getTaskProfile(config,id=input$task)
           task_def_url<-task_def_url$dsd_ref_url
           task_def <- readTaskDefinition(file = task_def_url)
           format_spec = task_def$formats[[input$format]]$spec
-          task_template = buildTemplate(format_spec)
           
           if(input$format!="generic"){
+            INFO("Transforming to 'simplified' format")
             target_data<-genericToSimplified(target_data)
+            INFO("Successful transformation from 'generic' to 'simplified' format!")
           }
           
-          if(input$with_values_label){
+          if(input$with_codelist_labels){
+            #enrich with codelist labels
             for(col in  names(target_data)){
-              if(col %in% task_template$name){
-                print(col)
-                ref<-subset(task_template,name==col)$ref
-                aliases<-col
-                if(!is.na(ref[[1]])){
-                  print(ref)
-                  ref<-subset(ref[[1]],select=c(code,label))
-                  if(input$with_cols_label){
-                    aliases<-subset(task_template,name==col)$label
-                  }
-  
-                  names(ref)<-c(sprintf("%s [code]",aliases),sprintf("%s [label]",aliases))
-                  names(target_data)[names(target_data) == col] <-sprintf("%s [code]",aliases)
+              column_spec = format_spec$getColumnSpecByName(col)
+              if(!is.null(column_spec)){
+                if(column_spec$hasCodelist() && any(sapply(column_spec$rules, is, "vrule_codelist"))){
+                  cl_rule = column_spec$rules[sapply(column_spec$rules, is, "vrule_codelist")][[1]]
+                  ref<-subset(cl_rule$ref_data,select=c(code,label))
+                  #manage column aliases if checked
+                  alias = col
+                  if(input$with_col_aliases) if(length(column_spec$aliases)>0) alias = column_spec$aliases[[1]]
+                  names(ref)<-c(sprintf("%s [code]",alias),sprintf("%s [label]",alias))
+                  names(target_data)[names(target_data) == col] <-sprintf("%s [code]",alias)
                   target_data<-merge(target_data,ref,all.x=T,all.y=F)
-                  print(head(target_data))
                 }else{
-                  if(input$with_cols_label){
-                    aliases<-subset(task_template,name==col)$label
-                    print(aliases)
-                    names(target_data)[names(target_data) == col] <- aliases
+                  #manage column aliases if checked
+                  if(input$with_col_aliases) if(length(column_spec$aliases)>0) {
+                    names(target_data)[names(target_data) == col] <- column_spec$aliases[[1]]
                   }
+                }
+              }
+            }
+          }else{
+            for(col in  names(target_data)){
+              column_spec = format_spec$getColumnSpecByName(col)
+              if(!is.null(column_spec)){
+                #manage column aliases if checked
+                if(input$with_col_aliases) if(length(column_spec$aliases)>0) {
+                  names(target_data)[names(target_data) == col] <- column_spec$aliases[[1]]
                 }
               }
             }
           }
           
-          write.csv(target_data,filename,row.names = F)
+          #reorder
+          target_data = do.call("cbind", lapply(format_spec$column_specs, function(column_spec){
+            out = NULL
+            reorder = startsWith(colnames(target_data), column_spec$name)
+            if(input$with_col_aliases) if(length(column_spec$aliases)>0){
+              reorder = startsWith(colnames(target_data), column_spec$aliases[[1]])
+            }
+            if(length(reorder)>0){
+              columns = colnames(target_data)[reorder]
+              out = target_data[,columns]
+              if(length(columns)==1){
+                out = data.frame(col = out)
+                colnames(out) = columns
+              }
+            }
+            out
+          }))
+
+          readr::write_csv(target_data,file = filename)
         })
       
       
