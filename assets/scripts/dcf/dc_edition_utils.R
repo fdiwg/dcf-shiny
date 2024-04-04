@@ -12,7 +12,7 @@ buildTemplate = function(format_spec){
       ref<-list(tibble(code=year_list,label=year_list))
       editable<-TRUE
     }else if(x$hasCodelist()){
-      cl_vrule = x$rules[sapply(x$rules, is, "vrule_codelist")][[1]]
+      cl_vrule = x$rules[sapply(x$rules, is, "vrule_codelist")|sapply(x$rules, is, "vrule_raw_codelist")][[1]]
       has_ref_values = !is.null(cl_vrule$ref_values)
       if(has_ref_values){
         if(length(cl_vrule$ref_values)==1){
