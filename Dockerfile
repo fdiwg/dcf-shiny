@@ -13,9 +13,8 @@ RUN apt-get update && apt-get install -y \
     texlive-fonts-recommended \
     texlive-fonts-extra \
     texlive-formats-extra \
-	libsodium-dev \
-    libsecret-1-dev \
-    git
+	  libsodium-dev \
+    libsecret-1-dev
     
 # general system libraries
 # Note: this includes rdf/redland system libraries
@@ -67,9 +66,9 @@ RUN /rocker_scripts/install_geospatial.sh
 # install R core package dependencies
 RUN install2.r --error --skipinstalled --ncpus -1 httpuv
 RUN R -e "install.packages(c('remotes','jsonlite','yaml'), repos='https://cran.r-project.org/')"
-# clone app
-RUN git -C /root/ clone https://github.com/fdiwg/dcf-shiny.git && echo "OK!"
-RUN ln -s /root/dcf-shiny /srv/dcf-shiny
+# copy app
+COPY ./ /srv/dcf-shiny
+
 # install R app package dependencies
 RUN R -e "source('./srv/dcf-shiny/install.R')"
 
