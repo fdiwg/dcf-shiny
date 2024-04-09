@@ -324,6 +324,8 @@ data_availability_server <-function(id, parent.session, config, profile, compone
             #enrich with codelist labels
             for(col in  names(target_data)){
               column_spec = format_spec$getColumnSpecByName(col)
+              if(is.null(column_spec)) column_spec = format_spec$getColumnSpecByName("month")
+              if(is.null(column_spec)) column_spec = format_spec$getColumnSpecByName("quarter")
               if(!is.null(column_spec)){
                 if(column_spec$hasCodelist() && any(sapply(column_spec$rules, is, "vrule_codelist"))){
                   cl_rule = column_spec$rules[sapply(column_spec$rules, is, "vrule_codelist")][[1]]
@@ -345,6 +347,8 @@ data_availability_server <-function(id, parent.session, config, profile, compone
           }else{
             for(col in  names(target_data)){
               column_spec = format_spec$getColumnSpecByName(col)
+              if(is.null(column_spec)) column_spec = format_spec$getColumnSpecByName("month")
+              if(is.null(column_spec)) column_spec = format_spec$getColumnSpecByName("quarter")
               if(!is.null(column_spec)){
                 #manage column aliases if checked
                 if(input$with_col_aliases) if(length(column_spec$aliases)>0) {
@@ -357,7 +361,9 @@ data_availability_server <-function(id, parent.session, config, profile, compone
           #reorder
           target_data = do.call("cbind", lapply(format_spec$column_specs, function(column_spec){
             out = NULL
-            reorder = startsWith(colnames(target_data), column_spec$name)
+            col = column_spec$name
+            if(column_spec$name %in% c("month", "quarter")) col = "period"
+            reorder = startsWith(colnames(target_data), col)
             if(input$with_col_aliases) if(length(column_spec$aliases)>0){
               reorder = startsWith(colnames(target_data), column_spec$aliases[[1]])
             }
@@ -369,6 +375,8 @@ data_availability_server <-function(id, parent.session, config, profile, compone
                 colnames(out) = columns
               }
             }
+            if(column_spec$name == "month") colnames(out)[colnames(out)=="period"] = "month"
+            if(column_spec$name == "quarter") colnames(out)[colnames(out)=="period"] = "quarter"
             out
           }))
           INFO("Successful data export!")
