@@ -29,6 +29,11 @@ server <- function(input, output, session) {
   #---------------------------------------------------------------------------------------
   PROFILE <- try(loadProfile(jwt))
   if(is(PROFILE, "try-error")){
+    waiter_update(html = tagList(
+      h4("Error while loading profile!", style = "color:red;"),
+      spin_flower()
+    ))
+    Sys.sleep(2)
     waiter_hide()
     shiny::showModal(
       shiny::modalDialog(
@@ -43,7 +48,15 @@ server <- function(input, output, session) {
     stop("Application has stopped!")
   }
   
-  COMPONENTS <- loadComponents(profile = PROFILE, sdi = FALSE)
+  COMPONENTS <- try(loadComponents(profile = PROFILE, sdi = FALSE))
+  if(is(COMPONENTS, "try-error")){
+    waiter_update(html = tagList(
+      h4("Error while loading components!", style = "color:red;"),
+      spin_flower()
+    ))
+    Sys.sleep(2)
+    stop("Application has stopped!")
+  }
   
   
   #TODO current config from file, next to get from Workspace URL inherited from ICPROXY
