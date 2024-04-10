@@ -1,7 +1,7 @@
 {
   "id": "dcf-shiny",
-  "version": "0.4.1-2",
-  "date": "2024-04-10",
+  "version": "0.4.1-4",
+  "date": "2024-04-11",
   "dependencies": [
     {"package": "R6", "version": "2.5.1", "repos": "https://cran.r-project.org"},
     {"package": "dotenv", "version": "1.0.3", "repos": "https://cran.r-project.org"},
@@ -36,7 +36,7 @@
     {"package": "geosapi", "version": "0.7-1", "repos": "https://cran.r-project.org"},
     {"package": "geonapi", "version": "0.6-1", "repos": "https://cran.r-project.org"},
     {"package": "ows4R", "version": "0.3-6", "repos": "https://cran.r-project.org"},
-    {"package": "d4storagehub4R", "version": "0.4-2", "repos": "https://cran.r-project.org"},
+    {"package": "d4storagehub4R", "version": "0.4-3", "repos": "https://cran.r-project.org"},
     {"package": "jsonld", "version": "2.2", "repos": "https://cran.r-project.org"},
     {"package": "rdflib", "version": "0.2.5", "repos": "https://cran.r-project.org", "dependencies": false},
     {"package": "waiter", "version": "0.2.5", "repos": "https://cran.r-project.org"},

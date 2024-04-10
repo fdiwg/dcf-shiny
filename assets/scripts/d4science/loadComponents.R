@@ -7,8 +7,6 @@ loadComponents <- function(profile, sdi = TRUE){
   components$STORAGEHUB <- try(d4storagehub4R::StoragehubManager$new(token = profile$access$access_token, token_type = "jwt"))
   attr(components$STORAGEHUB, "description") <- "Workspace (StorageHub)"
   
-  shiny::showModal(shiny::modalDialog(title = "Info", "STORAGEHUB ok!"))
-  
   #WPS
   components$WPS_CONFIG <- list()
   components$WPS <- ""
@@ -24,7 +22,6 @@ loadComponents <- function(profile, sdi = TRUE){
         headers = c("Authorization" = paste("Bearer", profile$access$access_token)),
         logger = "INFO"
       ), silent = TRUE)
-      shiny::showModal(shiny::modalDialog(title = "Info", "WPS ok!"))
     }
   }else{
     class(components$WPS) <- "try-error"
@@ -38,11 +35,8 @@ loadComponents <- function(profile, sdi = TRUE){
   components$GEONETWORK <- ""
   sdi_req <- try(httr::GET(sprintf("http://sdi.d4science.org/sdi-service/gcube/service/SDI"),
                            httr::add_headers("Authorization" = paste("Bearer", profile$access$access_token))))
-  shiny::showModal(shiny::modalDialog(title = "Info", "SDI ok!"))
   if(httr::status_code(icproxy_req) == 200){
     sdi_resp <- httr::content(sdi_req)
-    
-    shiny::showModal(shiny::modalDialog(title = "Info", as(jsonlite::toJSON(sdi_resp), "character")))
     
     if(length(sdi_resp$geoserverClusterConfiguration)>0){
       gs_url <- gsub("http://", "https://", sdi_resp$geoserverClusterConfiguration[[1]]$baseEndpoint)
@@ -53,7 +47,6 @@ loadComponents <- function(profile, sdi = TRUE){
         user = gs_creds$username, pwd = gs_creds$password,
         logger = "INFO"
       ))
-      shiny::showModal(shiny::modalDialog(title = "Info", "GS ok!"))
     }else{
       class(components$GEOSERVER) <- "unavailable"
     }
@@ -69,7 +62,6 @@ loadComponents <- function(profile, sdi = TRUE){
         user = gn_creds$username, pwd = gn_creds$password,
         logger = "INFO"
       ))
-      shiny::showModal(shiny::modalDialog(title = "Info", "GN ok!"))
     }else{
       class(components$GEONETWORK) <- "unavailable"
     }
