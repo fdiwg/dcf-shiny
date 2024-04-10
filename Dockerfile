@@ -67,7 +67,7 @@ RUN /rocker_scripts/install_geospatial.sh
 RUN install2.r --error --skipinstalled --ncpus -1 httpuv
 RUN R -e "install.packages(c('remotes','jsonlite','yaml'), repos='https://cran.r-project.org/')"
 # copy app
-COPY ./* /srv/dcf-shiny/
+COPY . /srv/dcf-shiny
 
 # install R app package dependencies
 RUN R -e "source('./srv/dcf-shiny/install.R')"
