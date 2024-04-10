@@ -55,14 +55,11 @@ server <- function(input, output, session) {
       spin_flower()
     ))
     Sys.sleep(2)
+    waiter_hide()
     shiny::showModal(
       shiny::modalDialog(
         title = "Error",
-        shiny::tagList(
-          PROFILE,
-          br(),
-          sprintf("Token: %s", jwt)
-        )
+        COMPONENTS[1]
       )
     )
     stop("Application has stopped!")
