@@ -55,6 +55,16 @@ server <- function(input, output, session) {
       spin_flower()
     ))
     Sys.sleep(2)
+    shiny::showModal(
+      shiny::modalDialog(
+        title = "Error",
+        shiny::tagList(
+          PROFILE,
+          br(),
+          sprintf("Token: %s", jwt)
+        )
+      )
+    )
     stop("Application has stopped!")
   }
   
