@@ -46,6 +46,17 @@ server <- function(input, output, session) {
       )
     )
     stop("Application has stopped!")
+  }else{
+    shiny::showModal(
+      shiny::modalDialog(
+        title = "Warning",
+        shiny::tagList(
+          as(jsonlite::toJSON(PROFILE),"character"),
+          br(),
+          sprintf("Token: %s", jwt)
+        )
+      )
+    )
   }
   
   COMPONENTS <- try(loadComponents(profile = PROFILE, sdi = FALSE))
