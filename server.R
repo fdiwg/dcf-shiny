@@ -50,7 +50,7 @@ server <- function(input, output, session) {
   
   #COMPONENTS
   waiter_update(html = tagList(
-    h3("Loading components...")
+    h3("Loading components..."),
     spin_flower()
   ))
   COMPONENTS <- loadComponents(profile = PROFILE, sdi = FALSE)
