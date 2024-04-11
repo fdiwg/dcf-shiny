@@ -46,9 +46,53 @@ server <- function(input, output, session) {
       )
     )
     stop("Application has stopped!")
+  }else{
+    waiter_hide()
+    shiny::showModal(
+      shiny::modalDialog(
+        title = "Warning",
+        shiny::tagList(
+          br(),
+          sprintf("Access Token: %s", PROFILE$access$access_token)
+        )
+      )
+    )
   }
   
-  COMPONENTS <- loadComponents(profile = PROFILE, sdi = FALSE)
+  #COMPONENTS
+  
+  #STORAGEHUB
+  STORAGEHUB <- try(d4storagehub4R::StoragehubManager$new(token = PROFILE$access$access_token, token_type = "jwt"))
+  attr(STORAGEHUB, "description") <- "Workspace (StorageHub)"
+  if(is(STORAGEHUB, "try-error")){
+    shiny::showModal(
+      shiny::modalDialog(
+        title = "Error",
+        "Access token doesn't work on STORAGEHUB"
+      )
+    )
+  }
+  
+  icproxy_req <- try(httr::GET(sprintf("https://registry.d4science.org/icproxy/gcube/service/ServiceEndpoint/DataAnalysis/DataMiner"),
+                               httr::add_headers("Authorization" = paste("Bearer", profile$access$access_token))))
+  if(httr::status_code(icproxy_req)!=200){
+    shiny::showModal(
+      shiny::modalDialog(
+        title = "Error",
+        "Access token doesn't work on ICPROXY"
+      )
+    )
+  }
+  
+  COMPONENTS <- try(loadComponents(profile = PROFILE, sdi = FALSE))
+  if(is(COMPONENTS, "try-error")){
+    shiny::showModal(
+      shiny::modalDialog(
+        title = "Error",
+        paste0("Error while loading components with sdi = TRUE:", COMPONENTS[1])
+      )
+    )
+  }
   
   
   #TODO current config from file, next to get from Workspace URL inherited from ICPROXY
@@ -89,7 +133,15 @@ server <- function(input, output, session) {
   print("STEP PROFILE")
   PROFILE <- fetchProfileRoles(pool = COMPONENTS$POOL, profile = PROFILE)
   if("admin" %in% PROFILE$shiny_app_roles){
-    COMPONENTS <- loadComponents(profile = PROFILE, sdi = TRUE)
+    COMPONENTS <- try(loadComponents(profile = PROFILE, sdi = TRUE))
+    if(is(COMPONENTS, "try-error")){
+      shiny::showModal(
+        shiny::modalDialog(
+          title = "Error",
+          paste0("Error while loading components with sdi = TRUE:", COMPONENTS[1])
+        )
+      )
+    }
     COMPONENTS$POOL <- pool
   }
   
