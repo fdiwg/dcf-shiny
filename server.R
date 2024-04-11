@@ -3,7 +3,7 @@
 server <- function(input, output, session) {
   
   waiting_screen<-tagList(
-    h3("Initialisation of Application"),
+    h3("Initializing"),
     spin_flower()
   )
   
@@ -46,67 +46,15 @@ server <- function(input, output, session) {
       )
     )
     stop("Application has stopped!")
-  }else{
-    waiter_hide()
-    shiny::showModal(
-      shiny::modalDialog(
-        title = "Warning",
-        shiny::tagList(
-          br(),
-          sprintf("Access Token: %s", PROFILE$access$access_token)
-        )
-      )
-    )
   }
   
   #COMPONENTS
-  
-  #STORAGEHUB
-  STORAGEHUB <- try(d4storagehub4R::StoragehubManager$new(token = PROFILE$access$access_token, token_type = "jwt"))
-  attr(STORAGEHUB, "description") <- "Workspace (StorageHub)"
-  if(is(STORAGEHUB, "try-error")){
-    shiny::showModal(
-      shiny::modalDialog(
-        title = "Error",
-        "Access token doesn't work on STORAGEHUB"
-      )
-    )
-  }
-  
-  icproxy_req <- try(httr::GET(sprintf("https://registry.d4science.org/icproxy/gcube/service/ServiceEndpoint/DataAnalysis/DataMiner"),
-                               httr::add_headers("Authorization" = paste("Bearer", PROFILE$access$access_token))))
-  if(httr::status_code(icproxy_req)!=200){
-    shiny::showModal(
-      shiny::modalDialog(
-        title = "Error",
-        "Access token doesn't work on ICPROXY"
-      )
-    )
-  }
-  
-  sdi_req <- try(httr::GET(sprintf("https://sdi.d4science.org/sdi-service/gcube/service/SDI"),
-                           httr::add_headers(
-                             "Authorization" = paste("Bearer", PROFILE$access$access_token)
-                           )))
-  if(httr::status_code(sdi_req)!=200){
-    shiny::showModal(
-      shiny::modalDialog(
-        title = "Error",
-        "Access token doesn't work on SDI-service"
-      )
-    )
-  }
-  
-  COMPONENTS <- try(loadComponents(profile = PROFILE, sdi = FALSE))
-  if(is(COMPONENTS, "try-error")){
-    shiny::showModal(
-      shiny::modalDialog(
-        title = "Error",
-        paste0("Error while loading components with sdi = TRUE:", COMPONENTS[1])
-      )
-    )
-  }
-  
+  waiter_update(html = tagList(
+    h3(paste0("Welcome to ",CONFIG$dcf$name)),
+    spin_flower(),
+    h4("Loading components..."),
+  ))
+  COMPONENTS <- loadComponents(profile = PROFILE, sdi = FALSE)
   
   #TODO current config from file, next to get from Workspace URL inherited from ICPROXY
   #---------------------------------------------------------------------------------------
@@ -117,12 +65,17 @@ server <- function(input, output, session) {
   #If you are an R developer, you need to create a .REnviron file (no file extension) in /dcf-shiny dir
   #The file should include the local path for your shiny config file in that way:
   #DCF_SHINY_CONFIG=<your config path>
+  waiter_update(html = tagList(
+    h3(paste0("Welcome to ",CONFIG$dcf$name)),
+    spin_flower(),
+    h4("Configuring..."),
+  ))
   local_config_file <- Sys.getenv("DCF_SHINY_CONFIG")
   if(nzchar(local_config_file)) config_file <- local_config_file
   CONFIG <- read_dcf_config(file = config_file)
   print("STEP CONFIG")
   waiter_update(html = tagList(
-    h3(paste0("Welcome to ",CONFIG$dcf$name," Application")),
+    h3(paste0("Welcome to ",CONFIG$dcf$name)),
     spin_flower()
   ))
   
@@ -135,31 +88,29 @@ server <- function(input, output, session) {
   
   #DBI component to add
   #---------------------------------------------------------------------------------------
+  waiter_update(html = tagList(
+    h3(paste0("Welcome to ",CONFIG$dcf$name)),
+    spin_flower(),
+    div("Connecting to database ...")
+  ))
   pool <- loadDBI(config = CONFIG)
   COMPONENTS$POOL <- pool
   print("STEP POOL")
+  #User full profile (roles) initialization
+  #---------------------------------------------------------------------------------------
   waiter_update(html = tagList(
-    h3(paste0("Welcome to ",CONFIG$dcf$name," application")),
+    h3(paste0("Welcome to ",CONFIG$dcf$name)),
     spin_flower(),
     div("User identification ...")
   ))
   print("STEP PROFILE")
   PROFILE <- fetchProfileRoles(pool = COMPONENTS$POOL, profile = PROFILE)
   if("admin" %in% PROFILE$shiny_app_roles){
-    COMPONENTS <- try(loadComponents(profile = PROFILE, sdi = TRUE))
-    if(is(COMPONENTS, "try-error")){
-      shiny::showModal(
-        shiny::modalDialog(
-          title = "Error",
-          paste0("Error while loading components with sdi = TRUE:", COMPONENTS[1])
-        )
-      )
-    }
+    COMPONENTS <- loadComponents(profile = PROFILE, sdi = TRUE)
     COMPONENTS$POOL <- pool
   }
-  
   waiter_update(html = tagList(
-    h3(paste0("Welcome to ",CONFIG$dcf$name," application")),
+    h3(paste0("Welcome to ",CONFIG$dcf$name)),
     spin_flower(),
     h4(paste0("Welcome ",PROFILE$name," !")),
   ))
