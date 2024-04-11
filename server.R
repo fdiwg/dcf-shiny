@@ -74,12 +74,25 @@ server <- function(input, output, session) {
   }
   
   icproxy_req <- try(httr::GET(sprintf("https://registry.d4science.org/icproxy/gcube/service/ServiceEndpoint/DataAnalysis/DataMiner"),
-                               httr::add_headers("Authorization" = paste("Bearer", profile$access$access_token))))
+                               httr::add_headers("Authorization" = paste("Bearer", PROFILE$access$access_token))))
   if(httr::status_code(icproxy_req)!=200){
     shiny::showModal(
       shiny::modalDialog(
         title = "Error",
         "Access token doesn't work on ICPROXY"
+      )
+    )
+  }
+  
+  sdi_req <- try(httr::GET(sprintf("https://sdi.d4science.org/sdi-service/gcube/service/SDI"),
+                           httr::add_headers(
+                             "Authorization" = paste("Bearer", PROFILE$access$access_token)
+                           )))
+  if(httr::status_code(sdi_req)!=200){
+    shiny::showModal(
+      shiny::modalDialog(
+        title = "Error",
+        "Access token doesn't work on SDI-service"
       )
     )
   }
