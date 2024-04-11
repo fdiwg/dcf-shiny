@@ -3,7 +3,7 @@
 server <- function(input, output, session) {
   
   waiting_screen<-tagList(
-    h3("Initializing"),
+    h3("Initializing..."),
     spin_flower()
   )
   
@@ -50,9 +50,8 @@ server <- function(input, output, session) {
   
   #COMPONENTS
   waiter_update(html = tagList(
-    h3(paste0("Welcome to ",CONFIG$dcf$name)),
-    spin_flower(),
-    h4("Loading components..."),
+    h3("Loading components...")
+    spin_flower()
   ))
   COMPONENTS <- loadComponents(profile = PROFILE, sdi = FALSE)
   
@@ -66,9 +65,8 @@ server <- function(input, output, session) {
   #The file should include the local path for your shiny config file in that way:
   #DCF_SHINY_CONFIG=<your config path>
   waiter_update(html = tagList(
-    h3(paste0("Welcome to ",CONFIG$dcf$name)),
-    spin_flower(),
-    h4("Configuring..."),
+    h3("Loading configuration..."),
+    spin_flower()
   ))
   local_config_file <- Sys.getenv("DCF_SHINY_CONFIG")
   if(nzchar(local_config_file)) config_file <- local_config_file
