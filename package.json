@@ -1,6 +1,6 @@
 {
   "id": "dcf-shiny",
-  "version": "0.4.2-2",
+  "version": "0.4.3",
   "date": "2024-04-11",
   "dependencies": [
     {"package": "R6", "version": "2.5.1", "repos": "https://cran.r-project.org"},
@@ -36,7 +36,6 @@
     {"package": "geosapi", "version": "0.7-1", "repos": "https://cran.r-project.org"},
     {"package": "geonapi", "version": "0.6-1", "repos": "https://cran.r-project.org"},
     {"package": "ows4R", "version": "0.3-6", "repos": "https://cran.r-project.org"},
-    {"package": "d4storagehub4R", "version": "0.4-3", "repos": "https://cran.r-project.org"},
     {"package": "jsonld", "version": "2.2", "repos": "https://cran.r-project.org"},
     {"package": "rdflib", "version": "0.2.5", "repos": "https://cran.r-project.org", "dependencies": false},
     {"package": "waiter", "version": "0.2.5", "repos": "https://cran.r-project.org"},
@@ -48,6 +47,7 @@
     {"repo": "eblondel/atom4R", "from": "github", "dependencies": false},
     {"repo": "eblondel/geometa", "from": "github", "dependencies": false},
     {"repo": "eblondel/geonode4R", "from": "github", "dependencies": false},
+    {"repo": "eblondel/d4storagehub4R", "from": "github", "dependencies": false},
     {"repo": "r-geoflow/geoflow", "from": "github", "dependencies": false},
     {"repo": "fdiwg/vrule", "from": "github", "dependencies": false}
   ]
