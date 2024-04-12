@@ -160,6 +160,8 @@ if(!valid){
                        ifelse(summary$status=="PASSED WITH WARNING","\\color{orange1}\\faExclamationTriangle \\color{black}",
                               "\\color{red1}\\faTimesCircle \\color{black}"))
   
+  summary$column<-gsub("_","\\_",summary$column,fixed=T)
+  
   kableExtra::kable(summary,format = "latex",booktabs = T,escape=F,align = "lrc",col.names = NULL,linesep = "")%>%
     kableExtra::kable_styling(latex_options = c("HOLD_position"),font_size = 8,full_width = F)%>%
     row_spec(which(summary$status =="PASSED"), bold = T, color = "#008000", background = "#d3f4cc")%>%
