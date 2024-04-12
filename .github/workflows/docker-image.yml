@@ -32,6 +32,7 @@ jobs:
             org.opencontainers.image.description=A shiny app in support of data collection frameworks
             org.opencontainers.image.vendor=UN-FAO
             org.opencontainers.image.author=UN-FAO
+            org.opencontainers.image.authors=Emmanuel Blondel <emmanuel.blondel@fao.org>
       - name: Login to image repository
         if: github.ref_type == 'tag'
         uses: docker/login-action@v3
