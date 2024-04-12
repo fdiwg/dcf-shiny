@@ -53,7 +53,12 @@ server <- function(input, output, session) {
     h3("Loading components..."),
     spin_flower()
   ))
-  COMPONENTS <- loadComponents(profile = PROFILE, sdi = FALSE)
+  COMPONENTS <- try(loadComponents(profile = PROFILE, sdi = FALSE))
+  if(is(COMPONENTS, "try-error")){
+    waiter_hide()
+    shiny::showModal(shiny::modalDialog(title = "Error", COMPONENTS[1]))
+    stop("Application has stopped!")
+  }
   
   #TODO current config from file, next to get from Workspace URL inherited from ICPROXY
   #---------------------------------------------------------------------------------------

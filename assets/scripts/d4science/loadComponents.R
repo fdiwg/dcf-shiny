@@ -6,6 +6,11 @@ loadComponents <- function(profile, sdi = TRUE){
   #STORAGEHUB
   components$STORAGEHUB <- try(d4storagehub4R::StoragehubManager$new(token = profile$access$access_token, token_type = "jwt"))
   attr(components$STORAGEHUB, "description") <- "Workspace (StorageHub)"
+  if(is(components$STORAGEHUB, "try-error")){
+    components$STORAGEHUB <- "Error while connecting to the STORAGEHUB component. Please contact a system administrator"
+    class(components$STORAGEHUB) <- "try-error"
+    return(components$STORAGEHUB)
+  }
   
   #WPS
   components$WPS_CONFIG <- list()
