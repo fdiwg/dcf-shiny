@@ -24,7 +24,14 @@ jobs:
           tags: |
             type=ref,event=branch
             type=ref,event=pr
-            type=semver,pattern={{version}}  
+            type=semver,pattern={{version}}
+          labels: |
+            org.opencontainers.image.url=https://github.com/fdiwg/dcf-shiny
+            org.opencontainers.image.source=https://github.com/fdiwg/dcf-shiny
+            org.opencontainers.image.title=dcf-shiny
+            org.opencontainers.image.description=A shiny app in support of data collection frameworks
+            org.opencontainers.image.vendor=UN-FAO
+            org.opencontainers.image.author=UN-FAO
       - name: Login to image repository
         if: github.ref_type == 'tag'
         uses: docker/login-action@v3
