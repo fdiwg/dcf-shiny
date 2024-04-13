@@ -193,31 +193,23 @@ data_availability_server <-function(id, parent.session, config, profile, compone
                
                
             file<-data_task<-data_tasks[[x]]
+            colnames(file)[colnames(file)==config$dcf$reporting_entities$name] = "reporting_entity"
             if(!is.null(file)){
               file<-file%>%
-                group_by(flagstate)%>%
+                group_by(reporting_entity)%>%
                 summarise(period=paste0("first:",year(min(time_end,na.rm=T)),"- last:",year(max(time_end,na.rm=T))),
                           min_year=as.character(year(min(time_end,na.rm=T))),
                           max_year=as.character(year(max(time_end,na.rm=T))),
                           nb_year=as.character(length(unique(year(time_end)))),
-                          nb_record=as.character(length(flagstate)),
+                          nb_record=as.character(length(reporting_entity)),
                           available_years=paste0(pretty_seq(sort(unique(year(time_end)))),collapse=";"))%>%
-                arrange(desc(flagstate))%>%
+                arrange(desc(reporting_entity))%>%
                 ungroup()%>%
                 #mutate(task=x)
                 mutate(task=gsub(": ",":\n",names(tasks[tasks==x])))
+              colnames(file)[colnames(file)=="reporting_entity"] = config$dcf$reporting_entities$name
             }else{
               WARN("No data available for task '%s'", x)
-              # file<-data.frame(flagstate=config$dcf$reporting_entities$codelist_ref$code,
-              #                  period="(no data)",
-              #                  min_year="(no data)",
-              #                  max_year="(no data)",
-              #                  nb_year="0",
-              #                  nb_record="0",
-              #                  available_years="(no data)",
-              #                  task=x)%>%
-              #   arrange(desc(flagstate))%>%
-              #   ungroup()
             }
             return(file)
           }))
@@ -225,7 +217,7 @@ data_availability_server <-function(id, parent.session, config, profile, compone
         }else{
           summary<-do.call("rbind",lapply(getTasks(config,withId=TRUE),function(x){
             
-            file<-data.frame(flagstate="",
+            file<-data.frame(reporting_entity="",
                              period="(no data)",
                              min_year="(no data)",
                              max_year="(no data)",
@@ -233,8 +225,10 @@ data_availability_server <-function(id, parent.session, config, profile, compone
                              nb_record="0",
                              available_years="(no data)",
                              task=x)%>%
-              arrange(desc(flagstate))%>%
+              arrange(desc(reporting_entity))%>%
               ungroup()
+            colnames(file)[colnames(file)=="reporting_entity"] = config$dcf$reporting_entities$name
+            file
           })
           )
             
@@ -394,14 +388,15 @@ data_availability_server <-function(id, parent.session, config, profile, compone
           
           for(i in c("period","available_years","min_year","max_year","nb_year","nb_record")){
           df<-data_s()
-          df<-df[,c("flagstate","task",i)]
+          colnames(df)[colnames(df)==config$dcf$reporting_entities$name] = "reporting_entity"
+          df<-df[,c("reporting_entity","task",i)]
           
           names(df)[names(df) == i] <- "stat"
           df<-unique(df)
           
           entity_list <- NULL
           if(isTRUE(input$limit_entities_s)){
-            entity_list<-unique(df$flagstate)
+            entity_list<-unique(df$reporting_entity)
           }else{
             entity_list<-reporting_entities
           }
@@ -414,16 +409,16 @@ data_availability_server <-function(id, parent.session, config, profile, compone
             rowwise()%>%
             mutate(value=ifelse(input$stat_s%in%c("nb_year","nb_record"),as.numeric(stat),1))%>%
             ungroup()%>%
-            complete(nesting(task),flagstate=entity_list,fill = list(value=0,stat="(no data)"))%>%
-            arrange(desc(flagstate))
+            complete(nesting(task),reporting_entity=entity_list,fill = list(value=0,stat="(no data)"))%>%
+            arrange(desc(reporting_entity))
           
           df_values<-df$value
           
           df<-df%>%
             select(-value)%>%
             pivot_wider(names_from = task,values_from = stat,names_sort=T)%>%
-            filter(flagstate %in% entity_list)%>%
-            rename(` `=flagstate)
+            filter(reporting_entity %in% entity_list)%>%
+            rename(` `=reporting_entity)
         
           addWorksheet(wb, i)
           setColWidths(wb, i, cols = 1:ncol(df), widths = "auto")
@@ -459,14 +454,16 @@ data_availability_server <-function(id, parent.session, config, profile, compone
         req(!is.null(data()))
         req(!is.null(input$limit_entities))
         print("RUN HEATMAP")
-        df<-subset(data(),select=c(flagstate,time_end))
+        df<-data()
+        colnames(df)[colnames(df)==config$dcf$reporting_entities$name] <- "reporting_entity"
+        df<-subset(df,select=c(reporting_entity,time_end))
         df$time_end<-year(df$time_end)
         df<-unique(df)
         df$value<-1
         
         entity_list <- NULL
         if(isTRUE(input$limit_entities)){
-          entity_list<-unique(df$flagstate)
+          entity_list<-unique(df$reporting_entity)
         }else{
           entity_list<-reporting_entities
         }
@@ -476,15 +473,15 @@ data_availability_server <-function(id, parent.session, config, profile, compone
         }
         
         df<-df%>%
-          complete(nesting(time_end=full_seq(time_end, 1)),flagstate=entity_list,fill = list(value=0))%>%
+          complete(nesting(time_end=full_seq(time_end, 1)),reporting_entity=entity_list,fill = list(value=0))%>%
           rename(year=time_end)%>%
-          arrange(desc(flagstate),year)%>%
-          filter(flagstate %in% entity_list)%>%
+          arrange(desc(reporting_entity),year)%>%
+          filter(reporting_entity %in% entity_list)%>%
           pivot_wider(names_from = year,values_from = value,names_sort=T)
         
         print(head(as.data.frame(df)))
         
-        y_lab<-df$flagstate
+        y_lab<-df$reporting_entity
         x_lab<-colnames(df)[-1]
         
         df_matrix<-as.matrix(df[,-1])
@@ -525,7 +522,8 @@ data_availability_server <-function(id, parent.session, config, profile, compone
         req(!is.null(input$stat_s))
         print(input$stat_s)
         df<-data_s()
-        df<-df[,c("flagstate","task",input$stat_s)]
+        colnames(df)[colnames(df)==config$dcf$reporting_entities$name] = "reporting_entity"
+        df<-df[,c("reporting_entity","task",input$stat_s)]
 
         names(df)[names(df) == input$stat_s] <- "stat"
         df<-unique(df)
@@ -540,7 +538,7 @@ data_availability_server <-function(id, parent.session, config, profile, compone
         print(max_value)
         entity_list <- NULL
         if(isTRUE(input$limit_entities_s)){
-          entity_list<-unique(df$flagstate)
+          entity_list<-unique(df$reporting_entity)
         }else{
           entity_list<-reporting_entities
         }
@@ -550,9 +548,9 @@ data_availability_server <-function(id, parent.session, config, profile, compone
         }
         
         df<-df%>%
-          complete(task = names(getTasks(config,withId=TRUE)),flagstate=entity_list,fill = list(value=0,stat="(no data)"))%>%
-          arrange(desc(flagstate))%>%
-          filter(flagstate %in% entity_list)
+          complete(task = names(getTasks(config,withId=TRUE)),reporting_entity=entity_list,fill = list(value=0,stat="(no data)"))%>%
+          arrange(desc(reporting_entity))%>%
+          filter(reporting_entity %in% entity_list)
         
         text<-df%>%
           select(-value)
@@ -567,7 +565,7 @@ data_availability_server <-function(id, parent.session, config, profile, compone
         print(head(as.data.frame(dfm)))
         print(head(as.data.frame(text)))
         
-        y_lab<-dfm$flagstate
+        y_lab<-dfm$reporting_entity
         x_lab<-colnames(dfm)[-1]
         
         df_matrix<-as.matrix(dfm[,-1])
@@ -614,7 +612,7 @@ data_availability_server <-function(id, parent.session, config, profile, compone
         fig<-layout(fig,
                     showlegend = FALSE,
                     xaxis = list(side ="top",showgrid = F)
-        )%>% add_annotations(x = text$task, y = text$flagstate, text = text$stat, xref = 'x', yref = 'y', showarrow = FALSE, font=list(color='black'))
+        )%>% add_annotations(x = text$task, y = text$reporting_entity, text = text$stat, xref = 'x', yref = 'y', showarrow = FALSE, font=list(color='black'))
         return(fig)
       })
       
