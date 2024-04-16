@@ -357,9 +357,9 @@ data_availability_server <-function(id, parent.session, config, profile, compone
             out = NULL
             col = column_spec$name
             if(column_spec$name %in% c("month", "quarter")) col = "period"
-            reorder = startsWith(colnames(target_data), col)
+            reorder = colnames(target_data) == col
             if(input$with_col_aliases) if(length(column_spec$aliases)>0){
-              reorder = startsWith(colnames(target_data), column_spec$aliases[[1]])
+              reorder = colnames(target_data) == column_spec$aliases[[1]]
             }
             if(length(reorder)>0){
               columns = colnames(target_data)[reorder]
