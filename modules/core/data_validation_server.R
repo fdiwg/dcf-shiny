@@ -38,6 +38,8 @@ data_validation_server <- function(id, parent.session, config, profile, componen
             task_id = NULL,
             task_name =NULL,
             reporting_entity = NULL,
+            validation_start = NULL,
+            validation_end = NULL,
             notes = "-"
           )
           submitted<<-reactiveVal(NULL)
@@ -89,6 +91,8 @@ data_validation_server <- function(id, parent.session, config, profile, componen
           submission$task_id = NULL
           submission$task_name =NULL
           submission$reporting_entity = NULL
+          submission$validation_start = NULL
+          submission$validation_end = NULL
           submission$notes = "-"
           
           submitted<-submitted(NULL)
@@ -598,6 +602,9 @@ data_validation_server <- function(id, parent.session, config, profile, componen
         task_def <- readTaskDefinition(file = task_def_url)
         hostess$set(5)
         
+        #VALIDATION START
+        #----------------
+        submission$validation_start = Sys.time()
         #Validation of structure
         INFO("Validating data structure")
         out<-validateDataStructure(file = data, task_def = task_def, format = input$format)
@@ -644,6 +651,7 @@ data_validation_server <- function(id, parent.session, config, profile, componen
             loadedData<-loadedData(data)
           }
           hostess$set(99)
+          submission$validation_end = Sys.time()
         }
         
         INFO("=> data structure validation report")
@@ -697,17 +705,23 @@ data_validation_server <- function(id, parent.session, config, profile, componen
           #Data informations
           box(title=HTML("<b>Submission information</b>"),status = "info", solidHeader = TRUE,collapsible = F,collapsed=F,width = 12,
               div(
-                column(3,style = "border: 1px solid black;",
+                column(3,style = "border: 1px solid black;height:90px;",
                        p(strong("Task ID: "),input$task),
-                       p(strong("Date of Report : "),Sys.Date())
+                       p(strong("Reporting entity: "), input$reporting_entity),
+                       p(strong("Report date: "),Sys.Date())
                 ),
-                column(6,style = "border: 1px solid black;",
+                column(3,style = "border: 1px solid black;height:90px;",
+                       p(strong("Validation start: "), submission$validation_start),
+                       p(strong("Validation end: "), submission$validation_end),
+                       p(strong(sprintf("Validation done in %s seconds", round(as(difftime(submission$validation_end, submission$validation_start, units = "secs"),"numeric"), 2))))
+                ),
+                column(3,style = "border: 1px solid black;height:90px;",
                        p(strong("Task Name: "),taskProfile()$name),
-                       p(strong("File : "),file_info$name)
+                       p(strong("File: "),file_info$name)
                 ),
-                column(3,style = "border: 1px solid black;",
-                       p(strong("Format : "),input$format),
-                       p(strong("Approved for Upload : "),span(ifelse(valid,"Yes","No"),style = ifelse(valid,"color:green","color:red")))
+                column(3,style = "border: 1px solid black;height:90px;",
+                       p(strong("Format: "),input$format),
+                       p(strong("Approved for Upload: "),span(ifelse(valid,"Yes","No"),style = ifelse(valid,"color:green","color:red")))
                 )
               ),
               br(),
