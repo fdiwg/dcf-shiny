@@ -190,11 +190,10 @@ data_availability_server <-function(id, parent.session, config, profile, compone
             # file<-readr::read_csv(item)
                
             #file<-getDataTaskDBData(pool, x)
-               
-               
+
             file<-data_task<-data_tasks[[x]]
-            colnames(file)[colnames(file)==config$dcf$reporting_entities$name] = "reporting_entity"
             if(!is.null(file)){
+              colnames(file)[colnames(file)==config$dcf$reporting_entities$name] = "reporting_entity"
               file<-file%>%
                 group_by(reporting_entity)%>%
                 summarise(period=paste0("first:",year(min(time_end,na.rm=T)),"- last:",year(max(time_end,na.rm=T))),
