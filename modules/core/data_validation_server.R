@@ -477,7 +477,7 @@ data_validation_server <- function(id, parent.session, config, profile, componen
       #-----------------------------------------------------------------------------------
       #TAB 2 - PREVIEW
       #-----------------------------------------------------------------------------------
-      output$dataView<-DT::renderDT(server = FALSE, {
+      output$dataView<-DT::renderDT(server = TRUE, {
         req(input$file)
         if(!is.null(input$file)){
           if(any(endsWith(input$file$datapath,c("xls","xlsx")))){
