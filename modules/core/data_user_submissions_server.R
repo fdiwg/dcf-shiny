@@ -208,9 +208,9 @@ data_user_submissions_server <- function(id, parent.session, config, profile, co
               "Submission ID" = item$id,
               "Data call ID" = item$data_call_id,
               "Task ID" = item$task_id,
-              "Flag" = if(config$dcf$reporting_entities$name %in% c("country", "flagstate")){
+              "Flag" = if(config$dcf$reporting_entities$icon == "flag"){
                 paste0('<img src="https://raw.githubusercontent.com/fdiwg/flags/main/', tolower(item$reporting_entity),'.gif" height=16 width=32></img>')
-              }else if(config$dcf$reporting_entities$name == "rfmo"){
+              }else if(config$dcf$reporting_entities$icon == "rfmo"){
                 paste0('<img src="https://www.fao.org/fishery/services/storage/fs/fishery/images/organization/logo/', tolower(item$reporting_entity),'.jpg" height=16 width=32></img>')
               }else{""},          "Reporting entity" = as.factor(item$reporting_entity),
               "Owner" = item$owner,

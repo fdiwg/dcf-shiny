@@ -367,11 +367,9 @@ data_admin_submissions_server <- function(id, parent.session, config, profile, c
               "Data call ID" = item$data_call_id,
               "Data call Folder" = as.factor(item$data_call_folder),
               "Task ID" = as.factor(item$task_id),
-              #"Flag" = paste0('<img src="https://www.fao.org/fileadmin/assets/countries/flags/', tolower(item$reporting_entity),'.gif" height=16 width=32></img>'),
-              #"Flag" = paste0('<img src="https://countryflagsapi.com/png/', tolower(item$reporting_entity),'" height=16 width=32></img>'),
-              "Flag" = if(config$dcf$reporting_entities$name %in% c("country", "flagstate")){
+              "Flag" = if(config$dcf$reporting_entities$icon == "flag"){
                          paste0('<img src="https://raw.githubusercontent.com/fdiwg/flags/main/', tolower(item$reporting_entity),'.gif" height=16 width=32></img>')
-                       }else if(config$dcf$reporting_entities$name == "rfmo"){
+                       }else if(config$dcf$reporting_entities$icon == "rfmo"){
                          paste0('<img src="https://www.fao.org/fishery/services/storage/fs/fishery/images/organization/logo/', tolower(item$reporting_entity),'.jpg" height=16 width=32></img>')
                        }else{""},
               "Reporting entity" = as.factor(item$reporting_entity),
@@ -440,9 +438,9 @@ data_admin_submissions_server <- function(id, parent.session, config, profile, c
           )
         }
         
-        if(config$dcf$reporting_entities$name %in% c("country", "flagstate")){
+        if(config$dcf$reporting_entities$icon == "flag"){
           
-        }else if(config$dcf$reporting_entities$name == "rfmo"){
+        }else if(config$dcf$reporting_entities$icon == "rfmo"){
          data<-data%>%
            rename(Logo=Flag)
         }else{

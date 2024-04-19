@@ -37,7 +37,7 @@ user_management_server <- function(id, parent.session, config, profile, componen
             },
             if(!is.null(config$dcf$reporting_entities)){
               #special case for country/flagstate (to display flag)
-              if(config$dcf$reporting_entities$name %in% c("country", "flagstate")){
+              if(config$dcf$reporting_entities$icon == "flag"){
                 selectizeInput(ns("user_form_reporting_entities"), label = "Reporting entities", selected = reporting_entities, multiple = TRUE, 
                   choices = {
                     ref_entity <- getReportingEntityCodes(config)
@@ -56,7 +56,7 @@ user_management_server <- function(id, parent.session, config, profile, componen
                     }"
                   ))
                 )
-              }else if(config$dcf$reporting_entities$name == "rfmo"){
+              }else if(config$dcf$reporting_entities$icon == "rfmo"){
                 selectizeInput(ns("user_form_reporting_entities"), label = "Reporting entities", selected = reporting_entities, multiple = TRUE, 
                                choices = {
                                  ref_entity <- getReportingEntityCodes(config)

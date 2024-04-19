@@ -23,9 +23,9 @@ dashboard_server <- function(id, parent.session, config, profile, components,rel
         if(nrow(ref_entity_db>0)){
           entity_choices <- ref_entity_db$code
           reporting_entities_list<-setNames(entity_choices, ref_entity_db$label)
-          if(config$dcf$reporting_entities$name %in% c("country", "flagstate")){
+          if(config$dcf$reporting_entities$icon == "flag"){
             assignedRE<-p(HTML(paste0(sprintf("<span><img src=\"https://raw.githubusercontent.com/fdiwg/flags/main/%s.gif\" height=16 width=32/> %s[%s]</span>",tolower(reporting_entities_list),names(reporting_entities_list),reporting_entities_list),collapse = "<br>")),style="column-count: 2;max-height:250px;overflow-y: auto;")
-          }else if(config$dcf$reporting_entities$name == "rfmo"){
+          }else if(config$dcf$reporting_entities$icon == "rfmo"){
             assignedRE<-p(HTML(paste0(sprintf("<span><img src=\"https://www.fao.org/fishery/services/storage/fs/fishery/images/organization/logo/%s.jpg\" height=16 width=32/> %s[%s]</span>",tolower(reporting_entities_list),names(reporting_entities_list),reporting_entities_list),collapse = "<br>")),style="column-count: 2;max-height:250px;overflow-y: auto;")
           }else{
             assignedRE<-p(HTML(paste0(sprintf("<span>%s[%s]</span>",tolower(reporting_entities_list),names(reporting_entities_list),reporting_entities_list),collapse = "<br>")),style="column-count: 2;max-height:250px;overflow-y: auto;")

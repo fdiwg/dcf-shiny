@@ -123,7 +123,7 @@ data_entry_editor_server <- function(id, parent.session, config, profile, compon
       output$reporting_entity_wrapper <- renderUI({
         if(!is.null(profile$reporting_entities)) {
           if(all(profile$reporting_entities != "")){
-            if(config$dcf$reporting_entities$name %in% c("country", "flagstate")){
+            if(config$dcf$reporting_entities$icon == "flag"){
               selectizeInput(ns("reporting_entity"), label = "Reporting entity", selected = NULL, multiple = FALSE, 
                              choices = {
                                ref_entity <- getReportingEntityCodes(config)
@@ -146,7 +146,7 @@ data_entry_editor_server <- function(id, parent.session, config, profile, compon
                                onInitialize = I('function() { this.setValue(""); }')
                              )
               )
-            }else if(config$dcf$reporting_entities$name == "rfmo"){
+            }else if(config$dcf$reporting_entities$icon == "rfmo"){
               selectizeInput(ns("reporting_entity"), label = "Reporting entity", selected = NULL, multiple = FALSE, 
                              choices = {
                                ref_entity <- getReportingEntityCodes(config)

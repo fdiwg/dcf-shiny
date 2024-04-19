@@ -82,6 +82,12 @@ server <- function(input, output, session) {
     spin_flower()
   ))
   
+  #reporting entities config options
+  #---------------------------------------------------------------------------------------
+  if(!is.null(CONFIG$dcf$reporting_entities)){
+    if(is.null(CONFIG$dcf$reporting_entities$icon)) CONFIG$dcf$reporting_entities$icon = ""
+  }
+  
   #VRULE config options
   #---------------------------------------------------------------------------------------
   if(!is.null(CONFIG$vrule)){

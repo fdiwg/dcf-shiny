@@ -333,7 +333,7 @@ data_validation_server <- function(id, parent.session, config, profile, componen
         if(has_task){
         if(!is.null(profile$reporting_entities)) {
           if(all(profile$reporting_entities != "")){
-            if(config$dcf$reporting_entities$name %in% c("country", "flagstate")){
+            if(config$dcf$reporting_entities$icon == "flag"){
               selectizeInput(ns("reporting_entity"), label = "Reporting entity", selected = NULL, multiple = FALSE, 
                choices = {
                  ref_entity <- getReportingEntityCodes(config)
@@ -356,7 +356,7 @@ data_validation_server <- function(id, parent.session, config, profile, componen
                  onInitialize = I('function() { this.setValue(""); }')
                 )
               )
-            }else if(config$dcf$reporting_entities$name == "rfmo"){
+            }else if(config$dcf$reporting_entities$icon == "rfmo"){
               selectizeInput(ns("reporting_entity"), label = "Reporting entity", selected = NULL, multiple = FALSE, 
                              choices = {
                                ref_entity <- getReportingEntityCodes(config)
