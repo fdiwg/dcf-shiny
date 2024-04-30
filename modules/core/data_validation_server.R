@@ -983,12 +983,12 @@ data_validation_server <- function(id, parent.session, config, profile, componen
           status_icon<-tags$span(shiny::icon("ban"))
           status_box<-NULL
           
-          status_text<-sprintf("3/3 %s <span><b> Consistancy with Data Call - %s</b></span>",status_icon,status)
+          status_text<-sprintf("3/3 %s <span><b> Consistency with Data Call - %s</b></span>",status_icon,status)
           content<-tagList(
             br(),
             box(title=HTML(status_text),status = status_box, solidHeader = TRUE,collapsible = T,collapsed = T,width = 12,
                 div(
-                  p("Consistancy with data call can't be tested because data strucure in not valid") 
+                  p("Consistency with data call can't be tested because data strucure in not valid") 
                 )
             ),
             actionButton(ns("goBackPreview"),label =span(icon("angles-left"),"Previous")),
@@ -1003,12 +1003,12 @@ data_validation_server <- function(id, parent.session, config, profile, componen
           status_icon<-tags$span(shiny::icon("ban"))
           status_box<-NULL
           
-          status_text<-sprintf("3/3 %s <span><b> Consistancy with Data Call - %s</b></span>",status_icon,status)
+          status_text<-sprintf("3/3 %s <span><b> Consistency with Data Call - %s</b></span>",status_icon,status)
           content<-tagList(
             br(),
             box(title=HTML(status_text),status = status_box, solidHeader = TRUE,collapsible = T,collapsed = T,width = 12,
                 div(
-                  p("Consistancy with data call can't be tested because data content in not valid") 
+                  p("Consistency with data call can't be tested because data content in not valid") 
                 )
             ),
             actionButton(ns("goBackPreview"),label =span(icon("angles-left"),"Previous")),
@@ -1021,12 +1021,12 @@ data_validation_server <- function(id, parent.session, config, profile, componen
               status_icon<-tags$span(shiny::icon("ban"))
               status_box<-NULL
               
-              status_text<-sprintf("3/3 %s <span><b> Consistancy with Data Call - %s</b></span>",status_icon,status)
+              status_text<-sprintf("3/3 %s <span><b> Consistency with Data Call - %s</b></span>",status_icon,status)
               content<-tagList(
                 br(),
                 box(title=HTML(status_text),status = status_box, solidHeader = TRUE,collapsible = T,collapsed = T,width = 12,
                     div(
-                      p("Consistancy with data call can't be tested because no data call is open") 
+                      p("Consistency with data call can't be tested because no data call is open") 
                     )
                 ),
                 actionButton(ns("goBackPreview"),label =span(icon("angles-left"),"Previous")),
@@ -1057,7 +1057,7 @@ data_validation_server <- function(id, parent.session, config, profile, componen
                             
         )
         
-        status_text<-sprintf("3/3 %s <span><b> Consistancy with Data Call - %s</b></span>",status_icon,status)
+        status_text<-sprintf("3/3 %s <span><b> Consistency with Data Call - %s</b></span>",status_icon,status)
         
         output$dcSummary<-DT::renderDT(server = FALSE, {
           summary<-out$summary
@@ -1211,97 +1211,103 @@ data_validation_server <- function(id, parent.session, config, profile, componen
       #-----------------------------------------------------------------------------------
       #TAB 4 MANAGER
       observeEvent(input$goMetadata,{
-        
-        if(!"metadata"%in%computedSteps()){
+        print(computedSteps())
+        if(!"metadata_edition"%in%computedSteps()){
+          INFO("Render and display metadata wizard step")
+          print(file_info$name)
           
-          computedSteps<-computedSteps(c(computedSteps(),"metadata"))
-        
-        appendTab(inputId = "wizard-tabs",
+          computedSteps<-computedSteps(c(computedSteps(),"metadata_edition"))
+          
+          keyword_choices = geometa::ISOKeywordType$values()
+          
+          appendTab(inputId = "wizard-tabs",
                   session = parent.session,
                   select=TRUE,
                   tabPanel("4-Metadata", 
-                           value="metadata",
-                           tabBox(id = "metadata",title=NULL,height="600px",width = "100%",
-                                  tabPanel(title=tagList(icon("file-pen"),"Identification"),
-                                           value="tab_desc",
-                                           box(title="Informations",collapsible = T,
-                                               fluidRow(
-                                                 column(3,textInput(ns("file_id"),"Identifier", value = tolower(gsub(" |-","_",unlist(strsplit(file_info$name,".",fixed=T))[1])), width = NULL, placeholder = "Add a identifier")),
-                                                 column(3,textInput(ns("file_title"),"Title", value = "", width = NULL, placeholder = "Add a title")),
-                                                 column(6,shiny::textAreaInput(ns("file_description"), value = "", label = "Abstract", placeholder = "Add a abstract"))
-                                               )
-                                             ),
-                                           fluidRow(),
-                                           box(title="Keywords",collapsible = T,
-                                               fluidRow(
-                                                  column(3,
-                                                    selectizeInput(ns("keyword_type"),
-                                                                  label="Type",
-                                                                  multiple = F,
-                                                                  choices = geometa::ISOKeywordType$values(),
-                                                                  selected="theme"
-                                                    )
-                                                  ),
-                                                  column(3,textInput(ns("keyword_description"),"Keyword",value = "", width = NULL, placeholder = "Add keyword")),
-                                                  column(3,textInput(ns("keyword_link"),"Link",value = "", width = NULL, placeholder = "http://...")),
-                                                  column(3,
-                                                    shinyWidgets::circleButton(ns("add_keyword"),title="Add keyword",size="sm",label="",icon=icon("plus"),class = "btn-success"),
-                                                    shinyWidgets::circleButton(ns("clear_keyword"),title="Clear keywords",size="sm",label="",icon=icon("trash"),class = "btn-warning")
-                                                  )
-                                                ),
-                                                fluidRow(
-                                                  div(uiOutput(ns("keyword_list")))
-                                                ),
-                                               uiOutput(ns("keyword_table_wrapper"))
-                                           )
-                                  ),
-                                  tabPanel(title=tagList(icon("link"),"Relations"),
-                                           value="tab_relation",
-                                           box(title="Relations",collapsible = T,
-                                               fluidRow(
-                                                 column(3, selectizeInput(ns("relation_type"),
-                                                                          label="Type",
-                                                                          multiple = F,
-                                                                          choices = c("website","metadata","data"),
-                                                                          selected="website"
-                                                 )),
-                                                 column(3,textInput(ns("relation_description"),"Description",value = "", width = NULL, placeholder = "Relation description")),
-                                                 column(3,textInput(ns("relation_link"),"Link",value = "", width = NULL, placeholder = "http://...")),
-                                                 column(3,
-                                                        shinyWidgets::circleButton(ns("add_relation"),title="Add relation",size="sm",label="",icon=icon("plus"),class = "btn-success"),
-                                                        shinyWidgets::circleButton(ns("clear_relation"),title="Clear relation",size="sm",label="",icon=icon("trash"),class = "btn-warning"))
-                                               ),
-                                               uiOutput(ns("relation_table_wrapper"))
-                                           )
-                                  ),
-                                  tabPanel(title=tagList(icon("list-check"),"Provenance"),
-                                           value="tab_process",
-                                           div(
-                                             textInput(ns("process_statement"),"Statement", value = "Data processing", width = NULL, placeholder = "Declare statement"),
-                                             box(title="Processes",collapsible = T,
-                                                 fluidRow(
-                                                   column(3,textInput(ns("process_name"),"Title",value = "", width = NULL, placeholder = "Process title")),
-                                                   column(3,textInput(ns("process_description"),"Description",value = "", width = NULL, placeholder = "Process description")),
-                                                   column(3,textInput(ns("process_link"),"Link",value = "", width = NULL, placeholder = "http://...")),
-                                                   column(3,
-                                                    shinyWidgets::circleButton(ns("add_process"),title="Add process",size="sm",label="",icon=icon("plus"),class = "btn-success"),
-                                                    shinyWidgets::circleButton(ns("clear_process"),title="Clear process",size="sm",label="",icon=icon("trash"),class = "btn-warning"))
-                                                  ),
-                                                  uiOutput(ns("process_table_wrapper"))
+                           value="metadata_edition",
+                           tabBox(id="metadata",title=NULL, height = "600px", width = "100%",
+                                  tabPanel(title=tagList(icon("file-pen"),"Identification"), value="tab_desc",
+                                     box(title="Informations",collapsible = T,
+                                        fluidRow(
+                                          column(3,textInput(ns("file_id"),"Identifier", value = tolower(gsub(" |-","_",unlist(strsplit(file_info$name,".",fixed=T))[1])), width = NULL, placeholder = "Add a identifier")),
+                                          column(3,textInput(ns("file_title"),"Title", value = "", width = NULL, placeholder = "Add a title")),
+                                          column(6,shiny::textAreaInput(ns("file_description"), value = "", label = "Abstract", placeholder = "Add a abstract"))
+                                        )
+                                      ),
+                                      fluidRow(),
+                                      box(title="Keywords",collapsible = T,
+                                        fluidRow(
+                                           column(3,
+                                             selectizeInput(ns("keyword_type"),
+                                                           label="Type",
+                                                           multiple = F,
+                                                           choices = as.list(geometa::ISOKeywordType$values()),
+                                                           selected="theme"
                                              )
+                                           ),
+                                           column(3,textInput(ns("keyword_description"),"Keyword",value = "", width = NULL, placeholder = "Add keyword")),
+                                           column(3,textInput(ns("keyword_link"),"Link",value = "", width = NULL, placeholder = "http://...")),
+                                           column(3,
+                                              actionButton(ns("add_keyword"),title="Add keyword",size="sm",label="",icon=icon("plus"),class = "btn-success", style = "margin-top:25px;"),
+                                              actionButton(ns("clear_keyword"),title="Clear keywords",size="sm",label="",icon=icon("trash"),class = "btn-warning", style = "margin-top:25px;")
                                            )
+                                        ),
+                                        fluidRow(
+                                          div(uiOutput(ns("keyword_list")))
+                                        ),
+                                       uiOutput(ns("keyword_table_wrapper"))
+                                      )
+                                  ),
+                                  tabPanel(title=tagList(icon("link"),"Relations"), value="tab_relation",
+                                           box(title="Relations",collapsible = T,
+                                              fluidRow(
+                                                column(3, selectizeInput(ns("relation_type"),
+                                                                         label="Type",
+                                                                         multiple = F,
+                                                                         choices = c("website","metadata","data"),
+                                                                         selected="website"
+                                                )),
+                                                column(3,textInput(ns("relation_description"),"Description",value = "", width = NULL, placeholder = "Relation description")),
+                                                column(3,textInput(ns("relation_link"),"Link",value = "", width = NULL, placeholder = "http://...")),
+                                                column(3,
+                                                  actionButton(ns("add_relation"),title="Add relation",size="sm",label="",icon=icon("plus"),class = "btn-success", style = "margin-top:25px;"),
+                                                  actionButton(ns("clear_relation"),title="Clear relation",size="sm",label="",icon=icon("trash"),class = "btn-warning", style = "margin-top:25px;")
+                                                )
+                                              ),
+                                              uiOutput(ns("relation_table_wrapper"))
+                                          )
+                                  ),
+                                  tabPanel(title=tagList(icon("list-check"),"Provenance"), value="tab_process",
+                                           div(
+                                              textInput(ns("process_statement"),"Statement", value = "Data processing", width = NULL, placeholder = "Declare statement"),
+                                              box(title="Processes",collapsible = T,
+                                                  fluidRow(
+                                                    column(3,textInput(ns("process_name"),"Title",value = "", width = NULL, placeholder = "Process title")),
+                                                    column(3,textInput(ns("process_description"),"Description",value = "", width = NULL, placeholder = "Process description")),
+                                                    column(3,textInput(ns("process_link"),"Link",value = "", width = NULL, placeholder = "http://...")),
+                                                    column(3,
+                                                     actionButton(ns("add_process"),title="Add process",size="sm",label="",icon=icon("plus"),class = "btn-success", style = "margin-top:25px;"),
+                                                     actionButton(ns("clear_process"),title="Clear process",size="sm",label="",icon=icon("trash"),class = "btn-warning", style = "margin-top:25px;")
+                                                    )
+                                                   ),
+                                                   uiOutput(ns("process_table_wrapper"))
+                                              )
+                                            )
                                   )
+      
                            ),
                            actionButton(ns("goBackGlobValid"),label =span(icon("angles-left"),"Previous")),
                            actionButton(ns("goHome4"),label =span(icon("home"),"Home")),
                            actionButton(ns("goSend"),label =span("Next",icon("angles-right")))
 
                   )
-        )
+          )
+          
         }else{
+          INFO("Display metadata wizard step")
           updateTabsetPanel(inputId = "wizard-tabs", 
                             session = parent.session,
-                            selected = "metadata")
+                            selected = "metadata_edition")
         }
       })
       
