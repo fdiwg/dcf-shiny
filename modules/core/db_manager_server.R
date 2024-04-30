@@ -269,7 +269,7 @@ db_manager_server <- function(id, parent.session, config, profile, components,re
       #TAB 2 - MERGE DATA
       #TAB 2 MANAGER
       #----------------------
-      output$db_data_preview <- DT::renderDT(server = FALSE, {
+      output$db_data_preview <- DT::renderDT(server = TRUE, {
         if(nrow(data_resources$dbdatanew_duplicates)>0){
           DT::datatable(
             data_resources$dbdatanew_duplicates,
