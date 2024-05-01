@@ -41,7 +41,7 @@ data_entry_editor_server <- function(id, parent.session, config, profile, compon
         info<-template_info()
         
         if("tab_editor"%in%menu_tabs()){
-           removeTab(inputId = "tabbox",
+           removeTab(inputId = "tabbox_data_editor",
                      session = parent.session,
                      target = "tab_editor")
          }
@@ -49,14 +49,14 @@ data_entry_editor_server <- function(id, parent.session, config, profile, compon
          tabs_list<-unique(c(menu_tabs(),"tab_editor"))
          menu_tabs<-menu_tabs(tabs_list)
         
-        appendTab(inputId = "tabbox",
+        appendTab(inputId = "tabbox_data_editor",
                   session = parent.session,
                   select=TRUE,
           tabPanel(title=tagList(icon("edit"),"Editor"),
                    value="tab_editor",
                      uiOutput(ns("buttons_wrapper")),
                      br(),
-                     uiOutput(ns("table_wrapper"))
+                     uiOutput(ns("hst_table_wrapper"))
                    
           )
         )
@@ -64,7 +64,7 @@ data_entry_editor_server <- function(id, parent.session, config, profile, compon
         if(any(!is.na(info$ref))){
           
           if("tab_referentials"%in%menu_tabs()){
-            removeTab(inputId = "tabbox",
+            removeTab(inputId = "tabbox_data_editor",
                       session = parent.session,
                       target = "tab_referentials")
           }
@@ -72,7 +72,7 @@ data_entry_editor_server <- function(id, parent.session, config, profile, compon
           tabs_list<-unique(c(menu_tabs(),"tab_referentials"))
           menu_tabs<-menu_tabs(tabs_list)
           
-          appendTab(inputId = "tabbox",
+          appendTab(inputId = "tabbox_data_editor",
                     session = parent.session,
                     select=FALSE,
             tabPanel(title=tagList(icon("search"),"Referentials"),
@@ -86,7 +86,7 @@ data_entry_editor_server <- function(id, parent.session, config, profile, compon
         }
         
         if("tab_templates"%in%menu_tabs()){
-          removeTab(inputId = "tabbox",
+          removeTab(inputId = "tabbox_data_editor",
                     session = parent.session,
                     target = "tab_templates")
         }
@@ -94,7 +94,7 @@ data_entry_editor_server <- function(id, parent.session, config, profile, compon
         tabs_list<-unique(c(menu_tabs(),"tab_templates"))
         menu_tabs<-menu_tabs(tabs_list)
          
-        appendTab(inputId = "tabbox",
+        appendTab(inputId = "tabbox_data_editor",
                   session = parent.session,
                   select=FALSE,
                   tabPanel(title=tagList(icon("download"),"Templates"),
@@ -263,7 +263,7 @@ data_entry_editor_server <- function(id, parent.session, config, profile, compon
       
       observeEvent(input$new_data,{
         req(input$new_data)
-          ready<-ready(TRUE)
+        ready<-ready(TRUE)
       })
       
       observeEvent(input$import_data,{
@@ -321,7 +321,7 @@ data_entry_editor_server <- function(id, parent.session, config, profile, compon
         req(input$format)
         if(!is.null(input$task))if(input$task!="")if(!is.null(input$reporting_entity))if(input$reporting_entity!="")if(!is.null(input$format))if(input$format!=""){
           reset<-FALSE
-          if(!is.null(input$table)){
+          if(!is.null(input$hst_table)){
             reset<-TRUE
             showModal(
               modalDialog(
@@ -362,7 +362,7 @@ data_entry_editor_server <- function(id, parent.session, config, profile, compon
             data_template[1,]<-values_type
             
             empty_row<-empty_row(data_template)
-            cache_data<-cache_data(data_template[rep(seq_len(nrow(data_template)), 10), ])
+            cache_data<-cache_data(data_template[rep(seq_len(nrow(data_template)), 5), ])
           })
         }
       })
@@ -408,7 +408,7 @@ data_entry_editor_server <- function(id, parent.session, config, profile, compon
             data_template[1,]<-values_type
             
             empty_row<-empty_row(data_template)
-            cache_data<-cache_data(data_template[rep(seq_len(nrow(data_template)), 10), ])
+            cache_data(data_template[rep(seq_len(nrow(data_template)), 10), ])
           })
         }
       })
@@ -498,13 +498,13 @@ data_entry_editor_server <- function(id, parent.session, config, profile, compon
           sprintf("data_%s_%s_%s.csv",input$task,input$reporting_entity,input$format)
         },
         content = function(filename) {
-          data_to_save<-hot_to_r(input$table)
+          data_to_save<-hot_to_r(input$hst_table)
           data_to_save<-as.data.frame(data_to_save)
           data_to_load<-data_spec()$standardizeContent(data_to_save)
           write.csv(data_to_save, filename,row.names = F)
         })
       
-      output$table<-renderRHandsontable({
+      output$hst_table<-rhandsontable::renderRHandsontable({
         req(!is.null(cache_data()))
         req(ready())
 
@@ -542,8 +542,10 @@ data_entry_editor_server <- function(id, parent.session, config, profile, compon
         cache_report<-cache_report(report)
         
         #display
-        editable_table<-data_spec()$display_as_handsontable(data, report, read_only = FALSE) %>%
+        editable_table<-data_spec()$display_as_handsontable(data, as.data.frame(report), read_only = FALSE) %>%
           hot_context_menu(allowRowEdit = T, allowColEdit = F)
+        
+        editable_table
         
         #column that should not be editable --> put them as readonly
         info<-template_info()  
@@ -565,24 +567,24 @@ data_entry_editor_server <- function(id, parent.session, config, profile, compon
           }
         }
         
-        return(editable_table)
+        editable_table
       })
 
       
        #observe changes on handsontable
-       observeEvent(input$table$changes$changes,{
+       observeEvent(input$hst_table$changes$changes,{
          WARN("Triggered handsontable cell event on render")
-         target_cell_row = input$table$changes$changes[[1]][[1]]+1
-         target_cell_col = input$table$changes$changes[[1]][[2]]+1
-         target_cell_value_old = input$table$changes$changes[[1]][[3]]
+         target_cell_row = input$hst_table$changes$changes[[1]][[1]]+1
+         target_cell_col = input$hst_table$changes$changes[[1]][[2]]+1
+         target_cell_value_old = input$hst_table$changes$changes[[1]][[3]]
          if(is.null(target_cell_value_old)) target_cell_value_old = ""
-         target_cell_value_new = input$table$changes$changes[[1]][[4]]
+         target_cell_value_new = input$hst_table$changes$changes[[1]][[4]]
          if(is.null(target_cell_value_new)) target_cell_value_new = ""
          if(target_cell_value_old != target_cell_value_new){
            WARN("Changed row = %s", target_cell_row)
            WARN("Changed col = %s", target_cell_col)
            WARN("Value '%s' changed by '%s'", target_cell_value_old, target_cell_value_new)
-           updated_hst = hot_to_r(input$table) %>% as.data.frame()
+           updated_hst = hot_to_r(input$hst_table) %>% as.data.frame()
            
            WARN("Caching data...")
            WARN("Old data cell content:")
@@ -595,13 +597,13 @@ data_entry_editor_server <- function(id, parent.session, config, profile, compon
          }
        })
       
-      output$table_wrapper<-renderUI({
+      output$hst_table_wrapper<-renderUI({
         req(!is.null(cache_data()))
         req(ready())
         info<-template_info()
         div(
           div(
-            rHandsontableOutput(ns("table"))
+            rhandsontable::rHandsontableOutput(ns("hst_table"))
           ),
           br(),
           div(
@@ -653,7 +655,7 @@ data_entry_editor_server <- function(id, parent.session, config, profile, compon
         new_row<-empty_row()
         for (i in 1 : input$nb_add_row){
           if(i==1){
-            last_data <- hot_to_r(input$table)
+            last_data <- hot_to_r(input$hst_table)
           }else {
             last_data <- new_data
           }
