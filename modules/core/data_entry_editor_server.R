@@ -22,7 +22,7 @@ data_entry_editor_server <- function(id, parent.session, config, profile, compon
       
       output$menu<-renderUI({
 
-        tabBox(id = "tabbox",title=NULL,height="600px",width = "100%",
+        tabBox(id = "tabbox_data_editor",title=NULL,height="600px",width = "100%",
                tabPanel(title=tagList(icon("gear"),"Settings"),
                         value="tab_settings",
                           div(

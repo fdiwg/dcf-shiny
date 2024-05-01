@@ -123,7 +123,7 @@ data_availability_server <-function(id, parent.session, config, profile, compone
       
       output$menu<-renderUI({
         
-        tabBox(id = "tabbox",title=NULL,height="600px",width = "100%",
+        tabBox(id = "tabbox_availability",title=NULL,height="600px",width = "100%",
                tabPanel(title=tagList(icon("clipboard")," Summary"),
                         value="tab_summary",
                         uiOutput(ns("summary_content"))
