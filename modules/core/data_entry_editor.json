@@ -5,6 +5,7 @@
   "name": "data_entry_editor",
   "title": "Data entry",
   "restricted": true,
+  "experimental": true,
   "icon": "pencil",
   "roles": ["submitter", "manager", "admin", "r-studio"],
   "linked_modules": []

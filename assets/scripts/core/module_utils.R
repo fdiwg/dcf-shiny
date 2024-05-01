@@ -354,9 +354,11 @@ sidebarMenuFromModules <- function(config = NULL, profile){
         text = shiny::tagList(tags$span(icon(menu_item$icon), menu_item$title)), tabName = menu_item_name,
         lapply(menu_subitem_profiles, function(item_profile){
           INFO("Loading shiny menu sub-item '%s'...", item_profile$module)
+          experimental = FALSE
+          if(!is.null(item_profile$experimental)) experimental = item_profile$experimental
           if(!item_profile$enabled) return(NULL)
           icon = shiny::icon(item_profile$icon)
-          menuSubItem(item_profile$title, tabName = item_profile$module, icon = icon)
+          menuSubItem(tags$span(item_profile$title, if(experimental){tags$span(tags$em("(Experimental)"), style="color:red;")}else{}), tabName = item_profile$module, icon = icon)
         })
       ))
     }else{
