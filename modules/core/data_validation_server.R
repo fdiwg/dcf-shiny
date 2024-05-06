@@ -1659,6 +1659,12 @@ data_validation_server <- function(id, parent.session, config, profile, componen
         #original file
         new_filename<-file.path(dirname(file_info$datapath),file_info$name)
         file.rename(file_info$datapath,new_filename)
+        if(!is.null(config$storagehub)) if(config$storagehub$upload_zip){
+          INFO("STORAGEHUB: 'upload_zip' enabled, zip original data file before upload")
+          new_filename_zip = gsub("\\.csv", ".zip", new_filename)
+          zip::zipr(zipfile = new_filename_zip, files = new_filename)
+          new_filename = new_filename_zip
+        }
         uploadedOriginalDataId <- store$uploadFile(folderPath = file.path(config$dcf$user_workspace, dc_folder), file = new_filename, description ="Original dataset")
         
         #file for submission
@@ -1666,6 +1672,12 @@ data_validation_server <- function(id, parent.session, config, profile, componen
           INFO("Successful upload for source file '%s'", file_info$datapath)
           data_filename <- file.path(getwd(), paste0(dc_folder, ".csv"))
           readr::write_csv(loadedData(), data_filename)
+          if(!is.null(config$storagehub)) if(config$storagehub$upload_zip){
+            INFO("STORAGEHUB: 'upload_zip' enabled, zip formatted data file before upload")
+            data_filename_zip = gsub("\\.csv", ".zip", data_filename)
+            zip::zipr(zipfile = data_filename_zip, files = data_filename)
+            data_filename = data_filename_zip
+          }
           uploadedDataId <- store$uploadFile(folderPath = file.path(config$dcf$user_workspace, dc_folder), file = data_filename, description ="Formated dataset")
           unlink(data_filename)
         }

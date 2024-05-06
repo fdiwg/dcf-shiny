@@ -320,10 +320,16 @@ copyItemsSubmission <- function(store, data_submission_id, wd=tempdir()){
       file_items = store$listWSItems(parentFolderID = data_submission_id)
       dcfile_item <- file_items[file_items$name == item$name,]
       dcfile <- store$downloadItem(item = dcfile_item, wd = wd)
+      if(mime::guess_type(dcfile)=="application/zip"){
+        #case of zipped data files (in case config$storagehub$upload_zip is enabled)
+        dcfile_csv = basename(gsub("\\.zip", ".csv", dcfile))
+        zip::unzip(zipfile = dcfile, files = dcfile_csv, exdir = wd)
+        dcfile = file.path(wd, dcfile_csv)
+      }
       
       item_info <- data.frame(
         id = item$id,
-        name = item$name,
+        name = gsub("\\.zip", ".csv", item$name),
         description = item$description,
         path = dcfile,
         stringsAsFactors = FALSE

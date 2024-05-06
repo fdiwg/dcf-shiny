@@ -99,12 +99,13 @@ data_user_submissions_server <- function(id, parent.session, config, profile, co
         req(input$item)
         if(endsWith(input$item,".pdf")){
           #data reports
-          print("CLICK ON PDF")
+          INFO("Display submission PDF report")
           output$display <- renderUI({
             tags$iframe(style="height:600px; width:100%", src=paste0("tmp/",input$item))
           })
         }else if(endsWith(input$item,".csv")){
           #data files
+          INFO("Display submission CSV data file")
           output$display_table <-DT::renderDT(
             readr::read_csv(file.path(tempdir(),input$item)),
             escape=FALSE,rownames=FALSE,
@@ -117,10 +118,11 @@ data_user_submissions_server <- function(id, parent.session, config, profile, co
           )
           
           output$display<- renderUI({
-            DT::dataTableOutput(ns("display_table"))
+            shinycssloaders::withSpinner(DT::dataTableOutput(ns("display_table")))
           })
         }else if(endsWith(input$item,".xml")){
           #metadata
+          INFO("Display submission XML metadata file")
           dcentry <- atom4R::readDCEntry(file.path(tempdir(),input$item))
           output$display_table <-DT::renderDT(
             dcentry$asDataFrame(),
@@ -134,10 +136,11 @@ data_user_submissions_server <- function(id, parent.session, config, profile, co
           )
           
           output$display<- renderUI({
-            DT::dataTableOutput(ns("display_table"))
+            shinycssloaders::withSpinner(DT::dataTableOutput(ns("display_table")))
           })
         }else {
           #nothing in principle
+          INFO("Nothing to display")
           output$display<- renderUI({
             NULL
           })
