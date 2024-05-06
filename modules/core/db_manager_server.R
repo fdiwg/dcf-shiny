@@ -35,8 +35,7 @@ db_manager_server <- function(id, parent.session, config, profile, components,re
           newdata <- do.call("rbind", lapply(1:nrow(data_submissions), function(i){
             data_submission <- data_submissions[i,]
             item_list = store$listWSItems(parentFolderID = data_submission$id)
-            data_is_zipped = F
-            if(!is.null(config$storagehub)) if(config$storagehub$upload_zip) data_is_zipped = T
+            data_is_zipped = isTRUE(config$storagehub$upload_zip)
             item <- item_list[item_list$name == paste0(data_submission$data_call_folder, ".", ifelse(data_is_zipped, "zip", "csv")),]
             tmp_wd = tempdir()
             filename <- store$downloadItem(item = item, wd = tmp_wd)
@@ -114,14 +113,29 @@ db_manager_server <- function(id, parent.session, config, profile, components,re
         newdata_file <- paste0(datetime, "_new.csv")
         progress$set(value = 1, message = sprintf("Store new data in dataspace: file '%s'", newdata_file))
         readr::write_csv(data_resources$newdata, newdata_file)
+        #if upload_zip enabled we zip the CSV
+        if(isTRUE(config$storagehub$upload_zip)){
+          newdata_file_zip = gsub("\\.csv", ".zip", newdata_file)
+          zip::zipr(zipfile = newdata_file_zip, files = newdata_file)
+          unlink(newdata_file)
+          newdata_file = newdata_file_zip
+        }
         storeInDataspace(config, pool, profile, store, task_id, newdata_file)
         unlink(newdata_file)
+        if(isTRUE(config$storagehub$upload_zip)) unlink(newdata_file_zip)
         
         #store db backup in dataspace
         if(!is.null(data_resources$dbdata)){
           dbdata_file <- paste0(datetime, "_db_old.csv")
           progress$set(value = 2, message = sprintf("Store DB data dump in dataspace: file '%s'", dbdata_file))
           readr::write_csv(data_resources$dbdata, dbdata_file)
+          #if upload_zip enabled we zip the CSV
+          if(isTRUE(config$storagehub$upload_zip)){
+            dbdata_file_zip = gsub("\\.csv", ".zip", dbdata_file_zip)
+            zip::zipr(zipfile = dbdata_file_zip, files = dbdata_file)
+            unlink(dbdata_file)
+            dbdata_file = dbdata_file_zip
+          }
           storeInDataspace(config, pool, profile, store, task_id, dbdata_file)
           unlink(dbdata_file)
         }
@@ -130,6 +144,13 @@ db_manager_server <- function(id, parent.session, config, profile, components,re
         dbdatanew_file <- paste0(datetime, "_db_new.csv")
         progress$set(value = 3, message = sprintf("Store DB updated data in dataspace: file '%s'", dbdatanew_file))
         readr::write_csv(data_resources$dbdatanew_noduplicates, dbdatanew_file)
+        #if upload_zip enabled we zip the CSV
+        if(isTRUE(config$storagehub$upload_zip)){
+          dbdatanew_file_zip = gsub("\\.csv", ".zip", dbdatanew_file)
+          zip::zipr(zipfile = dbdatanew_file_zip, files = dbdatanew_file)
+          unlink(dbdatanew_file)
+          dbdatanew_file = dbdatanew_file_zip
+        }
         storeInDataspace(config, pool, profile, store, task_id, dbdatanew_file)
         unlink(dbdatanew_file)
         
