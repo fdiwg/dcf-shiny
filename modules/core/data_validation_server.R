@@ -926,7 +926,7 @@ data_validation_server <- function(id, parent.session, config, profile, componen
         })
 
         #Table with details of errors
-        output$gbErrors<-DT::renderDT(server = FALSE, {
+        output$gbErrors<-DT::renderDT(server = TRUE, {
           if(nrow(out$errors)>0){
             DT::datatable(
               out$errors[,c("type","rule","row","col","category","message")],
