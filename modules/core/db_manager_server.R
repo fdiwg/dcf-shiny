@@ -32,7 +32,7 @@ db_manager_server <- function(id, parent.session, config, profile, components,re
         data_submissions <- data_submissions [data_submissions$status == "ACCEPTED",]
         newdata <- NULL
         if(nrow(data_submissions)>0){
-          newdata <- do.call("rbind", lapply(1:nrow(data_submissions), function(i){
+          newdata <- do.call(plyr::rbind.fill, lapply(1:nrow(data_submissions), function(i){
             data_submission <- data_submissions[i,]
             item_list = store$listWSItems(parentFolderID = data_submission$id)
             data_is_zipped = isTRUE(config$storagehub$upload_zip)
@@ -74,7 +74,7 @@ db_manager_server <- function(id, parent.session, config, profile, components,re
             return(newdata)
           }
         }
-        out <- rbind(newdata,dbdata)
+        out <- plyr::rbind.fill(newdata,dbdata)
         out$duplicated <- duplicated(out[,colnames(out)[!colnames(out) %in% c("source", "measurement_value")]])
         if(!show_duplicates){
           out <- out[!out$duplicated,]
@@ -131,7 +131,7 @@ db_manager_server <- function(id, parent.session, config, profile, components,re
           readr::write_csv(data_resources$dbdata, dbdata_file)
           #if upload_zip enabled we zip the CSV
           if(isTRUE(config$storagehub$upload_zip)){
-            dbdata_file_zip = gsub("\\.csv", ".zip", dbdata_file_zip)
+            dbdata_file_zip = gsub("\\.csv", ".zip", dbdata_file)
             zip::zipr(zipfile = dbdata_file_zip, files = dbdata_file)
             unlink(dbdata_file)
             dbdata_file = dbdata_file_zip
