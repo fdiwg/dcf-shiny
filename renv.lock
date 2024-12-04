@@ -683,6 +683,43 @@
       ],
       "Hash": "15e9634c0fcd294799e9b2e929ed1b86"
     },
+    "geoflow": {
+      "Package": "geoflow",
+      "Version": "0.9999.20241130",
+      "Source": "GitHub",
+      "RemoteType": "github",
+      "RemoteHost": "api.github.com",
+      "RemoteRepo": "geoflow",
+      "RemoteUsername": "r-geoflow",
+      "RemoteSha": "e4b54be805a5a90926071a92f49384944875aed1",
+      "Requirements": [
+        "R",
+        "R6",
+        "XML",
+        "benchmarkme",
+        "curl",
+        "dotenv",
+        "geometa",
+        "geonapi",
+        "geonode4R",
+        "geosapi",
+        "httr",
+        "jsonlite",
+        "methods",
+        "mime",
+        "ows4R",
+        "plyr",
+        "png",
+        "readr",
+        "sf",
+        "terra",
+        "uuid",
+        "whisker",
+        "xml2",
+        "zip"
+      ],
+      "Hash": "5ce23f8a1cbad7cdc1912a2c7700d7bc"
+    },
     "geometa": {
       "Package": "geometa",
       "Version": "0.8-0",
@@ -716,6 +753,21 @@
         "openssl"
       ],
       "Hash": "7193e0e056d832854b51715ea423a26d"
+    },
+    "geonode4R": {
+      "Package": "geonode4R",
+      "Version": "0.1-1",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Requirements": [
+        "R",
+        "R6",
+        "httr",
+        "keyring",
+        "openssl",
+        "readr"
+      ],
+      "Hash": "4cda70681343d89314513b42c93bac3d"
     },
     "geosapi": {
       "Package": "geosapi",
@@ -1312,6 +1364,27 @@
         "viridisLite"
       ],
       "Hash": "fbb11e44d057996ca5fe40d959cacfb0"
+    },
+    "plyr": {
+      "Package": "plyr",
+      "Version": "1.8.9",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Requirements": [
+        "R",
+        "Rcpp"
+      ],
+      "Hash": "6b8177fd19982f0020743fadbfdbd933"
+    },
+    "png": {
+      "Package": "png",
+      "Version": "0.1-8",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Requirements": [
+        "R"
+      ],
+      "Hash": "bd54ba8a0a5faded999a7aab6e46b374"
     },
     "pool": {
       "Package": "pool",
