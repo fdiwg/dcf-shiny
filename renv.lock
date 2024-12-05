@@ -176,8 +176,12 @@
     "atom4R": {
       "Package": "atom4R",
       "Version": "0.3-3",
-      "Source": "Repository",
-      "Repository": "CRAN",
+      "Source": "GitHub",
+      "RemoteType": "github",
+      "RemoteHost": "api.github.com",
+      "RemoteRepo": "atom4R",
+      "RemoteUsername": "eblondel",
+      "RemoteSha": "4430ca2cba8803d8884fadcc53846efe9d26156e",
       "Requirements": [
         "R",
         "R6",
@@ -190,7 +194,7 @@
         "readr",
         "zip"
       ],
-      "Hash": "8111c34df3f1e550e1f0e9aa043a0b79"
+      "Hash": "b448749be0b22301e3a4994af03d2a01"
     },
     "base64enc": {
       "Package": "base64enc",
