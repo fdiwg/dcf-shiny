@@ -56,7 +56,7 @@ RUN apt-get update && apt-get install -y \
     wget
     
 RUN apt-get install -y librdf0-dev
-RUN install2.r --error --skipinstalled --ncpus -1 redland rdflib
+RUN install2.r --error --skipinstalled --ncpus -1 redland rdflib atom4R
 RUN apt-get install -y \
     libcurl4-openssl-dev \
     libgit2-dev \
@@ -94,7 +94,7 @@ RUN mkdir renv/.cache
 ENV RENV_PATHS_CACHE=renv/.cache
 
 # Restore the R environment
-RUN R -e "renv::restore(exclude = c('rdflib','redland'))"
+RUN R -e "renv::restore(exclude = c('atom4R','rdflib','redland'))"
 
 #copy app
 COPY . /srv/dcf-shiny
