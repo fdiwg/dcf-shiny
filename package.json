@@ -44,9 +44,9 @@
     {"package": "rhandsontable", "version": "0.3.8", "repos": "https://cran.r-project.org"},
     {"package": "rclipboard", "version": "0.1.6", "repos": "https://cran.r-project.org"},
     {"package": "shinyWidgets", "version": "0.7.0", "repos": "https://cran.r-project.org"},
-    {"package": "atom4R", "version": "0.4", "repos": "https://cran.r-project.org"},
     {"package": "geometa", "version": "0.8-0", "repos": "https://cran.r-project.org"},
     {"package": "d4storagehub4R", "version": "0.4-4", "repos": "https://cran.r-project.org"},
+    {"repo": "eblondel/atom4R", "from": "github", "dependencies": false},
     {"repo": "eblondel/geonode4R", "from": "github", "dependencies": false},
     {"repo": "r-geoflow/geoflow", "from": "github", "dependencies": false},
     {"repo": "fdiwg/vrule", "from": "github", "dependencies": false}
