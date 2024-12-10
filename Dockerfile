@@ -1,7 +1,5 @@
 FROM rocker/shiny:4.3.0
 
-MAINTAINER Emmanuel Blondel "emmanuel.blondel@fao.org"
-
 LABEL org.opencontainers.image.title="dcf-shiny"
 LABEL org.opencontainers.image.url="https://github.com/fdiwg/dcf-shiny"
 LABEL org.opencontainers.image.source="https://github.com/fdiwg/dcf-shiny"
