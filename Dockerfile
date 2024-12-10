@@ -17,8 +17,13 @@ RUN apt-get update && apt-get install -y \
     texlive-fonts-recommended \
     texlive-fonts-extra \
     texlive-formats-extra \
-	  libsodium-dev \
-    libsecret-1-dev
+    libssl-dev \
+    libxml2-dev \
+    libv8-dev \
+    libsodium-dev \
+    libsecret-1-dev \
+    librdf0 \
+    librdf0-dev
     
 # general system libraries
 # Note: this includes rdf/redland system libraries
@@ -53,8 +58,7 @@ RUN apt-get update && apt-get install -y \
     vim \
     wget
     
-RUN apt-get install -y librdf0-dev
-RUN install2.r --error --skipinstalled --ncpus -1 redland rdflib atom4R
+RUN install2.r --error --skipinstalled --ncpus -1 redland
 RUN apt-get install -y \
     libcurl4-openssl-dev \
     libgit2-dev \
@@ -92,7 +96,7 @@ RUN mkdir renv/.cache
 ENV RENV_PATHS_CACHE=renv/.cache
 
 # Restore the R environment
-RUN R -e "renv::restore(exclude = c('atom4R','rdflib','redland'))"
+RUN R -e "renv::restore()"
 
 #copy app
 COPY . /srv/dcf-shiny
