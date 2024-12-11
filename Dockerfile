@@ -60,7 +60,7 @@ RUN apt-get update && apt-get install -y \
     
 RUN install2.r --error --skipinstalled --ncpus -1 redland
 RUN apt-get install -y \
-    libcurl4-openssl-dev \
+    libcurl4 \
     libgit2-dev \
     libxslt-dev \
     librdf0 \
