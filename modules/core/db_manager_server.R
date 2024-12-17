@@ -157,8 +157,21 @@ db_manager_server <- function(id, parent.session, config, profile, components,re
         #store new data in the database
         table_id <- getDataTaskTablename(task_id)
         progress$set(value = 4, message = sprintf("Write data in database table '%s'", table_id))
+        table_exists = table_id %in% dbListTables(pool)
         DBI::dbWriteTable(conn = pool, name = table_id, value = data_resources$dbdatanew_noduplicates, overwrite = TRUE)
-        
+        if(!table_exists){
+          if(!is.null(config$dbi$readonly_user)){
+            #table is new, need to grant to readonly user
+            INFO("Granting SELECT privilege on data task table '%s' for readonly user '%s'", table_id, config$dbi$readonly_user)
+            DBI::dbExecute(
+              conn = pool, 
+              statement = sprintf("GRANT SELECT ON %s TO %s WITH GRANT OPTION;", 
+                                  table_id, config$dbi$readonly_user)
+            )
+          }else{
+            WARN("Granting SELECT privilege on data task table '%s' is skipped. No readonly user defined in config.", table_id)
+          }
+        }
         progress$set(value = 5, message = "Data successfully persisted!")
       }
       
