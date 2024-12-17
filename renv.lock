@@ -2154,7 +2154,7 @@
       "RemoteHost": "api.github.com",
       "RemoteRepo": "vrule",
       "RemoteUsername": "fdiwg",
-      "RemoteSha": "aa1a1c7f420344848414a712da5e1bf047fddda0",
+      "RemoteSha": "3afcd6263bfc567ae3532fa5063a47a925906894",
       "Requirements": [
         "R",
         "R6",
@@ -2166,7 +2166,7 @@
         "rhandsontable",
         "stringi"
       ],
-      "Hash": "0226aa36202a52839904452d732dda9e"
+      "Hash": "5a06935336b2b6aa118d917f5ba70998"
     },
     "waiter": {
       "Package": "waiter",
