@@ -1,7 +1,7 @@
 {
   "id": "dcf-shiny",
   "version": "0.6.0",
-  "date": "2024-12-17",
+  "date": "2025-01-14",
   "dependencies": [
     {"package": "jsonlite", "version": "1.8.9", "repos": "https://cran.r-project.org"},
     {"package": "R6", "version": "2.5.1", "repos": "https://cran.r-project.org"},
