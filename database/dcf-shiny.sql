@@ -81,7 +81,8 @@ CREATE TABLE public.dcf_users (
     creation_date timestamp with time zone NOT NULL,
     updater_id character varying,
     update_date timestamp with time zone,
-    roles character varying
+    roles character varying,
+    groups character varying
 );
 
 
