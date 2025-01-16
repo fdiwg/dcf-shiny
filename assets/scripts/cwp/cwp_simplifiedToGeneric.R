@@ -11,8 +11,8 @@ simplifiedToGeneric <- function(file, format_spec, measurements){
 
     attr_target_cols = colnames(data)[sapply(colnames(data), function(x){!any(sapply(measurements, function(m){startsWith(x,m)}))}) ]
     measurement_target_cols = colnames(data)[sapply(colnames(data), function(x){startsWith(x, paste0(measurement, "_"))})]
+    if(length(measurement_target_cols)==0) return(NULL)
     target_cols = c(attr_target_cols, measurement_target_cols)
-    
     mdata = data[,target_cols]
     names(mdata)<-gsub("_unit","__measurement_unit",names(mdata))
     names(mdata)<-gsub("_status","__measurement_status",names(mdata))
@@ -39,9 +39,12 @@ simplifiedToGeneric <- function(file, format_spec, measurements){
     newdata = newdata[,c(colnames(newdata)[!sapply(colnames(newdata), function(x){x %in% mdata_measurement_block_cols})], mdata_measurement_block_cols)]
     
     #check if measurement_unit / measurement_status are available if not initialize them
+    if(!"measurement_value" %in% colnames(newdata)) newdata$measurement_value <- NA
     if(!"measurement_unit" %in% colnames(newdata)) newdata$measurement_unit <- NA
     if(!"measurement_status" %in% colnames(newdata)) newdata$measurement_status <- NA
 
+    newdata = newdata[!is.na(newdata$measurement_value) & !is.na(newdata$measurement_unit),]
+    
     return(newdata)
   }))
   
