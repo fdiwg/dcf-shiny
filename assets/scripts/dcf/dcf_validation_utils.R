@@ -136,6 +136,7 @@ readDataCallRules<- function(task_def, format, config = NULL,reporting_entity=NU
   
   #we create a deep clone (copy) of the format_spec
   dc_format_spec = format_spec$clone(deep = TRUE)
+  dc_format_spec$setType("default") #required to disable duplicates analysis
   dc_format_spec$column_specs = list()
   
   #REPORTING ENTITY data call rule
