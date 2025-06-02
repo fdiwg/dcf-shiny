@@ -6,6 +6,6 @@
   "title": "Database management",
   "restricted": true,
   "icon": "database",
-  "roles": ["manager", "admin", "r-studio"],
+  "roles": ["manager", "admin"],
   "linked_modules": ["data_availability"]
 }

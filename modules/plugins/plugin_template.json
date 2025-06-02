@@ -6,5 +6,5 @@
   "title": "Plugin template",
   "icon": "gears",
   "restricted": true,
-  "roles": ["admin", "r-studio"]
+  "roles": ["admin"]
 }

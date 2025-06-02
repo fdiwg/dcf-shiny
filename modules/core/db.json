@@ -6,5 +6,5 @@
   "rank": 4,
   "restricted": true,
   "icon": "database",
-  "roles": ["submitter", "manager", "supervisor", "admin", "r-studio"]
+  "roles": ["submitter", "manager", "supervisor", "admin"]
 }

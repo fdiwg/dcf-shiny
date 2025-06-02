@@ -7,6 +7,6 @@
   "restricted": true,
   "experimental": true,
   "icon": "pencil",
-  "roles": ["submitter", "manager", "admin", "r-studio"],
+  "roles": ["submitter", "manager", "admin"],
   "linked_modules": []
 }

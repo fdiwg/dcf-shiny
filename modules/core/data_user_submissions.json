@@ -6,6 +6,6 @@
   "title": "My submissions",
   "restricted": true,
   "icon": "list",
-  "roles": ["submitter", "manager", "admin", "r-studio"],
+  "roles": ["submitter", "manager", "admin"],
   "linked_modules": []
 }

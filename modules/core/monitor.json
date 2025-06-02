@@ -6,6 +6,6 @@
   "title": "System monitor",
   "icon": "gears",
   "restricted": true,
-  "roles": ["admin", "r-studio"],
+  "roles": ["admin"],
   "linked_modules": []
 }

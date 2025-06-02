@@ -6,6 +6,6 @@
   "title": "Validate and Submit data",
   "restricted": true,
   "icon": "upload",
-  "roles": ["submitter", "manager", "admin", "r-studio"],
+  "roles": ["submitter", "manager", "admin"],
   "linked_modules": []
 }

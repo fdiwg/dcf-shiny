@@ -6,6 +6,6 @@
   "title": "All submissions",
   "restricted": true,
   "icon": "list",
-  "roles": ["manager", "admin", "r-studio"],
+  "roles": ["manager", "admin"],
   "linked_modules": []
 }

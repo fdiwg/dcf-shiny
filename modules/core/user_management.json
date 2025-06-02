@@ -6,6 +6,6 @@
   "icon": "users",
   "rank": 1,
   "restricted": true,
-  "roles": ["manager", "admin", "r-studio"],
+  "roles": ["manager", "admin"],
   "linked_modules": []
 }
