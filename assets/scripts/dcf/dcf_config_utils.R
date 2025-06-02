@@ -37,7 +37,21 @@ read_dcf_config <- function(file){
 
 #getAppRoles
 getAppRoles <- function(config){
-  return(config$dcf$roles)
+  roles = names(config$dcf$roles)
+  names(roles) = config$dcf$roles
+  return(roles)
+}
+
+#getAllRoles
+getAllRoles <- function(config){
+  all_roles = list(getAppRoles(config))
+  for(group_name in names(config$dcf$groups)){
+    group_roles <- paste(group_name, names(config$dcf$roles), sep = ":")
+    names(group_roles) <- paste(group_name, config$dcf$roles)
+    all_roles[[length(all_roles)+1]] <- group_roles
+  }
+  names(all_roles) <- c("Main roles", config$dcf$groups)
+  return(all_roles)
 }
 
 #getReportingEntityCodes

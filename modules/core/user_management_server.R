@@ -29,10 +29,8 @@ user_management_server <- function(id, parent.session, config, profile, componen
             shinyjs::disabled(textInput(ns("user_form_username"), value = username, label = "User name")),
             shinyjs::disabled(textInput(ns("user_form_fullname"), value = fullname, label = "Full name")),
             if(!is.null(config$dcf$roles)){
-              selectInput(ns("user_form_roles"), label = "Roles", selected = roles, multiple = TRUE,
-                choices = {
-                  setNames(names(config$dcf$roles), unlist(config$dcf$roles))
-                }
+              pickerInput(ns("user_form_roles"), label = "Roles", selected = roles, multiple = TRUE,
+                choices = getAllRoles(config)
               )
             },
             if(!is.null(config$dcf$reporting_entities)){
@@ -106,13 +104,24 @@ user_management_server <- function(id, parent.session, config, profile, componen
         
         if(nrow(data)>0){
           data <- do.call("rbind", lapply(1:nrow(data), function(i){
+            
+            roles = unlist(strsplit(unlist(data[i,"roles"]),","))
+            role_colors = sapply(roles, function(x){
+              groups = names(config$dcf$groups)
+              if(is.null(groups)) return(COLORS[1])
+              parts = unlist(strsplit(x, ":"))
+              if(length(parts)==1) return(COLORS[1])
+              return(COLORS[which(groups == parts[1])+1])
+            })
+            reporting_entities = unlist(strsplit(unlist(data[i,"reporting_entities"]),","))
+                           
             out_tib <- tibble::tibble(
               "User name" = data[i,"username"],
               "Full name" = data[i,"fullname"],
               "Registered in DB" = if(data[i,"db"]){as(icon("check"),"character")}else{""},
               "User ID" = data[i,"id_user"],
-              "User roles" = paste0(sprintf("<span class='badge' style='background-color:%s'>%s</span>","gray",unlist(strsplit(unlist(data[i,"roles"]),","))),collapse=" "),
-              "Reporting entities" = paste0(sprintf("<span class='badge' style='background-color:%s'>%s</span>","gray",unlist(strsplit(unlist(data[i,"reporting_entities"]),","))),collapse=" "),
+              "User roles" = paste0(sprintf("<span class='badge' style='background-color:%s'>%s</span>",role_colors, roles),collapse=" "),
+              "Reporting entities" = paste0(sprintf("<span class='badge' style='background-color:%s'>%s</span>","gray", reporting_entities),collapse=" "),
               Actions = if(data[i,"id_user"]==""){
                 as(actionButton(inputId = ns(paste0('button_save_', uuids[i])), class="btn btn-primary", style = "margin-right: 2px;",
                                 title = "Save user to DB", label = "", icon = icon("tasks")),"character")

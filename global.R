@@ -7,6 +7,7 @@ options(shiny.maxRequestSize=200*1024^2) #increase upload size to 200Mb
 #---------------------------------------------------------------------------------------
 scripts <- as.list(list.files("assets/scripts", recursive = T, full.names = TRUE))
 invisible(lapply(scripts, source))
+COLORS = rev(RColorBrewer::brewer.pal(8, "Dark2"))
 
 #packages
 #---------------------------------------------------------------------------------------
