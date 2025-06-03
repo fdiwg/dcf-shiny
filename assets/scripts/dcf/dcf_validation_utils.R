@@ -1,13 +1,30 @@
 
 
 #getTasks
-getTasks <- function(config,withId=FALSE){
+getTasks <- function(config, withId=FALSE){
   tasks <- config$dcf$tasks
   task_list <- sapply(tasks, function(x){x$id})
-  if(withId){
-    task_list<- setNames(task_list, sprintf("%s [%s]",unlist(lapply(tasks, function(x){x$name})),task_list))
+  if(!is.null(config$dcf$groups)){
+    task_list <- lapply(config$dcf$groups, function(group){
+      group_task_list = c()
+      group_tasks = tasks[sapply(tasks, function(task){ task$context == group })]
+      if(length(group_tasks)>0){
+        group_task_list <- sapply(group_tasks, function(x){x$id})
+        if(withId){
+          group_task_list<- setNames(group_task_list, sprintf("%s [%s]",unlist(lapply(group_tasks, function(x){x$name})),group_task_list))
+        }else{
+          group_task_list<- setNames(group_task_list, unlist(lapply(group_tasks, function(x){x$name})))
+        }
+      }
+      return(group_task_list)
+    })
+    names(tasks) = as.character(config$dcf$groups)
   }else{
-    task_list<- setNames(task_list, unlist(lapply(tasks, function(x){x$name})))
+    if(withId){
+      task_list<- setNames(task_list, sprintf("%s [%s]",unlist(lapply(tasks, function(x){x$name})),task_list))
+    }else{
+      task_list<- setNames(task_list, unlist(lapply(tasks, function(x){x$name})))
+    }
   }
   return(task_list)
 }

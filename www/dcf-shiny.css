@@ -151,3 +151,8 @@ footer{
   cursor: not-allowed;
   pointer-events: none;
 }
+
+.dropdown-header {
+  font-weight: bold !important;
+  font-size: 100% !important;
+}
