@@ -1,11 +1,15 @@
 
 
 #getTasks
-getTasks <- function(config, withId=FALSE){
+getTasks <- function(config, withId=FALSE, profile = NULL){
   tasks <- config$dcf$tasks
   task_list <- sapply(tasks, function(x){x$id})
-  if(!is.null(config$dcf$groups)){
-    task_list <- lapply(config$dcf$groups, function(group){
+  groups = names(config$dcf$groups)
+  if(!is.null(groups)){
+    if(!is.null(profile)) if(!any(as.character(getAllRoles(config)[[1]]) %in% profile$shiny_app_roles)){
+      groups = unique(sapply(profile$shiny_app_roles, function(x){unlist(strsplit(x,":"))[1]}))
+    }
+    task_list <- lapply(groups, function(group){
       group_task_list = c()
       group_tasks = tasks[sapply(tasks, function(task){ task$context == group })]
       if(length(group_tasks)>0){
@@ -18,7 +22,7 @@ getTasks <- function(config, withId=FALSE){
       }
       return(group_task_list)
     })
-    names(tasks) = as.character(config$dcf$groups)
+    names(task_list) = as.character(config$dcf$groups[groups])
   }else{
     if(withId){
       task_list<- setNames(task_list, sprintf("%s [%s]",unlist(lapply(tasks, function(x){x$name})),task_list))
