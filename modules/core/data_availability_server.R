@@ -403,8 +403,8 @@ data_availability_server <-function(id, parent.session, config, profile, compone
           }else{
             entity_list<-reporting_entities
           }
-          if("submitter" %in% profile$shiny_app_roles &
-             !any(c("admin", "manager", "superviser") %in% profile$shiny_app_roles)){
+          if(is_profile_authorized("submitter", profile) &
+             !is_profile_authorized(c("admin", "manager", "supervisor"), profile)){
             entity_list = entity_list[entity_list %in% profile$reporting_entities]
           }
           
@@ -470,8 +470,8 @@ data_availability_server <-function(id, parent.session, config, profile, compone
         }else{
           entity_list<-reporting_entities
         }
-        if("submitter" %in% profile$shiny_app_roles &
-           !any(c("admin", "manager", "superviser") %in% profile$shiny_app_roles)){
+        if(is_profile_authorized("submitter", profile) &
+           !is_profile_authorized(c("admin", "manager", "supervisor"), profile)){
           entity_list = entity_list[entity_list %in% profile$reporting_entities]
         }
         
@@ -545,8 +545,8 @@ data_availability_server <-function(id, parent.session, config, profile, compone
         }else{
           entity_list<-reporting_entities
         }
-        if("submitter" %in% profile$shiny_app_roles &
-           !any(c("admin", "manager", "superviser") %in% profile$shiny_app_roles)){ 
+        if(is_profile_authorized("submitter", profile) &
+           !is_profile_authorized(c("admin", "manager", "supervisor"), profile)){ 
           entity_list = entity_list[entity_list %in% profile$reporting_entities]
         }
         

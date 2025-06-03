@@ -70,6 +70,14 @@ check_module_ui_formals <- function(module, ui_fun){
   }
 }
 
+#is_profile_authorized
+is_profile_authorized <- function(roles, profile){
+  any(sapply(profile$shiny_app_roles, function(x){
+    str = paste0("\\b(?:[A-Za-z][A-Za-z0-9_-]*[:_-]?)?(",paste(unique(c("admin", roles)), collapse="|"),")\\b")
+    any(regexpr(pattern = str, text = x)>0)
+  }))
+}
+
 #loadModuleServers
 loadModuleServers <- function(parent.session, config, profile, components,reloader){
   INFO("=> Loading Module Servers")
@@ -90,7 +98,7 @@ loadModuleServers <- function(parent.session, config, profile, components,reload
     if(outp$type != "internal" && !outp$menu){
       enabled = outp$enabled
       if(!is.null(outp$restricted)) if(outp$restricted){
-        module_ok_with_roles <- any(sapply(profile$shiny_app_roles, function(x){x %in% outp$roles}))
+        module_ok_with_roles <- is_profile_authorized(roles = outp$roles, profile = profile)
         INFO("Module '%s' Server %s (at least one of the profile roles [%s] do%s match module roles [%s]", 
              module, 
              ifelse(module_ok_with_roles, "enabled", "disabled"),
@@ -141,7 +149,7 @@ loadModuleUIs <- function(config = NULL, profile){
     if(outp$type != "internal" && !outp$menu){
       enabled = TRUE
       if(!is.null(outp$restricted)) if(outp$restricted){
-        module_ok_with_roles <- any(sapply(profile$shiny_app_roles, function(x){x %in% outp$roles}))
+        module_ok_with_roles <- is_profile_authorized(roles = outp$roles, profile = profile)
         INFO("Module '%s' Server %s (at least one of the profile roles [%s] do%s match module roles [%s]", 
              module, 
              ifelse(module_ok_with_roles, "enabled", "disabled"),
@@ -193,7 +201,7 @@ loadPluginServers <- function(parent.session, config, profile, components){
       outp <- loadModuleProfile(plugin_profile)
       enabled = outp$enabled
       if(!is.null(outp$restricted)) if(outp$restricted) {
-        plugin_ok_with_roles <- any(sapply(profile$shiny_app_roles, function(x){x %in% outp$roles}))
+        plugin_ok_with_roles <- is_profile_authorized(roles = outp$roles, profile = profile)
         INFO("Plugin '%s' server %s (at least one of the profile roles [%s] do%s match plugin roles [%s]", 
              plugin, 
              ifelse(plugin_ok_with_roles, "enabled", "disabled"),
@@ -245,7 +253,7 @@ loadPluginUIs <- function(config = NULL, profile){
     outp <- loadModuleProfile(plugin_profile)
     enabled = outp$enabled
     if(!is.null(outp$restricted)) if(outp$restricted){
-      plugin_ok_with_roles <- any(sapply(profile$shiny_app_roles, function(x){x %in% outp$roles}))
+      plugin_ok_with_roles <- is_profile_authorized(roles = outp$roles, profile = profile)
       INFO("Plugin '%s' UI %s (at least one of the profile roles [%s] do%s match plugin roles [%s]", 
            plugin, 
            ifelse(plugin_ok_with_roles, "enabled", "disabled"),
@@ -292,7 +300,7 @@ sidebarMenuFromModules <- function(config = NULL, profile){
     outp <- loadModuleProfile(module_profile)
     outp$source <- module_profile
     outp$module <- module_profile_name
-    if(!is.null(outp$restricted)) if(outp$restricted) outp$enabled <- any(sapply(profile$shiny_app_roles, function(x){x %in% outp$roles}))
+    if(!is.null(outp$restricted)) if(outp$restricted) outp$enabled <- is_profile_authorized(roles = outp$roles, profile = profile)
     #overwrite with config module definition
     m_config <- config$modules[[outp$module]]
     if(!is.null(m_config)){
@@ -315,7 +323,7 @@ sidebarMenuFromModules <- function(config = NULL, profile){
       plugp <- loadModuleProfile(plugin$def)
       plugp$source <- plugin$def
       plugp$module <- plugin_name
-      if(!is.null(plugp$restricted)) if(plugp$restricted) plugp$enabled <- any(sapply(profile$shiny_app_roles, function(x){x %in% plugp$roles}))
+      if(!is.null(plugp$restricted)) if(plugp$restricted) plugp$enabled <- is_profile_authorized(roles = plugp$roles, profile = profile)
       return(plugp)
     })
     module_profiles <- c(module_profiles, plugin_profiles)

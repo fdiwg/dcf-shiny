@@ -16,7 +16,9 @@ dashboard_server <- function(id, parent.session, config, profile, components,rel
       })
       
       output$user_roles<-renderUI({
-        roles_list<-setNames(names(config$dcf$roles), unlist(config$dcf$roles))
+        roles_list <- getAllRoles(config)
+        names(roles_list)=NULL
+        roles_list = unlist(roles_list)
         my_roles<-roles_list[roles_list%in%profile$shiny_app_roles]
         ref_entity <- getReportingEntityCodes(config)
         ref_entity_db <- ref_entity[ref_entity$code %in% getDBUserReportingEntities(profile = profile, pool = pool),]
@@ -57,7 +59,7 @@ dashboard_server <- function(id, parent.session, config, profile, components,rel
         boxes<-list()
           for(i in 1:nrow(current_datacalls())){
             datacall<-current_datacalls()[i,]
-            user_submissions<-getSubmissions(config = config, pool = pool , profile = profile, store = store, user_only =  if("manager" %in% profile$shiny_app_roles){FALSE}else{TRUE},data_calls_id=datacall$id_data_call,full_entities=TRUE)
+            user_submissions<-getSubmissions(config = config, pool = pool , profile = profile, store = store, user_only =  if(is_profile_authorized("manager", profile)){FALSE}else{TRUE},data_calls_id=datacall$id_data_call,full_entities=TRUE)
             user_submissions<-user_submissions%>%
             rowwise()%>%
             mutate(color=switch(status,
@@ -69,7 +71,7 @@ dashboard_server <- function(id, parent.session, config, profile, components,rel
               ungroup()
             
             nb_entities<-length(unique(user_submissions$reporting_entity))
-            if("manager" %in% profile$shiny_app_roles){
+            if(is_profile_authorized("manager",profile)){
               transmitted_submissions<-length(unique(subset(user_submissions,status=="ACCEPTED")$reporting_entity))
               transmitted_label<-"transmitted and validated"
             }else{
@@ -82,7 +84,7 @@ dashboard_server <- function(id, parent.session, config, profile, components,rel
         infoBox("Status",datacall$status, icon = icon(ifelse(datacall$status=="OPEN","check","xmark")), fill = TRUE,color=ifelse(datacall$status=="OPEN","green","red"),width = 12),
         infoBox("Period",HTML(datacall$time_label), icon = icon("clock"), fill = TRUE,color=ifelse(datacall$status=="OPEN","teal","orange"),width = 12),
         progressInfoBox(title="Submission completion", text=sprintf('%s/%s',transmitted_submissions,nb_entities),value=transmitted_submissions,description=paste0(round(transmitted_submissions/nb_entities*100,0),"% ",transmitted_label), max = nb_entities,icon = icon("share"),fill = TRUE, color = ifelse(transmitted_submissions!=nb_entities,"yellow","green"),width =12),
-        if("manager" %in% profile$shiny_app_roles){infoBox("Pending submissions",submitted_submissions, icon = icon("info"),color=ifelse(submitted_submissions>0,"yellow","green"),fill=TRUE,width = 12)}else{NULL},
+        if(is_profile_authorized("manager",profile)){infoBox("Pending submissions",submitted_submissions, icon = icon("info"),color=ifelse(submitted_submissions>0,"yellow","green"),fill=TRUE,width = 12)}else{NULL},
         infoBox("Submission detail", div(style="max-height:250px;overflow-y: auto;",HTML(paste0(sprintf("<span> %s : </span><span class='badge' style='background-color:%s'>%s</span>",user_submissions$reporting_entity,user_submissions$color,user_submissions$status),collapse="<br>"))), icon = icon("list"), fill = TRUE,color="light-blue",width = 12)
       )
           }
@@ -91,7 +93,7 @@ dashboard_server <- function(id, parent.session, config, profile, components,rel
       })
       
       output$ressource_management<-renderUI({
-        if("manager" %in% profile$shiny_app_roles){
+        if(is_profile_authorized("manager",profile)){
         users <- getUsers(pool,profile)
         dbUsers<-subset(users,db=="TRUE")
         dbUsersNoRole<-subset(dbUsers,roles=="")

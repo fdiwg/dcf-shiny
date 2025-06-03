@@ -77,6 +77,7 @@ monitor_server <- function(id, parent.session, config, profile, components,reloa
               DT::dataTableOutput(ns("software_resources"))
           ),
           if("admin" %in% profile$shiny_app_roles){
+            #super admin only
             box(title=HTML(paste0("<b>", as(shiny::icon("key"),"character"), " Token</b>")),collapsible = F,width=6, solidHeader = T, status = "info",
                 div(
                   fluidRow(

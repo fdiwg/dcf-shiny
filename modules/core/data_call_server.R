@@ -66,11 +66,21 @@ data_call_server <- function(id, parent.session, config, profile, components, re
         form_action <- tolower(title_prefix)
         showModal(modalDialog(title = sprintf("%s data call", title_prefix),
                               if(new){
-                                selectInput(ns("data_call_form_task"), "Task:",choices = getTasks(config,withId = T), selected = task)
+                                if(!is.null(config$dcf$groups)){
+                                  shinyWidgets::pickerInput(ns("data_call_form_task"), label = "Task:", choices = getTasks(config,withId = T), selected = task)
+                                }else{
+                                  selectInput(ns("data_call_form_task"), "Task:",choices = getTasks(config,withId = T), selected = task)
+                                }
                               }else{
                                 shiny::tagList(
                                   shinyjs::disabled(textInput(ns("data_call_form_id"), value = id_data_call, label = "Data call ID")),
-                                  shinyjs::disabled(selectInput(ns("data_call_form_task"), "Task:",choices = getTasks(config), selected = task))
+                                  shinyjs::disabled(
+                                    if(!is.null(config$dcf$groups)){
+                                      shinyWidgets::pickerInput(ns("data_call_form_task"), label = "Task:", choices = getTasks(config,withId = T), selected = task)
+                                    }else{
+                                      selectInput(ns("data_call_form_task"), "Task:",choices = getTasks(config), selected = task)
+                                    }
+                                  )
                                 )
                               },
                               dateInput(ns("data_call_form_start"), "Start date", value = start),
@@ -194,15 +204,26 @@ data_call_server <- function(id, parent.session, config, profile, components, re
       
       #Task selector
       output$task_selector<-renderUI({
-        selectizeInput(ns("task"),
-                       label=NULL,
-                       multiple = T,
-                       choices = getTasks(config,withId=TRUE),
-                       selected=NULL,
-                       options = list(
-                         placeholder = "Display tasks :"
-                       )
-        )
+        if(!is.null(config$dcf$groups)){
+          shinyWidgets::pickerInput(ns("task"), 
+                                    label = NULL, 
+                                    multiple = T, 
+                                    choices = getTasks(config,withId = T), 
+                                    selected = NULL,
+                                    options = list(
+                                      placeholder = "Display tasks :"
+                                    ))
+        }else{
+          selectizeInput(ns("task"),
+                         label=NULL,
+                         multiple = T,
+                         choices = getTasks(config,withId=TRUE),
+                         selected=NULL,
+                         options = list(
+                           placeholder = "Display tasks :"
+                         )
+          )
+        }
       })
       
       observeEvent(input$limit_status,{
