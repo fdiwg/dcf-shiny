@@ -16,7 +16,28 @@ read_dcf_config <- function(file){
     if(is.null(cfg$dcf$roles)) stop("No dcf 'roles' defined in configuration")
     if(is.null(cfg$dcf$roles$submitter)) stop("No dcf roles 'submitter' name defined in configuration")
     if(is.null(cfg$dcf$roles$manager)) stop("No dcf roles 'manager' name defined in configuration")
-    if(is.null(cfg$dcf$tasks)) stop("No dcf 'tasks' defined in configuration")
+    
+    #tasks
+    if(is.null(cfg$dcf$tasks)){
+      if(is.null(cfg$dcf$receiver)){
+        stop("No dcf 'tasks' or 'receiver' defined in configuration")
+      }else{
+        receiver = repfishr::reporting_receiver$new(id = cfg$dcf$receiver, name = cfg$dcf$receiver)
+        cfg$dcf$tasks <- receiver$getTaskDefinitions(raw = TRUE)
+      }
+    }else{ 
+      cfg$dcf$tasks = lapply(cfg$dcf$tasks, function(x){
+        task = x
+        if(!is.null(task$ref)){
+          #read from file
+          switch(mime::guess_type(task$ref),
+            "text/yaml" = yaml::read_yaml(task$ref),
+            "application/json" = jsonlite::read_json(task$ref)
+          )
+        }
+        return(task)
+      })
+    }
   }
   
   #reporting entity

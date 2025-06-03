@@ -59,6 +59,7 @@ library(atom4R)
 library(geonode4R)
 library(geoflow)
 library(vrule)
+library(repfishr)
 
 #env
 #---------------------------------------------------------------------------------------

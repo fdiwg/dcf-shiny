@@ -302,10 +302,8 @@ data_availability_server <-function(id, parent.session, config, profile, compone
           target_data<-data()
           
           #inherit format 
-          task_def_url<-getTaskProfile(config,id=input$task)
-          task_def_url<-task_def_url$dsd_ref_url
-          task_def <- readTaskDefinition(file = task_def_url)
-          format_spec = task_def$formats[[input$format]]$spec
+          task <- getReportingTask(config, id = input$task)
+          format_spec = task$formats[[input$format]]$spec
           
           if(input$format!="generic"){
             INFO("Transforming to 'simplified' format")

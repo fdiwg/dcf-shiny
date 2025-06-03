@@ -336,10 +336,8 @@ data_entry_editor_server <- function(id, parent.session, config, profile, compon
           }
           req(reset==FALSE)
           withBusyIndicatorServer(ns("run"), {
-            task<-getTaskProfile(config,id=input$task)
-            taskRules <- task$dsd_ref_url
-            taskDef<-readTaskDefinition(file = taskRules)
-            format_spec = taskDef$formats[[input$format]]$spec
+            task <- getReportingTask(config, id = input$task)
+            format_spec = task$formats[[input$format]]$spec
             data_spec = data_spec(format_spec)
             
             #TODO process reporting_entity in format_spec
@@ -383,10 +381,8 @@ data_entry_editor_server <- function(id, parent.session, config, profile, compon
           target_row<-target_row(NULL)
           
           withBusyIndicatorServer(ns("run"), {
-            task<-getTaskProfile(config,id=input$task)
-            taskRules <- task$dsd_ref_url
-            taskDef<-readTaskDefinition(file = taskRules)
-            format_spec = taskDef$formats[[input$format]]$spec
+            task <- getReportingTask(config, id = input$task)
+            format_spec = task$formats[[input$format]]$spec
             
             #TODO process reporting_entity in format_spec
             task_template = buildTemplate(format_spec)

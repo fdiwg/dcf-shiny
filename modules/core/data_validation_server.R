@@ -454,7 +454,7 @@ data_validation_server <- function(id, parent.session, config, profile, componen
       observeEvent(input$task,{
         if(!is.null(input$task))if(input$task!=""){
         #Check Data call open
-        task_prof <- getTaskProfile(config,id=input$task)
+        task_prof <- getReportingTask(config,id=input$task, raw = TRUE)
         taskProfile <- taskProfile(task_prof)
         datacall<-getDataCalls(pool,status="OPENED",tasks=input$task,period="IN")
           if(nrow(datacall)==1){
@@ -561,9 +561,9 @@ data_validation_server <- function(id, parent.session, config, profile, componen
           
           computedSteps<-computedSteps(c(computedSteps(),"standard_validation"))
         
-        task_def_url <- taskProfile()$dsd_ref_url
+          taskProfile <- taskProfile(getReportingTask(config,id=input$task, raw = FALSE))
         
-        appendTab(inputId = "wizard-tabs",
+          appendTab(inputId = "wizard-tabs",
                   session = parent.session,
                   select=TRUE,
                   tabPanel(title="3-Data Validation", 
@@ -598,8 +598,6 @@ data_validation_server <- function(id, parent.session, config, profile, componen
         
         waiter_show(html = waiting_screen, color = "#14141480")
         data<-loadedData()
-        INFO("Read Task '%s' definition", taskProfile()$name)
-        task_def <- readTaskDefinition(file = task_def_url)
         hostess$set(5)
         
         #VALIDATION START
@@ -607,13 +605,13 @@ data_validation_server <- function(id, parent.session, config, profile, componen
         submission$validation_start = Sys.time()
         #Validation of structure
         INFO("Validating data structure")
-        out<-validateDataStructure(file = data, task_def = task_def, format = input$format)
+        out<-validateDataStructure(file = data, task_def = taskProfile(), format = input$format)
         dsOut<-dsOut(out)
         hostess$set(10)
         
         if(out$valid){
           INFO("Validating data content")
-          out<-validateDataContent(file=data, task_def = task_def, format = input$format, 
+          out<-validateDataContent(file=data, task_def = taskProfile(), format = input$format, 
                                    parallel = vrule::getVruleOption("parallel"))
           gbOut<-gbOut(out)
           hostess$set(50)
@@ -621,7 +619,7 @@ data_validation_server <- function(id, parent.session, config, profile, componen
           if(out$valid){
             submission$reporting_entity <- input$reporting_entity
             INFO("Standardizing column names on functional terms")
-            format_spec = task_def$formats[[input$format]]$spec
+            format_spec = taskProfile()$formats[[input$format]]$spec
             data <- format_spec$standardizeStructure(data)
             INFO("Successful data standardization on functional terms")
             data <- format_spec$standardizeContent(data)
@@ -630,7 +628,7 @@ data_validation_server <- function(id, parent.session, config, profile, componen
             INFO("Selected format specification: '%s'", input$format)
             if(input$format=="simplified"){
               INFO("Transforming data from 'simplified' to 'generic' data structure (normalization)")
-              data <- simplifiedToGeneric(file=data, format_spec = task_def$formats[[input$format]]$spec, measurements = task_def$measurement)
+              data <- simplifiedToGeneric(file=data, format_spec = taskProfile()$formats[[input$format]]$spec, measurements = taskProfile()$measurement)
               INFO("Successful transformation from 'simplified' to 'generic'")
             }
 
@@ -638,7 +636,7 @@ data_validation_server <- function(id, parent.session, config, profile, componen
               INFO("Existing target data call, check compliance with data call")
               taskSupplRules<-taskProfile()$data_call_limited_on
               INFO("Build format specification for data call rules")
-              dc_task_def <- readDataCallRules(task_def = task_def, format = input$format, config = config,reporting_entity = input$reporting_entity, data_call_limited_on=taskSupplRules)
+              dc_task_def <- readDataCallRules(task_def = taskProfile(), format = input$format, config = config,reporting_entity = input$reporting_entity, data_call_limited_on=taskSupplRules)
               INFO("Data call format specification ready to use, validating data vs. data call spec...")
               out<-validateDataContent(file=data, task_def = dc_task_def, format = "generic",
                                        parallel = vrule::getVruleOption("parallel"))

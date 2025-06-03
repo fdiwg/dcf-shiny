@@ -1598,6 +1598,31 @@
       ],
       "Hash": "47623f66b4e80b3b0587bc5d7b309888"
     },
+    "repfishr": {
+      "Package": "repfishr",
+      "Version": "0.1.20250603",
+      "Source": "GitHub",
+      "RemoteType": "github",
+      "RemoteHost": "api.github.com",
+      "RemoteRepo": "repfishr",
+      "RemoteUsername": "fdiwg",
+      "RemoteSha": "f8ad3be932cf930354840f4c807a7c5dd3bcd107",
+      "Requirements": [
+        "R",
+        "R6",
+        "jsonlite",
+        "magrittr",
+        "methods",
+        "mime",
+        "openxlsx",
+        "readr",
+        "tibble",
+        "vrule",
+        "writexl",
+        "yaml"
+      ],
+      "Hash": "947c35aae37e4372d930c630f5d43451"
+    },
     "rhandsontable": {
       "Package": "rhandsontable",
       "Version": "0.3.8",
@@ -2208,6 +2233,13 @@
         "R"
       ],
       "Hash": "37be35d733130f1de1ef51672cf7cdc0"
+    },
+    "writexl": {
+      "Package": "writexl",
+      "Version": "1.5.4",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "c58dc41b898080efbe58558fe012852c"
     },
     "xfun": {
       "Package": "xfun",

@@ -3,7 +3,7 @@
 #getTasks
 getTasks <- function(config,withId=FALSE){
   tasks <- config$dcf$tasks
-  task_list <- names(tasks)
+  task_list <- sapply(tasks, function(x){x$id})
   if(withId){
     task_list<- setNames(task_list, sprintf("%s [%s]",unlist(lapply(tasks, function(x){x$name})),task_list))
   }else{
@@ -12,9 +12,17 @@ getTasks <- function(config,withId=FALSE){
   return(task_list)
 }
 
-#getTaskProfile
-getTaskProfile <- function(config,id){
-  task <- config$dcf$tasks[[id]]
+#getReportingTask
+getReportingTask <- function(config, id, raw = FALSE){
+  task <- config$dcf$tasks[sapply(config$dcf$tasks, function(x){x$id == id})]
+  if(length(task)==0){
+    stop(sprintf("No reporting task for id = '%S'", id))
+  }
+  if(raw){
+    task = task[[1]] 
+  }else{
+    task = repfishr::reporting_task$new(task = task[[1]])
+  }
   return(task)
 }
 
@@ -96,38 +104,6 @@ dateFormating<- function(date,period="start"){
   return(dates)
 }
 
-#readTaskDefinition
-#@note new, refactoring with vrule
-readTaskDefinition <- function(file){
-  task_def <-jsonlite::read_json(file)
-  
-  #mandatory properties
-  mandatory_properties = c("task_id", "task_name", "formats")
-  diff = setdiff(mandatory_properties, names(task_def))
-  if(length(diff)>0){
-    stop(sprintf("Task definition | missing mandatory properties: %s", paste0(diff, collapse=",")))
-  }
-  
-  #conditional properties
-  if("simplified" %in% names(task_def$formats)){
-    #in case a simplified format definition is set, the measurement is mandatory
-    if(!"measurement" %in% names(task_def)){
-      stop("Task definition |  At least one 'measurement' declaration is required with a simplified format specification")
-    }
-  }
-  
-  #formats
-  mandatory_format_properties = c("id", "name", "ref")
-  for(format in names(task_def$formats)){
-    diff = setdiff(mandatory_format_properties, names(task_def$formats[[format]]))
-    if(length(diff)>0){
-      stop(sprintf("Task definition | At least one format with missing properties: %s", paste(diff, collapse=",")))
-    }
-    task_def$formats[[format]]$spec <- vrule::format_spec$new(json = jsonlite::read_json(task_def$formats[[format]]$ref))
-  }
-  return(task_def)
-}
-
 #readDataCallRules
 readDataCallRules<- function(task_def, format, config = NULL,reporting_entity=NULL,data_call_limited_on=NULL){
 
@@ -196,12 +172,9 @@ readDataCallRules<- function(task_def, format, config = NULL,reporting_entity=NU
 }
 
 #getTaskFormats
-getTaskFormats<- function(config,id){
-  task<-getTaskProfile(config,id)
-  taskRules <- task$dsd_ref_url
-  task_def<-jsonlite::read_json(taskRules)
-  task_def <- task_def$formats
-  formats<-setNames(unlist(lapply(task_def, function(x){x$id})),unlist(lapply(task_def, function(x){x$name})))
+getTaskFormats<- function(config, id){
+  task <- getReportingTask(config, id, raw = TRUE)
+  formats<-setNames(unlist(lapply(task$formats, function(x){x$id})),unlist(lapply(task$formats, function(x){x$name})))
   return(formats)
 }
 
