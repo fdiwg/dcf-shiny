@@ -319,16 +319,27 @@ data_validation_server <- function(id, parent.session, config, profile, componen
       })
       #TAB 1 TASK SELECTOR
       output$task_wrapper<-renderUI({
-        selectizeInput(ns("task"),
-                       label="Task",
-                       multiple = F,
-                       choices = getTasks(config,withId=TRUE),
-                       selected=NULL,
-                       options = list(
-                         placeholder = "Please select a task",
-                         onInitialize = I('function() { this.setValue(""); }')
-                       )
-        )
+        if(!is.null(config$dcf$groups)){
+          shinyWidgets::pickerInput(ns("task"), 
+                                    label = "Task", 
+                                    multiple = F, 
+                                    choices = getTasks(config, withId = T, profile = profile), 
+                                    selected = NULL,
+                                    options = list(
+                                      placeholder = "Select a task"
+                                    ))
+        }else{
+          selectizeInput(ns("task"),
+                         label="Task",
+                         multiple = F,
+                         choices = getTasks(config,withId=TRUE),
+                         selected=NULL,
+                         options = list(
+                           placeholder = "Select a task",
+                           onInitialize = I('function() { this.setValue(""); }')
+                         )
+          )
+        }
       })
       #TAB 1 REPORTING ENTITY SELECTOR
       output$reporting_entity_wrapper <- renderUI({

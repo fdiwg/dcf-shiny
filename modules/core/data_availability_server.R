@@ -27,7 +27,7 @@ data_availability_server <-function(id, parent.session, config, profile, compone
       #task_folders <- SH$listWSItems(config$dataspace_id)
       reporting_entities<-config$dcf$reporting_entities$codelist_ref$code
       
-      data_tasks<-lapply(setNames(getTasks(config,withId=TRUE),getTasks(config,withId=TRUE)),function(x){
+      data_tasks<-lapply(setNames(getTasks(config,withId=TRUE, profile = profile),getTasks(config,withId=TRUE, profile = profile)),function(x){
         getDataTaskDBData(pool, x)
       })
       
@@ -162,16 +162,28 @@ data_availability_server <-function(id, parent.session, config, profile, compone
       
       #Task selector
       output$task_selector<-renderUI({
-        selectizeInput(ns("task"),
-                       label="Task",
-                       multiple = F,
-                       choices = getTasks(config,withId=TRUE),
-                       selected=NULL,
-                       options = list(
-                         placeholder = "Please select a task",
-                         onInitialize = I('function() { this.setValue(""); }')
-                       )
-        )
+        
+        if(!is.null(config$dcf$groups)){
+          shinyWidgets::pickerInput(ns("task"), 
+                                    label = "Task", 
+                                    multiple = F, 
+                                    choices = getTasks(config, withId = T, profile = profile), 
+                                    selected = NULL,
+                                    options = list(
+                                      placeholder = "Select a task"
+                                    ))
+        }else{
+          selectizeInput(ns("task"),
+                         label="Task",
+                         multiple = F,
+                         choices = getTasks(config,withId=TRUE),
+                         selected=NULL,
+                         options = list(
+                           placeholder = "Select a task",
+                           onInitialize = I('function() { this.setValue(""); }')
+                         )
+          )
+        }
       })
       
       #observeEvent(input$summaryBtn,{
@@ -179,9 +191,9 @@ data_availability_server <-function(id, parent.session, config, profile, compone
         #withBusyIndicatorServer(ns("summaryBtn"), {
           if(dataAvailable()){
             
-            tasks<-getTasks(config,withId=T) 
+            tasks<-getTasks(config,withId=T,profile=profile) 
               
-            summary<-do.call("rbind",lapply(getTasks(config,withId=TRUE),function(x){
+            summary<-do.call("rbind",lapply(getTasks(config,withId=TRUE,profile=profile),function(x){
             # items <- SH$listWSItems(parentFolderID = subset(task_folders,name==x)$id)
             # last_modification_time <- max(items$lastModificationTime)
             # items <- items[items$lastModificationTime == last_modification_time,]
@@ -214,7 +226,7 @@ data_availability_server <-function(id, parent.session, config, profile, compone
           }))
             
         }else{
-          summary<-do.call("rbind",lapply(getTasks(config,withId=TRUE),function(x){
+          summary<-do.call("rbind",lapply(getTasks(config,withId=TRUE,profile=profile),function(x){
             
             file<-data.frame(reporting_entity="",
                              period="(no data)",
@@ -551,7 +563,7 @@ data_availability_server <-function(id, parent.session, config, profile, compone
         }
         
         df<-df%>%
-          complete(task = names(getTasks(config,withId=TRUE)),reporting_entity=entity_list,fill = list(value=0,stat="(no data)"))%>%
+          complete(task = names(getTasks(config,withId=TRUE,profile=profile)),reporting_entity=entity_list,fill = list(value=0,stat="(no data)"))%>%
           arrange(desc(reporting_entity))%>%
           filter(reporting_entity %in% entity_list)
         

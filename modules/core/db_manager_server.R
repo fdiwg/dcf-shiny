@@ -232,16 +232,27 @@ db_manager_server <- function(id, parent.session, config, profile, components,re
       
       #task_wrapper
       output$task_wrapper<-renderUI({
-        selectizeInput(ns("task"),
-                       label="Task",
-                       multiple = F,
-                       choices = getTasks(config,withId=TRUE),
-                       selected=NULL,
-                       options = list(
-                         placeholder = "Select a task",
-                         onInitialize = I('function() { this.setValue(""); }')
-                       )
-        )
+        if(!is.null(config$dcf$groups)){
+          shinyWidgets::pickerInput(ns("task"), 
+                                    label = "Task", 
+                                    multiple = F, 
+                                    choices = getTasks(config, withId = T, profile = profile), 
+                                    selected = NULL,
+                                    options = list(
+                                      placeholder = "Select a task"
+                                    ))
+        }else{
+          selectizeInput(ns("task"),
+                         label="Task",
+                         multiple = F,
+                         choices = getTasks(config,withId=TRUE),
+                         selected=NULL,
+                         options = list(
+                           placeholder = "Select a task",
+                           onInitialize = I('function() { this.setValue(""); }')
+                         )
+          )
+        }
       })
       
       #go_readandmerge_wrapper
