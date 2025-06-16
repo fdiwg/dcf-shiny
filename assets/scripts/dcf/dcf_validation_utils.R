@@ -4,6 +4,7 @@
 getTasks <- function(config, withId=FALSE, profile = NULL){
   tasks <- config$dcf$tasks
   task_list <- sapply(tasks, function(x){x$id})
+  if(all(sapply(task_list, is.null))) task_list = names(tasks) ##161 backward compatibility
   groups = names(config$dcf$groups)
   if(!is.null(groups)){
     if(!is.null(profile)) if(!any(as.character(getAllRoles(config)[[1]]) %in% profile$shiny_app_roles)){
