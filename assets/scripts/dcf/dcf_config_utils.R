@@ -26,15 +26,16 @@ read_dcf_config <- function(file){
         cfg$dcf$tasks <- receiver$getTaskDefinitions(raw = TRUE)
       }
     }else{ 
-      cfg$dcf$tasks = lapply(cfg$dcf$tasks, function(x){
-        task = x
+      cfg$dcf$tasks = lapply(names(cfg$dcf$tasks), function(x){
+        task = cfg$dcf$tasks[[x]]
         if(!is.null(task$ref)){
           #read from file
-          switch(mime::guess_type(task$ref),
+          task = switch(mime::guess_type(task$ref),
             "text/yaml" = yaml::read_yaml(task$ref),
             "application/json" = jsonlite::read_json(task$ref)
           )
         }
+        task$id = x
         return(task)
       })
     }
