@@ -1606,7 +1606,7 @@
       "RemoteHost": "api.github.com",
       "RemoteRepo": "repfishr",
       "RemoteUsername": "fdiwg",
-      "RemoteSha": "f8ad3be932cf930354840f4c807a7c5dd3bcd107",
+      "RemoteSha": "9eca5da05ffc5e77c0ed0a3ec45acabdcd7d9a9c",
       "Requirements": [
         "R",
         "R6",
@@ -1621,7 +1621,7 @@
         "writexl",
         "yaml"
       ],
-      "Hash": "947c35aae37e4372d930c630f5d43451"
+      "Hash": "689f9ff4122aa2ff46e2f3c43b873b97"
     },
     "rhandsontable": {
       "Package": "rhandsontable",
@@ -2166,7 +2166,7 @@
       "RemoteHost": "api.github.com",
       "RemoteRepo": "vrule",
       "RemoteUsername": "fdiwg",
-      "RemoteSha": "35770ba919cef2d9ce6c8e441feed84d4008f95a",
+      "RemoteSha": "4683584e0deeba091912fb77d5bed936211a7dd0",
       "Requirements": [
         "R",
         "R6",
@@ -2178,7 +2178,7 @@
         "rhandsontable",
         "stringi"
       ],
-      "Hash": "4b88ac45d699334bd7a2beeb2bfc7542"
+      "Hash": "86c6757de12922b5995741aabf5e7d58"
     },
     "waiter": {
       "Package": "waiter",
