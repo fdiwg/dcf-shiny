@@ -196,8 +196,13 @@ readDataCallRules<- function(task_def, format, config = NULL,reporting_entity=NU
 #getTaskFormats
 getTaskFormats<- function(config, id){
   task <- getReportingTask(config, id, raw = TRUE)
-  formats<-setNames(unlist(lapply(task$formats, function(x){x$id})),unlist(lapply(task$formats, function(x){x$name})))
-  return(formats)
+  formats <- task$formats
+  if(is.null(task$formats) & !is.null(task$dsd_ref_url)){
+    task <- jsonlite::read_json(task$dsd_ref_url)
+    formats <- task$formats
+  }
+  format_names = setNames(unlist(lapply(formats, function(x){x$id})),unlist(lapply(formats, function(x){x$name})))
+  return(format_names)
 }
 
 #readDataFile
