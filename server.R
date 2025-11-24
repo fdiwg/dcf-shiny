@@ -7,12 +7,12 @@ server <- function(input, output, session) {
     spin_flower()
   )
   
-  waiter_show(html = waiting_screen)
+  if(!is.null(session)) waiter_show(html = waiting_screen)
   
   #global variables / environment
   #---------------------------------------------------------------------------------------
   jwt <- Sys.getenv("SHINYPROXY_OIDC_ACCESS_TOKEN")
-  if(jwt == ""){
+  if(!is.null(session)) if(jwt == ""){
     waiter_hide()
     shiny::showModal(
       shiny::modalDialog(
@@ -28,7 +28,7 @@ server <- function(input, output, session) {
   #D4S components
   #---------------------------------------------------------------------------------------
   PROFILE <- try(loadProfile(jwt))
-  if(is(PROFILE, "try-error")){
+  if(!is.null(session)) if(is(PROFILE, "try-error")) {
     waiter_update(html = tagList(
       h4("Error while loading profile!", style = "color:red;"),
       spin_flower()
@@ -49,12 +49,12 @@ server <- function(input, output, session) {
   }
   
   #COMPONENTS
-  waiter_update(html = tagList(
+  if(!is.null(session)) waiter_update(html = tagList(
     h3("Loading components..."),
     spin_flower()
   ))
   COMPONENTS <- try(loadComponents(profile = PROFILE, sdi = FALSE))
-  if(is(COMPONENTS, "try-error")){
+  if(!is.null(session)) if(is(COMPONENTS, "try-error")){
     waiter_hide()
     shiny::showModal(shiny::modalDialog(title = "Error", COMPONENTS[1]))
     stop("Application has stopped!")
@@ -69,7 +69,7 @@ server <- function(input, output, session) {
   #If you are an R developer, you need to create a .REnviron file (no file extension) in /dcf-shiny dir
   #The file should include the local path for your shiny config file in that way:
   #DCF_SHINY_CONFIG=<your config path>
-  waiter_update(html = tagList(
+  if(!is.null(session)) waiter_update(html = tagList(
     h3("Loading configuration..."),
     spin_flower()
   ))
@@ -77,7 +77,7 @@ server <- function(input, output, session) {
   if(nzchar(local_config_file)) config_file <- local_config_file
   CONFIG <- read_dcf_config(file = config_file)
   print("STEP CONFIG")
-  waiter_update(html = tagList(
+  if(!is.null(session)) waiter_update(html = tagList(
     h3(paste0("Welcome to ",CONFIG$dcf$name)),
     spin_flower()
   ))
@@ -97,7 +97,7 @@ server <- function(input, output, session) {
   
   #DBI component to add
   #---------------------------------------------------------------------------------------
-  waiter_update(html = tagList(
+  if(!is.null(session)) waiter_update(html = tagList(
     h3(paste0("Welcome to ",CONFIG$dcf$name)),
     spin_flower(),
     div("Connecting to database ...")
@@ -107,7 +107,7 @@ server <- function(input, output, session) {
   print("STEP POOL")
   #User full profile (roles) initialization
   #---------------------------------------------------------------------------------------
-  waiter_update(html = tagList(
+  if(!is.null(session)) waiter_update(html = tagList(
     h3(paste0("Welcome to ",CONFIG$dcf$name)),
     spin_flower(),
     div("User identification ...")
@@ -118,7 +118,7 @@ server <- function(input, output, session) {
     COMPONENTS <- loadComponents(profile = PROFILE, sdi = TRUE)
     COMPONENTS$POOL <- pool
   }
-  waiter_update(html = tagList(
+  if(!is.null(session)) waiter_update(html = tagList(
     h3(paste0("Welcome to ",CONFIG$dcf$name)),
     spin_flower(),
     h4(paste0("Welcome ",PROFILE$name," !")),
