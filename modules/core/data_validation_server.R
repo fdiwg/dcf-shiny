@@ -38,6 +38,8 @@ data_validation_server <- function(id, parent.session, config, profile, componen
             task_id = NULL,
             task_name =NULL,
             reporting_entity = NULL,
+            data_year_start = NULL,
+            data_year_end = NULL,
             validation_start = NULL,
             validation_end = NULL,
             notes = "-"
@@ -91,6 +93,8 @@ data_validation_server <- function(id, parent.session, config, profile, componen
           submission$task_id = NULL
           submission$task_name =NULL
           submission$reporting_entity = NULL
+          submission$data_year_start = NULL
+          submission$data_year_end = NULL
           submission$validation_start = NULL
           submission$validation_end = NULL
           submission$notes = "-"
@@ -473,6 +477,8 @@ data_validation_server <- function(id, parent.session, config, profile, componen
             dataCall<-dataCall(TRUE)
             submission$data_call_id = datacall$id_data_call
             submission$task_id = datacall$task_id
+            submission$data_year_start = datacall$data_year_start
+            submission$data_year_end = datacall$data_year_end
             submission$task_name =taskProfile()$name
             output$dataCallMessage<-renderUI({tags$span(shiny::icon(c('check-circle')), "A data call is currently open for this task", style="color:green;")})
           }
@@ -645,7 +651,10 @@ data_validation_server <- function(id, parent.session, config, profile, componen
 
             if(!is.null(submission$data_call_id)){
               INFO("Existing target data call, check compliance with data call")
-              taskSupplRules<-taskProfile()$data_call_limited_on
+              taskSupplRules <- list(
+                time_start = submission$data_year_start,
+                time_end = submission$data_year_end
+              )
               INFO("Build format specification for data call rules")
               dc_task_def <- readDataCallRules(task_def = taskProfile(), format = input$format, config = config,reporting_entity = input$reporting_entity, data_call_limited_on=taskSupplRules)
               INFO("Data call format specification ready to use, validating data vs. data call spec...")

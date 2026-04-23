@@ -154,7 +154,7 @@ readDataCallRules<- function(task_def, format, config = NULL,reporting_entity=NU
   if(!is.null(data_call_limited_on)){
     
     #TIME DATA CALL CONSISTANCY
-    if("time_start" %in% names(data_call_limited_on)){
+    if("time_start" %in% names(data_call_limited_on)) if(!is.na(data_call_limited_on$time_start)){
       threshold <- eval_variable_expression(data_call_limited_on[["time_start"]])
       time_start_col_spec <- format_spec$getColumnSpecByName("time_start") #in case time_start is part of format_spec (ie if format is generic)
       if(is.null(time_start_col_spec)){
@@ -162,19 +162,19 @@ readDataCallRules<- function(task_def, format, config = NULL,reporting_entity=NU
         time_start_col_spec$setName("time_start")
       }
       time_start_col_spec$rules = list()
-      time_start_col_spec$addRule(vrule::vrule_date_min$new(minValue = threshold))
+      time_start_col_spec$addRule(vrule::vrule_date_min$new(minValue = as.Date(paste0(threshold,"-01-01"))))
       dc_format_spec$addColumnSpec(time_start_col_spec)
     }
   
-    if("time_end" %in% names(data_call_limited_on)){
-      threshold <- eval_variable_expression(data_call_limited_on[["time_end"]])
+    if("time_end" %in% names(data_call_limited_on)) if(!is.na(data_call_limited_on$time_end)){
+      threshold <- data_call_limited_on[["time_end"]]
       time_end_col_spec <- format_spec$getColumnSpecByName("time_end") #in case time_end is part of format_spec (ie if format is generic)
       if(is.null(time_end_col_spec)){
         time_end_col_spec <- vrule::column_spec$new()
         time_end_col_spec$setName("time_end")
       }
       time_end_col_spec$rules = list()
-      time_end_col_spec$addRule(vrule::vrule_date_max$new(maxValue = threshold))
+      time_end_col_spec$addRule(vrule::vrule_date_max$new(maxValue = as.Date(paste0(threshold,"-12-31"))))
       dc_format_spec$addColumnSpec(time_end_col_spec)
     }
   }

@@ -61,7 +61,8 @@ data_call_server <- function(id, parent.session, config, profile, components, re
       }
       
       #data call form
-      showDataCallModal <- function(new = TRUE, id_data_call = NULL, task = "", start = Sys.Date(), end = NULL, status = "OPENED"){
+      showDataCallModal <- function(new = TRUE, id_data_call = NULL, task = "", start = Sys.Date(), end = NULL, status = "OPENED",
+                                    data_year_start = NULL, data_year_end = NULL){
         title_prefix <- ifelse(new, "Add", "Modify")
         form_action <- tolower(title_prefix)
         showModal(modalDialog(title = sprintf("%s data call", title_prefix),
@@ -86,6 +87,8 @@ data_call_server <- function(id, parent.session, config, profile, components, re
                               dateInput(ns("data_call_form_start"), "Start date", value = start),
                               dateInput(ns("data_call_form_end"), "End date", value = end),
                               selectInput(ns("data_call_form_status"), "Status", choices = list("OPENED", "CLOSED"), selected = "OPENED"),
+                              numericInput(ns("data_call_form_data_year_start"), "Data - Min year", value = data_year_start),
+                              numericInput(ns("data_call_form_data_year_end"), "Data - Max year", value = data_year_end),
                               actionButton(ns(sprintf("data_call_%s_go", form_action)), title_prefix),
                               actionButton(ns("data_call_cancel"), "Cancel", style = "float:right;"),
                               uiOutput(ns("data_call_error")),
@@ -112,7 +115,9 @@ data_call_server <- function(id, parent.session, config, profile, components, re
               task = x[,"task_id"],
               start = x[,"date_start"],
               end = x[,"date_end"],
-              status = x[,"status"]
+              status = x[,"status"],
+              data_year_start = x[,"data_year_start"],
+              data_year_end = x[,"data_year_end"]
             )
           })
         })
@@ -249,6 +254,11 @@ data_call_server <- function(id, parent.session, config, profile, components, re
         )
         removeModal()
         waiter_show(html = waiting_screen, color = "#14141480")
+        
+        print("data start/end")
+        print(input$data_call_form_data_year_start)
+        print(input$data_call_form_data_year_end)
+        
         created <- createDataCall(
           pool = pool,
           config = config,
@@ -256,7 +266,10 @@ data_call_server <- function(id, parent.session, config, profile, components, re
           task = input$data_call_form_task,
           start = input$data_call_form_start,
           end = input$data_call_form_end,
-          status = input$data_call_form_status
+          status = input$data_call_form_status,
+          data_year_start = input$data_call_form_data_year_start,
+          data_year_end = input$data_call_form_data_year_end,
+          notify = FALSE
         )
         if(created){
           model$error <- NULL
@@ -279,6 +292,11 @@ data_call_server <- function(id, parent.session, config, profile, components, re
         removeModal()
         waiter_show(html = waiting_screen, color = "#14141480")
         id_call <- ""
+        
+        print("data start/end")
+        print(input$data_call_form_data_year_start)
+        print(input$data_call_form_data_year_end)
+        
         updated <- updateDataCall(
           pool = pool,
           profile = profile,
@@ -287,7 +305,10 @@ data_call_server <- function(id, parent.session, config, profile, components, re
           task = input$data_call_form_task,
           start = input$data_call_form_start,
           end = input$data_call_form_end,
-          status = input$data_call_form_status
+          status = input$data_call_form_status,
+          data_year_start = input$data_call_form_data_year_start,
+          data_year_end = input$data_call_form_data_year_end,
+          notify = FALSE
         )
         if(updated){
           model$error <- NULL

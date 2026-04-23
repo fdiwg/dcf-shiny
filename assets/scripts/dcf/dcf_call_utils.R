@@ -129,13 +129,18 @@ openStartedDataCalls <- function(pool,config,profile){
 
 #createDataCall
 createDataCall <- function(pool, task = "", start = Sys.Date(), end = Sys.Date(), status = "OPENED",
-                           config, profile){
+                           data_year_start = NULL, data_year_end = NULL,
+                           config, profile, notify = TRUE){
   conn <- pool::poolCheckout(pool)
   idx <- 0
   data_calls <- getDataCalls(pool)
   if(nrow(data_calls)>0) idx <- max(data_calls$id_data_call)+1
   creation_date <- Sys.time()
   attr(creation_date, "tzone") <- "UTC"
+  if(is.null(data_year_start)) data_year_start = "NULL"
+  if(is.na(data_year_start)) data_year_start = "NULL"
+  if(is.null(data_year_end)) data_year_end = "NULL"
+  if(is.na(data_year_end)) data_year_end = "NULL"
   
   #check presence of data calls
   open_calls <- getDataCalls(pool, task = task, status = "OPENED")
@@ -148,47 +153,49 @@ createDataCall <- function(pool, task = "", start = Sys.Date(), end = Sys.Date()
   
   #db management
   insert_sql <- sprintf(
-    "INSERT INTO dcf_data_call(id_data_call, task_id, date_start, date_end, status, creator_id, creation_date) 
-           VALUES (%s, '%s', '%s', '%s', '%s', '%s', '%s');", 
-    idx, task, as(start,"character"), as(end,"character"), status, profile$preferred_username, as(creation_date, "character")
+    "INSERT INTO dcf_data_call(id_data_call, task_id, date_start, date_end, status, data_year_start, data_year_end, creator_id, creation_date, updater_id, update_date) 
+           VALUES (%s, '%s', '%s', '%s', '%s', %s, %s, '%s', '%s', '%s', '%s');", 
+    idx, task, as(start,"character"), as(end,"character"), status, data_year_start, data_year_end, profile$preferred_username, as(creation_date, "character"), profile$preferred_username, as(creation_date, "character")
   )
+  print(insert_sql)
   out_sql <- try(DBI::dbSendQuery(conn, insert_sql))
   created <- !is(out_sql, "try-error")
   if(!created){
     attr(created, "error") <- as(out_sql, "character")
   }else{
     INFO("Data call successfully created for task ID '%s'", task)
-    
-    recipients <- getDBUsers(pool = pool, profile = profile)
-    print(recipients)
-    if(status == "OPENED") if(nrow(recipients)>0){
-      INFO("Sending data call notification to DB users")
-      for(i in 1:nrow(recipients)){
-        recipient <- recipients[i,]
-        INFO("Sending data call notification to '%s'", recipient$username)
-        sendMessage(
-          subject = sprintf("[%s] New Data call open for %s task ID '%s'", config$dcf$name, config$dcf$context, task),
-          body = sprintf(
-            "Dear %s,
-            
-            You receive this notification because you are assigned as part of the %s (%s) as %s.
-            
-            A new data call has been opened for the data task ID '%s'.
-            
-            You are kindly invited to validate and submit your data before %s.
-            
-            Best regards,
-            The %s
-                         
-            ",
-            recipient$fullname, 
-            config$dcf$name, config$dcf$context, config$dcf$roles$submitter, task,
-            as(end,"character"),
-            config$dcf$roles$manager
-          ),
-          recipients = as.list(recipient$username),
-          profile = profile
-        )
+    if(notify){
+      recipients <- getDBUsers(pool = pool, profile = profile)
+      print(recipients)
+      if(status == "OPENED") if(nrow(recipients)>0){
+        INFO("Sending data call notification to DB users")
+        for(i in 1:nrow(recipients)){
+          recipient <- recipients[i,]
+          INFO("Sending data call notification to '%s'", recipient$username)
+          sendMessage(
+            subject = sprintf("[%s] New Data call open for %s task ID '%s'", config$dcf$name, config$dcf$context, task),
+            body = sprintf(
+              "Dear %s,
+              
+              You receive this notification because you are assigned as part of the %s (%s) as %s.
+              
+              A new data call has been opened for the data task ID '%s'.
+              
+              You are kindly invited to validate and submit your data before %s.
+              
+              Best regards,
+              The %s
+                           
+              ",
+              recipient$fullname, 
+              config$dcf$name, config$dcf$context, config$dcf$roles$submitter, task,
+              as(end,"character"),
+              config$dcf$roles$manager
+            ),
+            recipients = as.list(recipient$username),
+            profile = profile
+          )
+        }
       }
     }
   }
@@ -197,10 +204,15 @@ createDataCall <- function(pool, task = "", start = Sys.Date(), end = Sys.Date()
 
 #updateDataCall
 updateDataCall <- function(pool, id_data_call, task = "", start = Sys.Date(), end = NULL, status = "OPENED",
-                           config,profile){
+                           data_year_start = NULL, data_year_end = NULL,
+                           config, profile, notify = TRUE){
   conn <- pool::poolCheckout(pool)
   update_date <- Sys.time()
   attr(update_date, "tzone") <- "UTC"
+  if(is.null(data_year_start)) data_year_start = "NULL"
+  if(is.na(data_year_start)) data_year_start = "NULL"
+  if(is.null(data_year_end)) data_year_end = "NULL"
+  if(is.na(data_year_end)) data_year_end = "NULL"
   
   prev_call <- getDataCalls(pool, id_data_call = id_data_call)
   if(prev_call$status=="CLOSED"&status=="OPENED"){
@@ -214,158 +226,162 @@ updateDataCall <- function(pool, id_data_call, task = "", start = Sys.Date(), en
   
   #db management
   update_sql <- sprintf("UPDATE dcf_data_call 
-                               SET date_start = '%s', date_end = '%s', status = '%s', updater_id = '%s', update_date = '%s' 
+                               SET date_start = '%s', date_end = '%s', status = '%s', data_year_start = %s, data_year_end = %s, updater_id = '%s', update_date = '%s' 
                                WHERE id_data_call = %s", 
-                        as(start,"character"), ifelse((prev_call$status=="OPENED"&status=="CLOSED"),as(Sys.Date()-1,"character"),as(end,"character")), status, profile$preferred_username, 
+                        as(start,"character"), ifelse((prev_call$status=="OPENED"&status=="CLOSED"),as(Sys.Date()-1,"character"),as(end,"character")), status, 
+                        data_year_start, data_year_end,
+                        profile$preferred_username, 
                         as(update_date, "character"), id_data_call)
   out_sql <- try(DBI::dbSendQuery(conn, update_sql))
   updated <- !is(out_sql, "try-error")
   if(!updated){
     attr(updated, "error") <- as(out_sql, "character")
-  }else{  
-    recipients <- getDBUsers(pool = pool, profile = profile)
-    print(recipients)
-    if(nrow(recipients)>0){
-      INFO("Sending data call notification to DB users")
-      for(i in 1:nrow(recipients)){
-        recipient <- recipients[i,]
-        INFO("Sending data call notification to '%s'", recipient$username)
-        
-        if(prev_call$status=="OPENED"&status=="CLOSED"){
-          sendMessage(
-            subject = sprintf("[%s] Data call closed for %s task ID '%s'", config$dcf$name, config$dcf$context, task),
-            body = sprintf(
-              "Dear %s,
-            
-            You receive this notification because you are assigned as part of the %s (%s) as %s.
-            
-            The data call for the data task ID '%s' is now closed.
-            
-            In case you did not submit your data, please contact your %s.
-            
-            Best regards,
-            The %s
-                         
-            ",
-              recipient$fullname, 
-              config$dcf$name, config$dcf$context, config$dcf$roles$submitter, task,
-              config$dcf$roles$manager,config$dcf$roles$manager
-            ),
-            recipients = as.list(recipient$username),
-            profile = profile
-          )
-        }
-        if(prev_call$status=="CLOSED"&status=="OPENED"){
-          if(start<Sys.Date()){
+  }else{
+    if(notify){
+      recipients <- getDBUsers(pool = pool, profile = profile)
+      print(recipients)
+      if(nrow(recipients)>0){
+        INFO("Sending data call notification to DB users")
+        for(i in 1:nrow(recipients)){
+          recipient <- recipients[i,]
+          INFO("Sending data call notification to '%s'", recipient$username)
+          
+          if(prev_call$status=="OPENED"&status=="CLOSED"){
             sendMessage(
-              subject = sprintf("[%s] Data call re-opened for %s task ID '%s'", config$dcf$name, config$dcf$context, task),
+              subject = sprintf("[%s] Data call closed for %s task ID '%s'", config$dcf$name, config$dcf$context, task),
               body = sprintf(
                 "Dear %s,
-            
-            You receive this notification because you are assigned as part of the %s (%s) as %s.
-            
-            The data call has been re-opened for the data task ID '%s'.
-            
-            You are kindly invited to validate and submit your data before %s.
-            
-            Please ignore this email if this action was already done.
-            
-            Best regards,
-            The %s
-                         
-            ",
+              
+              You receive this notification because you are assigned as part of the %s (%s) as %s.
+              
+              The data call for the data task ID '%s' is now closed.
+              
+              In case you did not submit your data, please contact your %s.
+              
+              Best regards,
+              The %s
+                           
+              ",
                 recipient$fullname, 
                 config$dcf$name, config$dcf$context, config$dcf$roles$submitter, task,
-                as(end,"character"),
-                config$dcf$roles$manager
-              ),
-              recipients = as.list(recipient$username),
-              profile = profile
-            )
-          }else{
-            sendMessage(
-              subject = sprintf("[%s] New Data call open for %s task ID '%s'", config$dcf$name, config$dcf$context, task),
-              body = sprintf(
-                "Dear %s,
-            
-            You receive this notification because you are assigned as part of the %s (%s) as %s.
-            
-            A new data call has been opened for the data task ID '%s'.
-            
-            You are kindly invited to validate and submit your data before %s.
-            
-            Best regards,
-            The %s
-                         
-            ",
-                recipient$fullname, 
-                config$dcf$name, config$dcf$context, config$dcf$roles$submitter, task,
-                as(end,"character"),
-                config$dcf$roles$manager
+                config$dcf$roles$manager,config$dcf$roles$manager
               ),
               recipients = as.list(recipient$username),
               profile = profile
             )
           }
-        }
-        if((prev_call$status=="OPENED"&status=="OPENED") &prev_call$date_end < end){
+          if(prev_call$status=="CLOSED"&status=="OPENED"){
+            if(start<Sys.Date()){
+              sendMessage(
+                subject = sprintf("[%s] Data call re-opened for %s task ID '%s'", config$dcf$name, config$dcf$context, task),
+                body = sprintf(
+                  "Dear %s,
+              
+              You receive this notification because you are assigned as part of the %s (%s) as %s.
+              
+              The data call has been re-opened for the data task ID '%s'.
+              
+              You are kindly invited to validate and submit your data before %s.
+              
+              Please ignore this email if this action was already done.
+              
+              Best regards,
+              The %s
+                           
+              ",
+                  recipient$fullname, 
+                  config$dcf$name, config$dcf$context, config$dcf$roles$submitter, task,
+                  as(end,"character"),
+                  config$dcf$roles$manager
+                ),
+                recipients = as.list(recipient$username),
+                profile = profile
+              )
+            }else{
+              sendMessage(
+                subject = sprintf("[%s] New Data call open for %s task ID '%s'", config$dcf$name, config$dcf$context, task),
+                body = sprintf(
+                  "Dear %s,
+              
+              You receive this notification because you are assigned as part of the %s (%s) as %s.
+              
+              A new data call has been opened for the data task ID '%s'.
+              
+              You are kindly invited to validate and submit your data before %s.
+              
+              Best regards,
+              The %s
+                           
+              ",
+                  recipient$fullname, 
+                  config$dcf$name, config$dcf$context, config$dcf$roles$submitter, task,
+                  as(end,"character"),
+                  config$dcf$roles$manager
+                ),
+                recipients = as.list(recipient$username),
+                profile = profile
+              )
+            }
+          }
+          if((prev_call$status=="OPENED"&status=="OPENED") &prev_call$date_end < end){
+            
+            sendMessage(
+              subject = sprintf("[%s] Data call for %s task ID '%s' is extended", config$dcf$name, config$dcf$context, task),
+              body = sprintf(
+                "Dear %s,
+              
+              You receive this notification because you are assigned as part of the %s (%s) as %s.
+              
+              The data call for the data task ID '%s' was extended to %s (previously %s).
+              
+              You are kindly invited to validate and submit your data before this date.
+              
+              Please ignore this email if you have already submitted your data.
+              
+              Best regards,
+              The %s
+                           
+              ",
+                recipient$fullname, 
+                config$dcf$name, config$dcf$context, config$dcf$roles$submitter, task,
+                as(end,"character"),as(prev_call$date_end,"character"),
+                config$dcf$roles$manager
+              ),
+              recipients = as.list(recipient$username),
+              profile = profile
+            )
+            
+          }
           
-          sendMessage(
-            subject = sprintf("[%s] Data call for %s task ID '%s' is extended", config$dcf$name, config$dcf$context, task),
-            body = sprintf(
-              "Dear %s,
+          if((prev_call$status=="OPENED"&status=="OPENED") &prev_call$date_end > end){
             
-            You receive this notification because you are assigned as part of the %s (%s) as %s.
+            sendMessage(
+              subject = sprintf("[%s] Data call for %s task ID '%s' is shortened", config$dcf$name, config$dcf$context, task),
+              body = sprintf(
+                "Dear %s,
+              
+              You receive this notification because you are assigned as part of the %s (%s) as %s.
+              
+              The data call for the data task ID '%s' was shortened to end on %s (previously %s).
+              
+              You are kindly invited to validate and submit your data before this date.
+              
+              Please ignore this email if you have already submitted your data.
+              
+              Best regards,
+              The %s
+                           
+              ",
+                recipient$fullname, 
+                config$dcf$name, config$dcf$context, config$dcf$roles$submitter, task,
+                as(end,"character"),as(prev_call$date_end,"character"),
+                config$dcf$roles$manager
+              ),
+              recipients = as.list(recipient$username),
+              profile = profile
+            )
             
-            The data call for the data task ID '%s' was extended to %s (previously %s).
-            
-            You are kindly invited to validate and submit your data before this date.
-            
-            Please ignore this email if you have already submitted your data.
-            
-            Best regards,
-            The %s
-                         
-            ",
-              recipient$fullname, 
-              config$dcf$name, config$dcf$context, config$dcf$roles$submitter, task,
-              as(end,"character"),as(prev_call$date_end,"character"),
-              config$dcf$roles$manager
-            ),
-            recipients = as.list(recipient$username),
-            profile = profile
-          )
-          
-        }
-        
-        if((prev_call$status=="OPENED"&status=="OPENED") &prev_call$date_end > end){
-          
-          sendMessage(
-            subject = sprintf("[%s] Data call for %s task ID '%s' is shortened", config$dcf$name, config$dcf$context, task),
-            body = sprintf(
-              "Dear %s,
-            
-            You receive this notification because you are assigned as part of the %s (%s) as %s.
-            
-            The data call for the data task ID '%s' was shortened to end on %s (previously %s).
-            
-            You are kindly invited to validate and submit your data before this date.
-            
-            Please ignore this email if you have already submitted your data.
-            
-            Best regards,
-            The %s
-                         
-            ",
-              recipient$fullname, 
-              config$dcf$name, config$dcf$context, config$dcf$roles$submitter, task,
-              as(end,"character"),as(prev_call$date_end,"character"),
-              config$dcf$roles$manager
-            ),
-            recipients = as.list(recipient$username),
-            profile = profile
-          )
-          
+          }
         }
       }
     }
